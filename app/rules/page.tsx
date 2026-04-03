@@ -86,15 +86,33 @@ function EntryGroup({ entries, title }: { entries: Array<Record<string, unknown>
           // Some entries have vocations/themes instead of text
           const extra = text ?? (entry.vocations ? (entry.vocations as string[]).join(', ') : null);
           return (
-            <div key={i} style={{
-              display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
-              padding: '0.4rem 0.75rem', backgroundColor: 'var(--bg-nav)',
-              borderRadius: '0.375rem', fontSize: '0.875rem',
-            }}>
-              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--text)', flexShrink: 0, minWidth: '120px' }}>
-                {name}
-              </span>
-              {extra && <span style={{ color: 'var(--text-muted)', lineHeight: 1.55 }}>{extra}</span>}
+            <div key={i}>
+              <div style={{
+                display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
+                padding: '0.4rem 0.75rem', backgroundColor: 'var(--bg-nav)',
+                borderRadius: name === 'Medicine Check Healing' ? '0.375rem 0.375rem 0 0' : '0.375rem',
+                fontSize: '0.875rem',
+              }}>
+                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--text)', flexShrink: 0, minWidth: '120px' }}>
+                  {name}
+                </span>
+                {extra && <span style={{ color: 'var(--text-muted)', lineHeight: 1.55 }}>{extra}</span>}
+              </div>
+              {name === 'Medicine Check Healing' && (
+                <div style={{ backgroundColor: 'var(--bg-nav)', borderRadius: '0 0 0.375rem 0.375rem', padding: '0.5rem 0.75rem', borderTop: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.35rem', fontFamily: 'var(--font-heading)' }}>
+                    Healing by Tier DC
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.375rem' }}>
+                    {([['Tier 1', '1d6'], ['Tier 2', '2d6'], ['Tier 3', '2d8'], ['Tier 4', '3d8']] as [string, string][]).map(([tier, dice]) => (
+                      <div key={tier} style={{ textAlign: 'center', padding: '0.3rem 0.4rem', backgroundColor: 'var(--bg-card)', borderRadius: '0.25rem', border: '1px solid var(--border)' }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 700, fontFamily: 'var(--font-heading)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tier}</div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 700, fontFamily: 'var(--font-heading)', color: 'var(--primary)' }}>{dice}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
