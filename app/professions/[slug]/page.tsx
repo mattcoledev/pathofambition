@@ -165,6 +165,11 @@ function FeatCard({ feat }: { feat: Feat }) {
             Requires: <strong style={{ color: 'var(--text)' }}>{feat.required}</strong>
           </span>
         )}
+        {feat.path_investment && (
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+            Investment: <strong style={{ color: 'var(--text)' }}>{feat.path_investment}</strong>
+          </span>
+        )}
       </div>
       <MarkdownContent content={feat.description_markdown} />
     </div>

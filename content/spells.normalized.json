@@ -3583,17 +3583,16 @@
       "is_cantrip": true,
       "reference_only": false,
       "school_display": "",
-      "description_markdown": "",
-      "raw_markdown": "**Starfall**",
+      "range": "Nearby",
+      "duration": "Instant",
+      "description_markdown": "You launch loose debris and objects of minimal mass. Make a **spell attack roll**, on a hit deal 1d8 **gravity** plus **spell casting modifier**.",
+      "raw_markdown": "**Starfall**\n**Range** Nearby | **Duration** Instant\nYou launch loose debris and objects of minimal mass. Make a **spell attack roll**, on a hit deal 1d8 **gravity** plus **spell casting modifier**.",
       "granted_by": {
         "collection": "character_data",
         "owner": "Chosen:Starborn",
         "feat": "Spellcasting",
         "tag": "Starborn"
-      },
-      "quality_flags": [
-        "missing_description"
-      ]
+      }
     },
     {
       "id": "spell-0-starlight",

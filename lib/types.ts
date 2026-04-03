@@ -120,6 +120,7 @@ export interface Feat {
   tag?: string;
   tier?: number;
   required?: string;
+  path_investment?: string;
   description_markdown: string;
   traits: string[];
   raw_markdown: string;
