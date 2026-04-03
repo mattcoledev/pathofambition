@@ -1,0 +1,1272 @@
+{
+  "metadata": {
+    "schema_version": "poa.content.v1",
+    "collection": "equipment",
+    "migrated_from": "equipment_data.json"
+  },
+  "document": {
+    "title": "Equipment v3Booklet",
+    "source_type": "pdf_booklet_extract",
+    "pages": [
+      16,
+      17,
+      18,
+      19
+    ]
+  },
+  "rules": {
+    "recovery": {
+      "respites": {
+        "duration": "10-60 minutes",
+        "uses_per_adventurer": 3,
+        "restore": {
+          "vitality": "Body x2, minimum 4",
+          "ambition": "Will, minimum 4"
+        }
+      },
+      "long_rest": {
+        "duration": "6-8 hours",
+        "timing": "End of adventure day",
+        "restore": {
+          "vitality": "Body x3, minimum 10",
+          "ambition": "Will x2, minimum 10",
+          "reservoirs": "Spellcasting Modifier x2, minimum 9",
+          "respites": "Regain 1 use"
+        }
+      },
+      "full_rest": {
+        "duration": "48 hours",
+        "location_requirement": "safe location",
+        "restore": {
+          "vitality": "full",
+          "ambition": "full",
+          "respites": "full",
+          "reservoirs": "Spellcasting Modifier x3, minimum 18",
+          "wounds": "Remove 1"
+        }
+      }
+    },
+    "medicine_healing": {
+      "frequency": "Once per hour per target",
+      "roll_basis": "Awareness or Intuition skill check",
+      "tier_restore": {
+        "1": "1d6",
+        "2": "2d6",
+        "3": "2d8",
+        "4": "3d8"
+      }
+    },
+    "inventory": {
+      "item_slots": {
+        "default_rule": "All items take 1 slot unless Light or Heavy",
+        "light": "Up to 10 per slot",
+        "heavy": "Takes 2 slots"
+      },
+      "carry_weight_formula": "5 + Body + Tier",
+      "notes": [
+        "Pack upgrades can allow additional slots",
+        "Full inventory means items cannot be stowed but can still be physically carried"
+      ]
+    },
+    "kits_rules": {
+      "description": "Special equipment that improves certain tasks",
+      "passive_effect": "+1 automatic success on relevant skill check",
+      "proficiency_rule": "If associated Tool Proficiency, apply Bonus on Success and Critical on Critical Success",
+      "default_uses": 10
+    },
+    "weapon_groups": {
+      "groups": [
+        "Simple",
+        "Martial",
+        "Finesse",
+        "Ranged",
+        "Defensive",
+        "Catalysts"
+      ],
+      "notes": [
+        "Weapons may belong to multiple groups"
+      ]
+    },
+    "armor_rules": {
+      "armor_types": [
+        "Light",
+        "Medium",
+        "Heavy"
+      ],
+      "summary": "Armor types mainly differ by max Armor Bonus and Modification Slots",
+      "shield_summary": "Shields follow armor type proficiency restrictions",
+      "reduction_pool": {
+        "summary": "Can absorb visible offensive attacks instead of vitality damage once per turn",
+        "disabled_threshold": "If below 1/4 max, shield no longer grants Armor Bonus until repaired"
+      }
+    },
+    "equipment_uses": {
+      "summary": "Some items have Uses; when expended the slot is freed",
+      "recharge_note": "Some magic items use recharge cooldowns"
+    },
+    "ammunition_rules": {
+      "default_rule": "Ranged weapons are assumed to have enough ammo for one skirmish",
+      "tracked_when": [
+        "Gritty or survival tracking is used",
+        "Weapon has Thrown",
+        "Special ammunition is used"
+      ],
+      "thrown_rule": "Thrown weapons must track carried total and may be recovered after skirmish or via Interact",
+      "special_ammo_rule": "Special ammo is always tracked and consumed on hit or miss",
+      "quality_rules": {
+        "ammo_and_container_quality": true,
+        "masterwork_bonus_sources": [
+          "Ammo",
+          "Ammo Container",
+          "Weapon"
+        ],
+        "cap": {
+          "ammo": 2,
+          "container": 2
+        },
+        "note": "Special ammo benefits from container bonus unless stated otherwise"
+      }
+    },
+    "masterwork_quality": {
+      "tiers": [
+        {
+          "name": "Common",
+          "bonus": 0
+        },
+        {
+          "name": "Superior",
+          "bonus": 1
+        },
+        {
+          "name": "Mastered",
+          "bonus": 2
+        },
+        {
+          "name": "Fabled",
+          "bonus": 3
+        }
+      ],
+      "applies_to": [
+        "attack rolls",
+        "damage rolls",
+        "armor bonuses"
+      ],
+      "stacking_rule": "Only one quality bonus applies per item"
+    },
+    "augments_and_magic_items": {
+      "augments": {
+        "summary": "Installed in item augment slots; can be passive, triggered, or limited-use",
+        "slot_limits": {
+          "weapons": 2,
+          "armor": "depends on type"
+        },
+        "rules": [
+          "Cannot exceed listed augment capacity",
+          "Removing or replacing requires appropriate tools and downtime",
+          "If an augment produces magical effects, the item counts as magical"
+        ]
+      },
+      "magic_items": {
+        "summary": "Normal equipment with additional effects",
+        "notes": [
+          "May use charges, cooldowns, or recharge conditions",
+          "May also possess masterwork quality"
+        ]
+      }
+    }
+  },
+  "item_traits": [
+    {
+      "id": "trait-adaptive",
+      "name": "Adaptive",
+      "alias": null,
+      "effect": "1H or 2H; if 2H, step damage die up, max d12"
+    },
+    {
+      "id": "trait-brace",
+      "name": "Brace",
+      "alias": null,
+      "effect": "Can be used with the Brace action"
+    },
+    {
+      "id": "trait-catalyst",
+      "name": "Catalyst",
+      "alias": null,
+      "effect": "Can cast spells while wielding this item"
+    },
+    {
+      "id": "trait-concealable",
+      "name": "Concealable",
+      "alias": null,
+      "effect": "Can attempt Dex skill check to keep it hidden"
+    },
+    {
+      "id": "trait-fragile-x",
+      "name": "Fragile X",
+      "alias": null,
+      "effect": "After dealing/taking damage, roll d6; if result <= X, it breaks and is unequipped"
+    },
+    {
+      "id": "trait-heavy",
+      "name": "Heavy",
+      "alias": null,
+      "effect": "Requires Body 3+ and Vigor, can't dual wield; +1 damage die on crits"
+    },
+    {
+      "id": "trait-hidden",
+      "name": "Hidden",
+      "alias": null,
+      "effect": "Can be concealed without a check"
+    },
+    {
+      "id": "trait-light",
+      "name": "Light",
+      "alias": null,
+      "effect": "One-handed; no dual-wield attack penalty"
+    },
+    {
+      "id": "trait-loud",
+      "name": "Loud",
+      "alias": null,
+      "effect": "Strain on Hide and while staying Hidden"
+    },
+    {
+      "id": "trait-reach",
+      "name": "Reach",
+      "alias": null,
+      "effect": "Melee strike without engaging"
+    },
+    {
+      "id": "trait-reload-x",
+      "name": "Reload X",
+      "alias": null,
+      "effect": "AP needed to reload"
+    },
+    {
+      "id": "trait-rend",
+      "name": "Rend",
+      "alias": null,
+      "effect": "1/turn after a hit, make one extra attack vs another target in engagement; deals weapon modifier damage"
+    },
+    {
+      "id": "trait-piercer-x",
+      "name": "Piercer X",
+      "alias": null,
+      "effect": "Vs heavy armor/natural armor, deal +2 damage per Piercer level"
+    },
+    {
+      "id": "trait-thrown",
+      "name": "Thrown",
+      "alias": null,
+      "effect": "Can be used at range"
+    },
+    {
+      "id": "trait-two-handed",
+      "name": "Two-handed",
+      "alias": "2H",
+      "effect": "Requires two hands"
+    }
+  ],
+  "weapons": [
+    {
+      "id": "weapon-baton",
+      "name": "Baton",
+      "slug": "baton",
+      "groups": [
+        "Simple"
+      ],
+      "damage": "1d4",
+      "damage_types": [
+        "B"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Light"
+      ],
+      "cost": 4
+    },
+    {
+      "id": "weapon-cestus",
+      "name": "Cestus",
+      "slug": "cestus",
+      "groups": [
+        "Simple",
+        "Finesse"
+      ],
+      "damage": "1d6",
+      "damage_types": [
+        "B"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Hidden",
+        "Light"
+      ],
+      "cost": 3
+    },
+    {
+      "id": "weapon-cleaver",
+      "name": "Cleaver",
+      "slug": "cleaver",
+      "groups": [
+        "Martial"
+      ],
+      "damage": "1d10",
+      "damage_types": [
+        "S"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Heavy",
+        "Rend"
+      ],
+      "cost": null
+    },
+    {
+      "id": "weapon-dagger",
+      "name": "Dagger",
+      "slug": "dagger",
+      "groups": [
+        "Simple",
+        "Finesse"
+      ],
+      "damage": "1d4",
+      "damage_types": [
+        "S",
+        "P"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Light",
+        "Concealable"
+      ],
+      "cost": 4
+    },
+    {
+      "id": "weapon-great-axe",
+      "name": "Great axe",
+      "slug": "great-axe",
+      "groups": [
+        "Martial"
+      ],
+      "damage": "1d12",
+      "damage_types": [
+        "S"
+      ],
+      "range_bands": [
+        "M",
+        "C"
+      ],
+      "traits": [
+        "Heavy",
+        "Rend",
+        "Thrown",
+        "2H"
+      ],
+      "cost": 150
+    },
+    {
+      "id": "weapon-greatclub",
+      "name": "Greatclub",
+      "slug": "greatclub",
+      "groups": [
+        "Simple"
+      ],
+      "damage": "1d10",
+      "damage_types": [
+        "B"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Heavy"
+      ],
+      "cost": 10
+    },
+    {
+      "id": "weapon-greatsword",
+      "name": "Greatsword",
+      "slug": "greatsword",
+      "groups": [
+        "Martial"
+      ],
+      "damage": "1d10(2d6)",
+      "damage_types": [
+        "S"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Heavy",
+        "Adaptive"
+      ],
+      "cost": 200
+    },
+    {
+      "id": "weapon-halberd",
+      "name": "Halberd",
+      "slug": "halberd",
+      "groups": [
+        "Martial"
+      ],
+      "damage": "1d10",
+      "damage_types": [
+        "P"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Heavy",
+        "Reach",
+        "2H"
+      ],
+      "cost": 75
+    },
+    {
+      "id": "weapon-hand-axe",
+      "name": "Hand axe",
+      "slug": "hand-axe",
+      "groups": [
+        "Simple"
+      ],
+      "damage": "1d6",
+      "damage_types": [
+        "S"
+      ],
+      "range_bands": [
+        "M",
+        "C"
+      ],
+      "traits": [
+        "Light",
+        "Thrown"
+      ],
+      "cost": 5
+    },
+    {
+      "id": "weapon-hand-crossbow",
+      "name": "Hand crossbow",
+      "slug": "hand-crossbow",
+      "groups": [
+        "Ranged",
+        "Finesse"
+      ],
+      "damage": "1d4",
+      "damage_types": [
+        "P"
+      ],
+      "range_bands": [
+        "C"
+      ],
+      "traits": [
+        "Concealable",
+        "Light",
+        "Reload 1"
+      ],
+      "cost": 15
+    },
+    {
+      "id": "weapon-heavy-crossbow",
+      "name": "Heavy crossbow",
+      "slug": "heavy-crossbow",
+      "groups": [
+        "Ranged",
+        "Martial"
+      ],
+      "damage": "1d8",
+      "damage_types": [
+        "P"
+      ],
+      "range_bands": [
+        "F"
+      ],
+      "traits": [
+        "Brace",
+        "Piercer",
+        "Reload 1",
+        "2H"
+      ],
+      "cost": 25
+    },
+    {
+      "id": "weapon-javelin",
+      "name": "Javelin",
+      "slug": "javelin",
+      "groups": [
+        "Simple",
+        "Ranged"
+      ],
+      "damage": "1d6",
+      "damage_types": [
+        "P"
+      ],
+      "range_bands": [
+        "N"
+      ],
+      "traits": [
+        "Thrown"
+      ],
+      "cost": 5
+    },
+    {
+      "id": "weapon-light-bow",
+      "name": "Light bow",
+      "slug": "light-bow",
+      "groups": [
+        "Ranged"
+      ],
+      "damage": "1d6",
+      "damage_types": [
+        "P"
+      ],
+      "range_bands": [
+        "C"
+      ],
+      "traits": [
+        "Light",
+        "2H"
+      ],
+      "cost": 15
+    },
+    {
+      "id": "weapon-light-crossbow",
+      "name": "Light crossbow",
+      "slug": "light-crossbow",
+      "groups": [
+        "Ranged",
+        "Finesse"
+      ],
+      "damage": "1d6",
+      "damage_types": [
+        "P"
+      ],
+      "range_bands": [
+        "N"
+      ],
+      "traits": [
+        "Piercer",
+        "Reload 1",
+        "2H"
+      ],
+      "cost": 20
+    },
+    {
+      "id": "weapon-longbow",
+      "name": "Longbow",
+      "slug": "longbow",
+      "groups": [
+        "Ranged",
+        "Martial"
+      ],
+      "damage": "1d10",
+      "damage_types": [
+        "P"
+      ],
+      "range_bands": [
+        "F"
+      ],
+      "traits": [
+        "Brace",
+        "2H"
+      ],
+      "cost": 45
+    },
+    {
+      "id": "weapon-longsword",
+      "name": "Longsword",
+      "slug": "longsword",
+      "groups": [
+        "Martial"
+      ],
+      "damage": "1d8(d10)",
+      "damage_types": [
+        "S"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Adaptive"
+      ],
+      "cost": 100
+    },
+    {
+      "id": "weapon-lucerne",
+      "name": "Lucerne",
+      "slug": "lucerne",
+      "groups": [
+        "Martial"
+      ],
+      "damage": "1d12",
+      "damage_types": [
+        "B"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Heavy",
+        "Piercer 2",
+        "2H"
+      ],
+      "cost": 125
+    },
+    {
+      "id": "weapon-mace",
+      "name": "Mace",
+      "slug": "mace",
+      "groups": [
+        "Martial"
+      ],
+      "damage": "1d8",
+      "damage_types": [
+        "B"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Brace"
+      ],
+      "cost": 50
+    },
+    {
+      "id": "weapon-morningstar",
+      "name": "Morningstar",
+      "slug": "morningstar",
+      "groups": [
+        "Martial"
+      ],
+      "damage": "1d6",
+      "damage_types": [
+        "B",
+        "P"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Piercer"
+      ],
+      "cost": 40
+    },
+    {
+      "id": "weapon-net",
+      "name": "Net",
+      "slug": "net",
+      "groups": [
+        "Simple",
+        "Ranged"
+      ],
+      "damage": null,
+      "damage_types": [],
+      "range_bands": [
+        "C"
+      ],
+      "traits": [
+        "Restraint",
+        "Pull"
+      ],
+      "cost": 10
+    },
+    {
+      "id": "weapon-pike",
+      "name": "Pike",
+      "slug": "pike",
+      "groups": [
+        "Simple",
+        "Martial"
+      ],
+      "damage": "1d10",
+      "damage_types": [
+        "P"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Heavy",
+        "2H",
+        "Reach"
+      ],
+      "cost": 20
+    },
+    {
+      "id": "weapon-quarterstaff",
+      "name": "Quarterstaff",
+      "slug": "quarterstaff",
+      "groups": [
+        "Simple"
+      ],
+      "damage": "1d6(d8)",
+      "damage_types": [
+        "B"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Adaptive"
+      ],
+      "cost": 2
+    },
+    {
+      "id": "weapon-rapier",
+      "name": "Rapier",
+      "slug": "rapier",
+      "groups": [
+        "Finesse"
+      ],
+      "damage": "1d8",
+      "damage_types": [
+        "P"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Light",
+        "Piercer"
+      ],
+      "cost": 80
+    },
+    {
+      "id": "weapon-scimitar",
+      "name": "Scimitar",
+      "slug": "scimitar",
+      "groups": [
+        "Finesse"
+      ],
+      "damage": "1d6",
+      "damage_types": [
+        "S"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Light",
+        "Rend"
+      ],
+      "cost": 50
+    },
+    {
+      "id": "weapon-short-sword",
+      "name": "Short sword",
+      "slug": "short-sword",
+      "groups": [
+        "Simple",
+        "Finesse"
+      ],
+      "damage": "1d6",
+      "damage_types": [
+        "S",
+        "P"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Light"
+      ],
+      "cost": 10
+    },
+    {
+      "id": "weapon-sling",
+      "name": "Sling",
+      "slug": "sling",
+      "groups": [
+        "Simple",
+        "Ranged"
+      ],
+      "damage": "Modifier",
+      "damage_types": [],
+      "range_bands": [
+        "C"
+      ],
+      "traits": [
+        "Hidden",
+        "Reload 1"
+      ],
+      "cost": 4
+    },
+    {
+      "id": "weapon-spear",
+      "name": "Spear",
+      "slug": "spear",
+      "groups": [
+        "Simple"
+      ],
+      "damage": "1d6(8)",
+      "damage_types": [
+        "P"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Adaptive"
+      ],
+      "cost": 5
+    },
+    {
+      "id": "weapon-throwing-axe",
+      "name": "Throwing axe",
+      "slug": "throwing-axe",
+      "groups": [
+        "Simple",
+        "Ranged"
+      ],
+      "damage": "1d4",
+      "damage_types": [
+        "S"
+      ],
+      "range_bands": [
+        "F"
+      ],
+      "traits": [
+        "Light",
+        "Thrown"
+      ],
+      "cost": 3
+    },
+    {
+      "id": "weapon-throwing-knife",
+      "name": "Throwing knife",
+      "slug": "throwing-knife",
+      "groups": [
+        "Finesse",
+        "Ranged"
+      ],
+      "damage": "2",
+      "damage_types": [
+        "P"
+      ],
+      "range_bands": [
+        "C"
+      ],
+      "traits": [
+        "Light",
+        "Hidden",
+        "Thrown"
+      ],
+      "cost": 1
+    },
+    {
+      "id": "weapon-war-bow",
+      "name": "War bow",
+      "slug": "war-bow",
+      "groups": [
+        "Ranged",
+        "Finesse"
+      ],
+      "damage": "1d8",
+      "damage_types": [
+        "P"
+      ],
+      "range_bands": [
+        "N"
+      ],
+      "traits": [
+        "2H"
+      ],
+      "cost": 25
+    },
+    {
+      "id": "weapon-warhammer",
+      "name": "Warhammer",
+      "slug": "warhammer",
+      "groups": [
+        "Martial"
+      ],
+      "damage": "1d8(d10)",
+      "damage_types": [
+        "B"
+      ],
+      "range_bands": [
+        "M"
+      ],
+      "traits": [
+        "Adaptive"
+      ],
+      "cost": 75
+    }
+  ],
+  "kits": [
+    {
+      "id": "kit-medical-healer-s-kit",
+      "name": "Healer's Kit",
+      "slug": "healer-s-kit",
+      "category": "medical",
+      "uses": [
+        "first aid",
+        "treat wounds",
+        "stabilize"
+      ],
+      "bonus": "+1d4 Vitality on Medical healing checks",
+      "critical": "Remove persistent non-magical condition"
+    },
+    {
+      "id": "kit-medical-injury-treatment-supplies",
+      "name": "Injury Treatment Supplies",
+      "slug": "injury-treatment-supplies",
+      "category": "medical",
+      "uses": [
+        "battlefield triage"
+      ],
+      "bonus": "Reduce Weakened by 1",
+      "critical": "1/day reduce Wounds by 1"
+    },
+    {
+      "id": "kit-medical-trauma-kit",
+      "name": "Trauma Kit",
+      "slug": "trauma-kit",
+      "category": "medical",
+      "uses": [
+        "suppress wounds on recently fallen"
+      ],
+      "bonus": "Suppress 1 Wound for an hour",
+      "critical": "1/day reduce Wounds by 1"
+    },
+    {
+      "id": "kit-alchemy-reactant-pouch",
+      "name": "Reactant Pouch",
+      "slug": "reactant-pouch",
+      "category": "alchemy",
+      "uses": [
+        "identify magical residue/materials"
+      ],
+      "bonus": null,
+      "critical": "Identify Sphere + Source"
+    },
+    {
+      "id": "kit-engineering-spare-parts",
+      "name": "Spare Parts",
+      "slug": "spare-parts",
+      "category": "engineering",
+      "uses": [
+        "craft",
+        "repair",
+        "modify equipment"
+      ],
+      "bonus": null,
+      "critical": "Crafting/repair time halved"
+    },
+    {
+      "id": "kit-engineering-repair-kit",
+      "name": "Repair Kit",
+      "slug": "repair-kit",
+      "category": "engineering",
+      "uses": [
+        "emergency repairs"
+      ],
+      "bonus": null,
+      "critical": "Temporary +1 Masterwork for 8 hours"
+    },
+    {
+      "id": "kit-engineering-polishing-kit",
+      "name": "Polishing Kit",
+      "slug": "polishing-kit",
+      "category": "engineering",
+      "uses": [
+        "weapon upkeep"
+      ],
+      "bonus": "First attack each turn using polished weapon gains Resolve next skirmish",
+      "critical": null
+    },
+    {
+      "id": "kit-crafting-trade-tools",
+      "name": "Trade Tools",
+      "slug": "trade-tools",
+      "category": "crafting",
+      "uses": [
+        "appraise goods",
+        "haggle",
+        "draft basic terms"
+      ],
+      "bonus": "Gain Resolve on the check",
+      "critical": null
+    },
+    {
+      "id": "kit-crafting-quality-assessment-tools",
+      "name": "Quality Assessment Tools",
+      "slug": "quality-assessment-tools",
+      "category": "crafting",
+      "uses": [
+        "inspect workmanship",
+        "spot counterfeits",
+        "evaluate condition"
+      ],
+      "bonus": null,
+      "critical": "Detect hidden flaws, curses, or enhancements"
+    },
+    {
+      "id": "kit-unproficient-tribal-tattoo-kit",
+      "name": "Tribal Tattoo Kit",
+      "slug": "tribal-tattoo-kit",
+      "category": "unproficient",
+      "uses": [
+        "intimidate",
+        "persuade when displaying recognized markings"
+      ],
+      "bonus": null,
+      "critical": null
+    },
+    {
+      "id": "kit-unproficient-divination-scrolls",
+      "name": "Divination Scrolls",
+      "slug": "divination-scrolls",
+      "category": "unproficient",
+      "uses": [
+        "Mysticism (Occult/Divine)",
+        "relevant Society checks for omens, rituals, doctrine"
+      ],
+      "bonus": null,
+      "critical": null
+    },
+    {
+      "id": "kit-unproficient-personal-grooming-set",
+      "name": "Personal Grooming Set",
+      "slug": "personal-grooming-set",
+      "category": "unproficient",
+      "uses": [
+        "prepare appearance for social encounters"
+      ],
+      "bonus": null,
+      "critical": null
+    },
+    {
+      "id": "kit-unproficient-forgery-tools",
+      "name": "Forgery Tools",
+      "slug": "forgery-tools",
+      "category": "unproficient",
+      "uses": [
+        "create false documents/seals"
+      ],
+      "bonus": "+1 auto on Academics/Sleight when forging",
+      "critical": "Forgery passes non-magical scrutiny on critical success"
+    },
+    {
+      "id": "kit-thievery-thieves-tools",
+      "name": "Thieves' Tools",
+      "slug": "thieves-tools",
+      "category": "thievery",
+      "uses": [
+        "pick locks",
+        "disable traps",
+        "bypass simple mechanisms"
+      ],
+      "bonus": "Upgrade 2d6 to 2d8 on the check",
+      "critical": null
+    },
+    {
+      "id": "kit-thievery-disguise-kit",
+      "name": "Disguise Kit",
+      "slug": "disguise-kit",
+      "category": "thievery",
+      "uses": [
+        "create a disguise",
+        "maintain a false identity"
+      ],
+      "bonus": "+1 automatic success to Deception",
+      "critical": null
+    },
+    {
+      "id": "kit-outrider-survival-kit",
+      "name": "Survival Kit",
+      "slug": "survival-kit",
+      "category": "outrider",
+      "uses": [
+        "endure forced marches",
+        "resist climate/hazards"
+      ],
+      "bonus": "Upgrade 2d6 to 2d8 on the check",
+      "critical": null
+    },
+    {
+      "id": "kit-outrider-wilderness-survival-kit",
+      "name": "Wilderness Survival Kit",
+      "slug": "wilderness-survival-kit",
+      "category": "outrider",
+      "uses": [
+        "track",
+        "forage",
+        "improvise shelter"
+      ],
+      "bonus": "+1 auto on Survival (Awareness); in natural terrain, treat two dice showing 1-2 as 3",
+      "critical": null
+    },
+    {
+      "id": "kit-outrider-animal-handling-kit",
+      "name": "Animal Handling Kit",
+      "slug": "animal-handling-kit",
+      "category": "outrider",
+      "uses": [
+        "calm/direct/diagnose animals",
+        "use treats"
+      ],
+      "bonus": null,
+      "critical": "Animals treat you friendlier or indifferent"
+    },
+    {
+      "id": "kit-outrider-navigation-tools",
+      "name": "Navigation Tools",
+      "slug": "navigation-tools",
+      "category": "outrider",
+      "uses": [
+        "chart a course",
+        "use maps to avoid becoming lost"
+      ],
+      "bonus": null,
+      "critical": "Travel time -50%"
+    },
+    {
+      "id": "kit-outrider-fishing-gear",
+      "name": "Fishing Gear",
+      "slug": "fishing-gear",
+      "category": "outrider",
+      "uses": [
+        "harvest aquatic food"
+      ],
+      "bonus": null,
+      "critical": "Double quantity or choose higher quality catch"
+    }
+  ],
+  "kit_legends": {
+    "legends": {
+      "bonus_label": "B",
+      "critical_label": "C"
+    }
+  },
+  "shields": [
+    {
+      "id": "shield-improvised-shield",
+      "name": "Improvised Shield",
+      "slug": "improvised-shield",
+      "shield_type": null,
+      "armor_type": null,
+      "bonus": {
+        "raw": null,
+        "value": null
+      },
+      "reduction_pool": 10,
+      "traits": [
+        "Fragile 3"
+      ]
+    },
+    {
+      "id": "shield-buckler",
+      "name": "Buckler",
+      "slug": "buckler",
+      "shield_type": "Light",
+      "armor_type": "Light",
+      "bonus": {
+        "raw": "+1",
+        "value": 1
+      },
+      "reduction_pool": 10,
+      "traits": []
+    },
+    {
+      "id": "shield-shield",
+      "name": "Shield",
+      "slug": "shield",
+      "shield_type": "Medium",
+      "armor_type": "Medium",
+      "bonus": {
+        "raw": "+1",
+        "value": 1
+      },
+      "reduction_pool": 15,
+      "traits": []
+    },
+    {
+      "id": "shield-reinforced-shield",
+      "name": "Reinforced Shield",
+      "slug": "reinforced-shield",
+      "shield_type": "Medium",
+      "armor_type": "Medium",
+      "bonus": {
+        "raw": "+2",
+        "value": 2
+      },
+      "reduction_pool": 25,
+      "traits": [
+        "Brace"
+      ]
+    },
+    {
+      "id": "shield-tower-shield",
+      "name": "Tower Shield",
+      "slug": "tower-shield",
+      "shield_type": "Heavy",
+      "armor_type": "Heavy",
+      "bonus": {
+        "raw": "+2(3)",
+        "value": 2
+      },
+      "reduction_pool": 40,
+      "traits": [
+        "Adaptive (Brace)"
+      ]
+    }
+  ],
+  "armor_types": [
+    {
+      "id": "armor-type-unarmored",
+      "type": "Unarmored",
+      "bonus_range": "0",
+      "traits": [],
+      "augment_slots": "0"
+    },
+    {
+      "id": "armor-type-light",
+      "type": "Light",
+      "bonus_range": "+1-3",
+      "traits": [],
+      "augment_slots": "0-1"
+    },
+    {
+      "id": "armor-type-medium",
+      "type": "Medium",
+      "bonus_range": "+3-5",
+      "traits": [
+        "Loud (Some)"
+      ],
+      "augment_slots": "1-2"
+    },
+    {
+      "id": "armor-type-heavy",
+      "type": "Heavy",
+      "bonus_range": "+5-7",
+      "traits": [
+        "Loud"
+      ],
+      "augment_slots": "2-3"
+    }
+  ],
+  "abbreviations": {
+    "damage_types": {
+      "B": "Blunt",
+      "P": "Puncture",
+      "S": "Slash"
+    },
+    "ranges": {
+      "M": "Melee",
+      "C": "Close",
+      "N": "Nearby",
+      "F": "Far"
+    }
+  }
+}

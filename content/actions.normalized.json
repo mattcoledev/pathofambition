@@ -1,0 +1,739 @@
+{
+  "metadata": {
+    "schema_version": "poa.content.v1",
+    "collection": "actions",
+    "migrated_from": "actions_data.json"
+  },
+  "action_groups": [
+    {
+      "id": "offensive",
+      "name": "Offensive",
+      "description": "These are actions that are taken with the intent to cause harm to another target, whether it be lethal or non-lethal damage.",
+      "rules": [
+        "After taking an action with the offensive action trait, any following offensive actions take an additional -5 penalty to their total roll."
+      ],
+      "sort_order": 1
+    },
+    {
+      "id": "maneuver",
+      "name": "Maneuver",
+      "description": "These are actions that need you to be able to have your movement or body unhindered. These actions may range from charging full speed into the enemy, or dodging an attack.",
+      "rules": [],
+      "sort_order": 2
+    },
+    {
+      "id": "utility_actions",
+      "name": "Utility Actions",
+      "description": "Actions that bolster allies or hinder foes. They rarely deal direct damage, but improve positioning, rolls, survivability, or tempo.",
+      "rules": [],
+      "sort_order": 3
+    },
+    {
+      "id": "general_actions",
+      "name": "General Actions",
+      "description": "Universal actions available to all characters that don’t depend on special training or class features.",
+      "rules": [],
+      "sort_order": 4
+    },
+    {
+      "id": "narrative_actions",
+      "name": "Narrative Actions",
+      "description": "Light, low-impact activities used primarily for expression, exploration, or minor interaction. They generally cost little or no AP and are limited by context rather than mechanics.",
+      "rules": [],
+      "sort_order": 5
+    },
+    {
+      "id": "passive",
+      "name": "Passive",
+      "description": "Always-active abilities that function automatically unless you're downed, unconscious, or dead. Passives are active all the time and do not require AP to use.",
+      "rules": [],
+      "sort_order": 6
+    },
+    {
+      "id": "triggers",
+      "name": "Triggers",
+      "description": "Reactive abilities that activate when specific conditions are met. Each trigger can only activate once per round but may chain-activate other triggers. Feats or abilities that list abilities that are triggers will state whether or not they consume AP.",
+      "rules": [],
+      "sort_order": 7
+    }
+  ],
+  "actions": [
+    {
+      "id": "weapon_strike",
+      "name": "Weapon Strike",
+      "slug": "weapon-strike",
+      "group_id": "offensive",
+      "group_name": "Offensive",
+      "sort_order": 1,
+      "activation": {
+        "raw": "2 AP",
+        "resources": {
+          "ap": 2
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Make a standard weapon attack against a target’s Armor defense. Applies to melee and ranged weapons unless otherwise specified.",
+      "outcomes": []
+    },
+    {
+      "id": "dual_strike",
+      "name": "Dual Strike",
+      "slug": "dual-strike",
+      "group_id": "offensive",
+      "group_name": "Offensive",
+      "sort_order": 2,
+      "activation": {
+        "raw": "2 AP",
+        "resources": {
+          "ap": 2
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Make one attack with each wielded weapon. Take -5 penalty to both attacks and no attribute damage modifiers. If both weapons have the light trait, you may add your attribute damage modifiers to each attack.",
+      "outcomes": []
+    },
+    {
+      "id": "power_strike",
+      "name": "Power Strike",
+      "slug": "power-strike",
+      "group_id": "offensive",
+      "group_name": "Offensive",
+      "sort_order": 3,
+      "activation": {
+        "raw": "3 AP",
+        "resources": {
+          "ap": 3
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Attack once with a Weapon Stirke or Cast a Spell casting a Cantrip dealing damage. On a hit roll 2 times the amount of dice rolled for damage of dice; modifiers, enchantments, and augmentations are unaffected. This attack is made at a -5 penalty.",
+      "outcomes": []
+    },
+    {
+      "id": "rebound_strike",
+      "name": "Rebound Strike",
+      "slug": "rebound-strike",
+      "group_id": "offensive",
+      "group_name": "Offensive",
+      "sort_order": 4,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": "Failed Power Strike this turn using a Weapon",
+      "description": "Come back again for a quick and dirty attack. On success, deal half weapon damage and modifiers. On critical, deal normal damage without critical damage bonus.",
+      "outcomes": []
+    },
+    {
+      "id": "cast_a_spell",
+      "name": "Cast a Spell",
+      "slug": "cast-a-spell",
+      "group_id": "offensive",
+      "group_name": "Offensive",
+      "sort_order": 5,
+      "activation": {
+        "raw": "2 AP",
+        "resources": {
+          "ap": 2
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": "Have a Spellcasting feat or casting a Vellum with a Spell with a Tier of 1 or higher.",
+      "description": "Activate a spell from your list of prepared or known spells. This includes direct, zone, or utility spells unless otherwise specified by the spell.",
+      "outcomes": []
+    },
+    {
+      "id": "snap_cantrip",
+      "name": "Snap Cantrip",
+      "slug": "snap-cantrip",
+      "group_id": "offensive",
+      "group_name": "Offensive",
+      "sort_order": 6,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": "Used Cast a Spell action this turn",
+      "description": "Use an Cantrip after you have taken the Cast a Spell action.",
+      "outcomes": []
+    },
+    {
+      "id": "alchemical_item_enemy",
+      "name": "Alchemical Item (Enemy)",
+      "slug": "alchemical-item-enemy",
+      "group_id": "offensive",
+      "group_name": "Offensive",
+      "sort_order": 7,
+      "activation": {
+        "raw": "2 AP",
+        "resources": {
+          "ap": 2
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Use an alchemical item on a target that would intend to cause harm, adversarial effects or conditions. Make either a ranged or melee attack roll against the target's Armor.",
+      "outcomes": []
+    },
+    {
+      "id": "grapple",
+      "name": "Grapple",
+      "slug": "grapple",
+      "group_id": "offensive",
+      "group_name": "Offensive",
+      "sort_order": 8,
+      "activation": {
+        "raw": "2 AP",
+        "resources": {
+          "ap": 2
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Make a Body check against the Body defense of a target that is the same size as you or one size smaller.",
+      "outcomes": [
+        {
+          "result": "success",
+          "effect": "The target becomes Restrained."
+        },
+        {
+          "result": "critical_success",
+          "effect": "You may knock the target Prone instead of restraining them."
+        }
+      ]
+    },
+    {
+      "id": "shield_bash",
+      "name": "Shield Bash",
+      "slug": "shield-bash",
+      "group_id": "offensive",
+      "group_name": "Offensive",
+      "sort_order": 9,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "If wielding a shield, make a single attack using your shield based upon its type. No damage modifier is applied if you do not have proficiency with shields.",
+      "outcomes": []
+    },
+    {
+      "id": "shove",
+      "name": "Shove",
+      "slug": "shove",
+      "group_id": "offensive",
+      "group_name": "Offensive",
+      "sort_order": 10,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Attempt to push a creature of equal or lesser size using a Body against the target's Body defense. Can push a target out of an engagement, or close distance on a critical success.",
+      "outcomes": []
+    },
+    {
+      "id": "trip",
+      "name": "Trip",
+      "slug": "trip",
+      "group_id": "offensive",
+      "group_name": "Offensive",
+      "sort_order": 11,
+      "activation": {
+        "raw": "2 AP",
+        "resources": {
+          "ap": 2
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Make a Body check against the target’s Body defense. On success, the target is knocked Prone.",
+      "outcomes": []
+    },
+    {
+      "id": "dash",
+      "name": "Dash",
+      "slug": "dash",
+      "group_id": "maneuver",
+      "group_name": "Maneuver",
+      "sort_order": 1,
+      "activation": {
+        "raw": "2 AP",
+        "resources": {
+          "ap": 2
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Move to an adjacent zone. Upon entering a new zone, you may freely reposition within that zone unless you become Engaged.",
+      "outcomes": []
+    },
+    {
+      "id": "disengage",
+      "name": "Disengage",
+      "slug": "disengage",
+      "group_id": "maneuver",
+      "group_name": "Maneuver",
+      "sort_order": 2,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Break free from an engagement. After disengaging, reposition anywhere within the zone that is reasonably reachable without changing zones. You cannot be targeted by a Held Action when you use Disengage.",
+      "outcomes": []
+    },
+    {
+      "id": "dodge",
+      "name": "Dodge",
+      "slug": "dodge",
+      "group_id": "maneuver",
+      "group_name": "Maneuver",
+      "sort_order": 3,
+      "activation": {
+        "raw": "2 AP",
+        "resources": {
+          "ap": 2
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Adopt a defensive stance. Until the end of your next turn, enemies targeting you have Strain on attacks and spell attacks against you.",
+      "outcomes": []
+    },
+    {
+      "id": "hide",
+      "name": "Hide",
+      "slug": "hide",
+      "group_id": "maneuver",
+      "group_name": "Maneuver",
+      "sort_order": 4,
+      "activation": {
+        "raw": "2 AP",
+        "resources": {
+          "ap": 2
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Make a Stealth check (d20 + Body modifiers) against a target’s Mind defense to become Unaware or Hidden to that target. On a critical success, gain +3 to Body defense against Scan actions.",
+      "outcomes": []
+    },
+    {
+      "id": "jump",
+      "name": "Jump",
+      "slug": "jump",
+      "group_id": "maneuver",
+      "group_name": "Maneuver",
+      "sort_order": 5,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Leap across a gap, up to a ledge, or to a location requiring a might or dexterity check. Used for overcoming obstacles or reaching terrain.",
+      "outcomes": []
+    },
+    {
+      "id": "aid",
+      "name": "Aid",
+      "slug": "aid",
+      "group_id": "utility_actions",
+      "group_name": "Utility Actions",
+      "sort_order": 1,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Attempt to remove or mitigate a condition affecting an ally. Requires a relevant skill check (e.g., medicine, vigor, or essence).",
+      "outcomes": []
+    },
+    {
+      "id": "alchemical_item_ally",
+      "name": "Alchemical Item (Ally)",
+      "slug": "alchemical-item-ally",
+      "group_id": "utility_actions",
+      "group_name": "Utility Actions",
+      "sort_order": 2,
+      "activation": {
+        "raw": "2 AP",
+        "resources": {
+          "ap": 2
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Use an alchemical item on an ally other than yourself, and does not have any hostile or adversarial effects or conditions.",
+      "outcomes": []
+    },
+    {
+      "id": "assist",
+      "name": "Assist",
+      "slug": "assist",
+      "group_id": "utility_actions",
+      "group_name": "Utility Actions",
+      "sort_order": 3,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Grant an ally within touch range Resolve on their next non-combative roll. Cannot be used more than once per 10 minutes per target.",
+      "outcomes": []
+    },
+    {
+      "id": "distract",
+      "name": "Distract",
+      "slug": "distract",
+      "group_id": "utility_actions",
+      "group_name": "Utility Actions",
+      "sort_order": 4,
+      "activation": {
+        "raw": "2 AP",
+        "resources": {
+          "ap": 2
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Choose a target within close range. Select one of the target’s defenses (Body, Mind, or Will). Make a check using the matching attribute. On a success, the target suffers Strain on their next check using that defense.",
+      "outcomes": []
+    },
+    {
+      "id": "flank",
+      "name": "Flank",
+      "slug": "flank",
+      "group_id": "utility_actions",
+      "group_name": "Utility Actions",
+      "sort_order": 5,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Choose a target you are engaged with. The next ally who attacks that target gains Resolve on their attack roll.",
+      "outcomes": []
+    },
+    {
+      "id": "scan",
+      "name": "Scan",
+      "slug": "scan",
+      "group_id": "general_actions",
+      "group_name": "General Actions",
+      "sort_order": 1,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Use Scan to locate creatures attempting to hide or remain hidden.",
+      "outcomes": [
+        {
+          "result": "success",
+          "effect": "The target’s visibility state improves one step relative to you: Hidden → Unaware → Visible"
+        },
+        {
+          "result": "critical_success",
+          "effect": "The target becomes Visible to you and all of your allies."
+        }
+      ]
+    },
+    {
+      "id": "perception",
+      "name": "Perception",
+      "slug": "perception",
+      "group_id": "general_actions",
+      "group_name": "General Actions",
+      "sort_order": 2,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Use Perception to observe, examine, or interpret your surroundings.",
+      "outcomes": []
+    },
+    {
+      "id": "brace",
+      "name": "Brace",
+      "slug": "brace",
+      "group_id": "general_actions",
+      "group_name": "General Actions",
+      "sort_order": 3,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Gain +2 to attacks for weapons, and +2 to armor bonus for shields with the brace trait until end of your next turn.",
+      "outcomes": []
+    },
+    {
+      "id": "alchemical_item_self",
+      "name": "Alchemical Item (Self)",
+      "slug": "alchemical-item-self",
+      "group_id": "general_actions",
+      "group_name": "General Actions",
+      "sort_order": 4,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Use an alchemical on yourself.",
+      "outcomes": []
+    },
+    {
+      "id": "cover",
+      "name": "Cover",
+      "slug": "cover",
+      "group_id": "general_actions",
+      "group_name": "General Actions",
+      "sort_order": 5,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Move into or out of a protective position in your current zone to gain or leave a cover bonus.",
+      "outcomes": []
+    },
+    {
+      "id": "skill_use_complex",
+      "name": "Skill Use (Complex)",
+      "slug": "skill-use-complex",
+      "group_id": "general_actions",
+      "group_name": "General Actions",
+      "sort_order": 6,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Perform a demanding or involved Skill Check, such as lockpicking, disabling traps, or deciphering magical runes.",
+      "outcomes": []
+    },
+    {
+      "id": "stand",
+      "name": "Stand",
+      "slug": "stand",
+      "group_id": "general_actions",
+      "group_name": "General Actions",
+      "sort_order": 7,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Stand up from the prone position. Once standing, you lose the Prone condition.",
+      "outcomes": []
+    },
+    {
+      "id": "go_prone",
+      "name": "Go Prone",
+      "slug": "go-prone",
+      "group_id": "general_actions",
+      "group_name": "General Actions",
+      "sort_order": 8,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Drop to the ground to gain half cover against ranged attacks, and gain the Prone condition.",
+      "outcomes": []
+    },
+    {
+      "id": "command",
+      "name": "Command",
+      "slug": "command",
+      "group_id": "narrative_actions",
+      "group_name": "Narrative Actions",
+      "sort_order": 1,
+      "activation": {
+        "raw": "1 AP / 3 AP",
+        "resources": {
+          "ap": 4
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "You issue commands to a summoned creature or pet, expending your AP instead of theirs to perform actions of 2 AP or less. Cost to use Command increases to 3 AP after first use, and resets to 1 AP at start of next turn.",
+      "outcomes": []
+    },
+    {
+      "id": "recollection",
+      "name": "Recollection",
+      "slug": "recollection",
+      "group_id": "narrative_actions",
+      "group_name": "Narrative Actions",
+      "sort_order": 2,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Use Lore skill check to uncover, remember, or analyze information relevant to the scene or target.",
+      "outcomes": []
+    },
+    {
+      "id": "persuade_deceive_interrogate",
+      "name": "Persuade / Deceive / Interrogate",
+      "slug": "persuade-deceive-interrogate",
+      "group_id": "narrative_actions",
+      "group_name": "Narrative Actions",
+      "sort_order": 3,
+      "activation": {
+        "raw": "1 AP",
+        "resources": {
+          "ap": 1
+        },
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Make a Social (Will) skill check against a chosen target. The DC is equal to the target’s Tier, unless the creature is immune to charm or social influence. If the target is hostile, increase the Difficulty Tier by 1 (maximum Tier 7).",
+      "outcomes": []
+    },
+    {
+      "id": "interact",
+      "name": "Interact",
+      "slug": "interact",
+      "group_id": "narrative_actions",
+      "group_name": "Narrative Actions",
+      "sort_order": 4,
+      "activation": {
+        "raw": "-",
+        "resources": {},
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Manipulate small objects such as doors, levers, or drawing a weapon. This can only be done once per turn at no cost, and further uses of Interact cost 1 AP.",
+      "outcomes": []
+    },
+    {
+      "id": "speak_gesture",
+      "name": "Speak / Gesture",
+      "slug": "speak-gesture",
+      "group_id": "narrative_actions",
+      "group_name": "Narrative Actions",
+      "sort_order": 5,
+      "activation": {
+        "raw": "-",
+        "resources": {},
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "Give verbal commands, communicate intentions, or signal allies.",
+      "outcomes": []
+    },
+    {
+      "id": "held_action_declare",
+      "name": "Held Action (Declare)",
+      "slug": "held-action-declare",
+      "group_id": "narrative_actions",
+      "group_name": "Narrative Actions",
+      "sort_order": 6,
+      "activation": {
+        "raw": "-",
+        "resources": {},
+        "properties": {},
+        "notes": []
+      },
+      "required": null,
+      "description": "You pause your turn to wait for a specific event. When you declare a Held Action, you must describe your trigger and the action you are holding. You may only hold an action after you have finished any actions you wish to take this turn.",
+      "outcomes": []
+    }
+  ]
+}
