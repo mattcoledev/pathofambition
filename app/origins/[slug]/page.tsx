@@ -170,9 +170,9 @@ export default async function OriginDetailPage({ params }: Props) {
                   {feat.traits?.map((t) => <TraitBadge key={t} trait={t} />)}
                 </div>
               </div>
-              {feat.prerequisites && feat.prerequisites.length > 0 && (
+              {feat.required && (
                 <p style={{ fontSize: '0.8rem', color: 'var(--accent)', marginBottom: '0.5rem', fontWeight: 500 }}>
-                  Prerequisites: {feat.prerequisites.join(', ')}
+                  Requires: {feat.required}
                 </p>
               )}
               <MarkdownContent content={feat.description_markdown} />

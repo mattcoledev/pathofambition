@@ -116,14 +116,16 @@ export interface Feat {
   slug: string;
   owner_id: string;
   owner_name: string;
+  /** tag is the path label (e.g. "Infiltrator"); equals owner_name for base feats */
+  tag?: string;
+  tier?: number;
+  required?: string;
   description_markdown: string;
   traits: string[];
-  prerequisites?: string[];
   raw_markdown: string;
-  path?: string;
-  path_tier?: string | number;
   cost?: string;
   activation?: { raw: string };
+  collection_type?: string;
 }
 
 export interface FeatOwner {

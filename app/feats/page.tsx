@@ -8,6 +8,7 @@ import type { Feat } from '@/lib/types';
 export const metadata: Metadata = { title: 'Feats' };
 
 function FeatCard({ feat }: { feat: Feat }) {
+  const isPathFeat = feat.tag && feat.tag !== feat.owner_name;
   return (
     <div style={{
       padding: '1rem 1.25rem',
@@ -20,22 +21,23 @@ function FeatCard({ feat }: { feat: Feat }) {
           {feat.name}
         </h3>
         <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', flexShrink: 0 }}>
+          {feat.tier !== undefined && <TraitBadge trait={`Tier ${feat.tier}`} variant="muted" />}
           {feat.traits?.map((t) => <TraitBadge key={t} trait={t} variant="muted" />)}
-          {feat.cost && feat.cost !== '-' && <TraitBadge trait={feat.cost} variant="accent" />}
           {feat.activation?.raw && feat.activation.raw !== '-' && <TraitBadge trait={feat.activation.raw} variant="accent" />}
         </div>
       </div>
-      {feat.prerequisites && feat.prerequisites.length > 0 && (
-        <p style={{ fontSize: '0.78rem', color: 'var(--accent)', marginBottom: '0.4rem', fontWeight: 500 }}>
-          Prerequisites: {feat.prerequisites.join(', ')}
-        </p>
-      )}
-      {feat.path && (
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
-          Path: <strong style={{ color: 'var(--text)' }}>{feat.path}</strong>
-          {feat.path_tier ? ` (Tier ${feat.path_tier})` : ''}
-        </p>
-      )}
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+        {isPathFeat && (
+          <span style={{ fontSize: '0.78rem', color: 'var(--accent)', fontWeight: 500 }}>
+            Path: <strong>{feat.tag}</strong>
+          </span>
+        )}
+        {feat.required && (
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+            Requires: <strong style={{ color: 'var(--text)' }}>{feat.required}</strong>
+          </span>
+        )}
+      </div>
       <MarkdownContent content={feat.description_markdown} />
     </div>
   );
