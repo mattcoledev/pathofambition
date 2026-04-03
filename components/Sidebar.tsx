@@ -23,6 +23,13 @@ const NAV_ITEMS = [
     ],
   },
   {
+    label: 'Characters',
+    items: [
+      { href: '/characters', label: 'My Characters', icon: 'character' },
+      { href: '/characters/new', label: 'New Character', icon: 'new-character' },
+    ],
+  },
+  {
     label: 'Site',
     items: [
       { href: '/search', label: 'Search', icon: 'search' },
@@ -84,6 +91,22 @@ function CategoryIcon({ type }: { type: string }) {
         <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
           <circle cx="11" cy="11" r="8" />
           <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+        </svg>
+      );
+    case 'character':
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" strokeLinecap="round" />
+          <path d="M16 3.5c1.5.5 2.5 2 2 3.5" strokeLinecap="round" />
+        </svg>
+      );
+    case 'new-character':
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+          <circle cx="10" cy="8" r="4" />
+          <path d="M2 20c0-4 3.6-7 8-7" strokeLinecap="round" />
+          <path d="M17 13v6M14 16h6" strokeLinecap="round" />
         </svg>
       );
     default:

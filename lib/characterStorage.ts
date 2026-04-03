@@ -1,0 +1,44 @@
+import type { Character } from './characterTypes';
+
+const STORAGE_KEY = 'poa_characters';
+
+function generateId(): string {
+  return `char_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+export function loadCharacters(): Character[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Character[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCharacter(char: Omit<Character, 'id' | 'createdAt' | 'updatedAt'>): Character {
+  const all = loadCharacters();
+  const now = new Date().toISOString();
+  const saved: Character = { ...char, id: generateId(), createdAt: now, updatedAt: now };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...all, saved]));
+  return saved;
+}
+
+export function updateCharacter(id: string, updates: Partial<Character>): Character | null {
+  const all = loadCharacters();
+  const idx = all.findIndex((c) => c.id === id);
+  if (idx === -1) return null;
+  const updated = { ...all[idx], ...updates, updatedAt: new Date().toISOString() };
+  all[idx] = updated;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  return updated;
+}
+
+export function deleteCharacter(id: string): void {
+  const all = loadCharacters().filter((c) => c.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+}
+
+export function getCharacter(id: string): Character | null {
+  return loadCharacters().find((c) => c.id === id) ?? null;
+}
