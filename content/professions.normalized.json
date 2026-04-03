@@ -16,11 +16,11 @@
       "vitality_gained_per_tier": "2d8",
       "body_modifier_bonus": "1d6  per 5 Body",
       "proficiencies": {
-        "vitals_skills": [],
-        "armaments": [],
-        "protection": [],
-        "tool_kits": [],
-        "raw": ""
+        "vitals_skills": ["Choose two:", "Talent,", "Awareness,", "Intuition,", "or Social"],
+        "armaments": ["Finesse"],
+        "protection": ["Light"],
+        "tool_kits": ["-"],
+        "raw": "**V.I.T.A.L.S. Skills** Choose two: Talent, Awareness, Intuition, or Social\n**Armaments** Finesse\n**Protection** Light\n**Tool Kit** -"
       },
       "starting_pack": {
         "weapons": {

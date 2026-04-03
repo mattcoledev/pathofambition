@@ -147,6 +147,62 @@ function Block({ block, sectionId }: { block: RulesBlock; sectionId: string }) {
   }
 }
 
+function KnownSpellsTable() {
+  return (
+    <div style={{ marginTop: '1.5rem' }}>
+      <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '1rem', color: 'var(--text)', marginBottom: '0.5rem', paddingBottom: '0.25rem', borderBottom: '1px dashed var(--border)' }}>
+        Known Spells
+      </h3>
+      <p style={{ fontSize: '0.925rem', color: 'var(--text)', lineHeight: 1.7, marginBottom: '0.875rem' }}>
+        Spellcasting advances when a character reaches <strong>0, 3, 6, 8, 10, 12, and 14</strong> unlocked Feats purchased with Renown.
+        Each threshold increases the caster&rsquo;s Known Spells. When reaching a new threshold, they learn additional spells according to their casting type.
+        After reaching the maximum, additional spells gained are of ranks the caster already knows.
+      </p>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+          <thead>
+            <tr>
+              {['Type', 'Starting Known', 'Casting Tier', 'Spells per Threshold', 'Max Tier'].map((col) => (
+                <th key={col} style={{
+                  padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)',
+                  borderBottom: '1px solid var(--border)', fontFamily: 'var(--font-heading)',
+                  fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase',
+                  letterSpacing: '0.05em', color: 'var(--text-muted)', textAlign: 'left',
+                }}>
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ['Full',    '4', 'Per Tier',    '3', '6th'],
+              ['Half',    '3', 'Per 2 Tiers', '2', '5th'],
+              ['Limited', '2', 'Per 2 Tiers', '1', '4th'],
+            ].map((row, i) => (
+              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-nav)' }}>
+                {row.map((cell, j) => (
+                  <td key={j} style={{
+                    padding: '0.45rem 0.75rem', borderBottom: '1px solid var(--border)',
+                    color: j === 0 ? 'var(--text)' : 'var(--text-muted)',
+                    fontWeight: j === 0 ? 600 : 400,
+                    fontFamily: j === 0 ? 'var(--font-heading)' : 'inherit',
+                  }}>
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+        Thresholds: 0, 3, 6, 8, 10, 12, and 14 purchased Feats.
+      </p>
+    </div>
+  );
+}
+
 function Section({ section }: { section: RulesSection }) {
   return (
     <section id={section.slug} style={{ marginBottom: '3rem' }}>
@@ -168,6 +224,7 @@ function Section({ section }: { section: RulesSection }) {
         {section.blocks.map((block, i) => (
           <Block key={i} block={block} sectionId={section.id} />
         ))}
+        {section.id === 'proficiency-and-skills' && <KnownSpellsTable />}
       </div>
 
       {section.children.map((child) => (
