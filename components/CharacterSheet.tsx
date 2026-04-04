@@ -92,6 +92,12 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
   const [newNotes, setNewNotes] = useState('');
   const [newSlot, setNewSlot] = useState<InventorySlot>(null);
 
+  const filteredCatalog = useMemo(() => {
+    const q = catalogSearch.toLowerCase().trim();
+    if (!q) return catalog;
+    return catalog.filter((i) => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q));
+  }, [catalogSearch, catalog]);
+
   // Spell amp state (temporary, not persisted)
   const [activeAmps, setActiveAmps] = useState<Record<string, Set<number>>>({});
   const [expandedAmps, setExpandedAmps] = useState<Set<string>>(new Set());
@@ -333,12 +339,6 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
       { label: 'Off Hand', slot: 'Off Hand', item: equippedTwoHands ?? equippedOff },
       { label: 'Body', slot: 'Body', item: equippedBody },
     ];
-    const filteredCatalog = useMemo(() => {
-      const q = catalogSearch.toLowerCase().trim();
-      if (!q) return catalog;
-      return catalog.filter((i) => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q));
-    }, [catalogSearch]);
-
     return (
       <div>
         {/* Equipped slots */}
