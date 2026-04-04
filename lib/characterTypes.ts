@@ -100,6 +100,9 @@ export interface Character {
   // Choice selections: key = "EntityName__FeatureName", value = selected option names
   choiceSelections: Record<string, string[]>;
 
+  // Armament proficiency tags — stored from profession/origin at creation (e.g. ["simple","finesse"])
+  armamentProficiencyTags: string[];
+
   // Play tracking (updated on character sheet)
   currentVitality: number;
   maxVitality: number | null;

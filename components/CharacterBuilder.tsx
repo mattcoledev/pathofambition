@@ -365,6 +365,18 @@ export default function CharacterBuilder({ professions, origins, professionFeats
           totalAttributes[(effectiveCaster.casterModifierOptions[0] ?? draft.spellcastingModifier ?? 'mind')]) ?? 0)
       : 0;
 
+    // Compute armament proficiency tags from profession armaments list
+    const armamentProficiencyTags: string[] = [];
+    for (const a of selectedProf?.armaments ?? []) {
+      const lower = a.toLowerCase();
+      if (lower.includes('finesse')) armamentProficiencyTags.push('finesse');
+      if (lower.includes('martial')) armamentProficiencyTags.push('martial');
+      if (lower.includes('simple')) armamentProficiencyTags.push('simple');
+      if (lower.includes('defensive')) armamentProficiencyTags.push('defensive');
+      if (lower.includes('catalyst')) armamentProficiencyTags.push('catalyst');
+      if (lower.includes('ranged')) armamentProficiencyTags.push('ranged');
+    }
+
     const charData: Omit<Character, 'id' | 'createdAt' | 'updatedAt'> = {
       ...draft,
       currency: draft.currency || combinedCurrency,
@@ -380,6 +392,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
       renown: 0,
       featsPurchased: draft.selectedFeatIds.length,
       activeFeedSpellIds: draft.knownSpellIds,
+      armamentProficiencyTags: [...new Set(armamentProficiencyTags)],
     };
     const saved = saveCharacter(charData);
     router.push(`/characters/${saved.id}`);

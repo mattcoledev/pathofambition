@@ -130,13 +130,33 @@ export default function CharacterSheetPage({ id, professions, origins, professio
 
   useEffect(() => {
     const loaded = getCharacter(id);
-    setChar(loaded);
     if (loaded) {
+      // Backfill armamentTags on weapons missing them — catalog lookup by name
+      const catalogByName = new Map(catalog.map((ci) => [ci.name.toLowerCase(), ci]));
+      const updatedInventory = loaded.inventory.map((item) => {
+        if (item.category !== 'Weapon' || (item.armamentTags ?? []).length > 0) return item;
+        const ci = catalogByName.get(item.name.toLowerCase());
+        if (!ci) return item;
+        return {
+          ...item,
+          armamentTags: ci.armamentTags,
+          damageTypeTags: (item.damageTypeTags ?? []).length > 0 ? item.damageTypeTags : ci.damageTypeTags,
+          equipSlots: (item.equipSlots ?? []).length > 0 ? item.equipSlots : ci.equipSlots,
+          isRanged: ci.isRanged,
+          damageDiceCount: item.damageDiceCount > 0 ? item.damageDiceCount : ci.damageDiceCount,
+          damageDiceSize: item.damageDiceSize > 0 ? item.damageDiceSize : ci.damageDiceSize,
+        };
+      });
+      const inventoryChanged = updatedInventory.some((item, i) => item !== loaded.inventory[i]);
+      const finalChar = inventoryChanged ? { ...loaded, inventory: updatedInventory } : loaded;
+      if (inventoryChanged) updateCharacter(loaded.id, { inventory: updatedInventory });
+      setChar(finalChar);
       setNotesVal(loaded.notes ?? '');
       setMaxVitalityInput(loaded.maxVitality !== null ? String(loaded.maxVitality) : '');
       setEditingMaxVitality(loaded.maxVitality === null);
     }
     setMounted(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (!mounted) return null;
@@ -333,8 +353,9 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   const equippedShield = inventory.find((i) => i.equipped && i.slot === 'Off Hand' && i.category === 'Shield') ?? null;
   const armorDefense = calcArmorDefense(equippedBody, equippedShield, attrs, hasAgile);
 
-  // Map profession armament display strings → lowercase tags for proficiency matching
+  // Armament proficiency tags — use stored value (set at creation), fall back to computing from prof for older characters
   const armamentProficiencyTags = useMemo(() => {
+    if ((c.armamentProficiencyTags ?? []).length > 0) return c.armamentProficiencyTags;
     const tags: string[] = [];
     for (const a of prof?.armaments ?? []) {
       const lower = a.toLowerCase();
@@ -346,7 +367,7 @@ export default function CharacterSheetPage({ id, professions, origins, professio
       if (lower.includes('ranged')) tags.push('ranged');
     }
     return [...new Set(tags)];
-  }, [prof]);
+  }, [c.armamentProficiencyTags, prof]);
 
   const DAMAGE_TYPE_LABEL: Record<string, string> = { puncture: 'Puncture', slash: 'Slash', blunt: 'Blunt' };
 

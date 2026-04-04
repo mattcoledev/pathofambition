@@ -51,6 +51,7 @@ export function getCharacter(id: string): Character | null {
   if (found.currentRespites === undefined) (found as Character).currentRespites = 3;
   if (!found.choiceSelections) (found as Character).choiceSelections = {};
   if (!found.activeFeedSpellIds) (found as Character).activeFeedSpellIds = (found as Character).knownSpellIds ?? [];
+  if (!found.armamentProficiencyTags) (found as Character).armamentProficiencyTags = [];
   // Backfill slot/equipped/traits on inventory items
   (found as Character).inventory = ((found as Character).inventory ?? []).map((item) => {
     // Parse legacy damageDice string (e.g. "2d6") into count/size
