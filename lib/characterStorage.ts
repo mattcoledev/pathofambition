@@ -49,6 +49,7 @@ export function getCharacter(id: string): Character | null {
   if (found.ambitionDice === undefined) (found as Character).ambitionDice = 'd4';
   if (found.currentReservoir === undefined) (found as Character).currentReservoir = 0;
   if (found.currentRespites === undefined) (found as Character).currentRespites = 3;
+  if (!found.choiceSelections) (found as Character).choiceSelections = {};
   // Backfill slot/equipped/traits on inventory items
   (found as Character).inventory = ((found as Character).inventory ?? []).map((item) => ({
     ...item,

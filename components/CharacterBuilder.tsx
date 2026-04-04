@@ -12,6 +12,7 @@ import {
 import type {
   BuilderProfession, BuilderOrigin, BuilderFeat, BuilderSpell,
   Character, AttributeKey, CharacterAttributes, BuilderVocationCaster,
+  ChoiceFeature,
 } from '@/lib/characterTypes';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -63,6 +64,7 @@ interface Draft {
   inventoryNotes: string;
   currency: string;
   notes: string;
+  choiceSelections: Record<string, string[]>;
 }
 
 const emptyDraft: Draft = {
@@ -77,6 +79,7 @@ const emptyDraft: Draft = {
   selectedFeatIds: [],
   knownSpellIds: [],
   ambition: '', inventoryNotes: '', currency: '', notes: '',
+  choiceSelections: {},
 };
 
 // ─── Feat logic helpers ───────────────────────────────────────────────────────
@@ -178,14 +181,21 @@ interface Props {
   professionFeats: BuilderFeat[];
   originFeats: BuilderFeat[];
   spells: BuilderSpell[];
+  choiceFeatures: ChoiceFeature[];
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function CharacterBuilder({ professions, origins, professionFeats, originFeats, spells }: Props) {
+export default function CharacterBuilder({ professions, origins, professionFeats, originFeats, spells, choiceFeatures }: Props) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+
+  // Choice resolution queue
+  const [choiceQueue, setChoiceQueue] = useState<ChoiceFeature[]>([]);
+  const [choiceQueueIdx, setChoiceQueueIdx] = useState(0);
+  const [pendingStep, setPendingStep] = useState<number | null>(null);
+  const [currentSelections, setCurrentSelections] = useState<string[]>([]);
 
   function update(partial: Partial<Draft>) {
     setDraft((d) => ({ ...d, ...partial }));
@@ -243,12 +253,99 @@ export default function CharacterBuilder({ professions, origins, professionFeats
     return true;
   }
 
+  // ─── Choice resolution ───────────────────────────────────────────────────
+
+  /** Return all on_gain choice features for the given feature names + entity name that haven't been resolved yet. */
+  function getUnresolvedOnGain(featureNames: string[], entityName: string): ChoiceFeature[] {
+    return featureNames.flatMap((name) => {
+      const key = `${entityName}__${name}`;
+      if (draft.choiceSelections[key]) return []; // already resolved
+      const cf = choiceFeatures.find(
+        (f) => f.feature_name === name && f.entity_name === entityName && f.selection_timing === 'on_gain'
+      );
+      return cf ? [cf] : [];
+    });
+  }
+
+  function startChoiceQueue(queue: ChoiceFeature[], nextStep: number) {
+    setChoiceQueue(queue);
+    setChoiceQueueIdx(0);
+    setCurrentSelections([]);
+    setPendingStep(nextStep);
+  }
+
+  function toggleChoiceSelection(optionName: string) {
+    const cf = choiceQueue[choiceQueueIdx];
+    if (!cf) return;
+    if (cf.selection_rule === 'single') {
+      setCurrentSelections([optionName]);
+    } else {
+      setCurrentSelections((prev) => {
+        if (prev.includes(optionName)) return prev.filter((s) => s !== optionName);
+        if (prev.length < cf.min_choices) return [...prev, optionName];
+        return prev;
+      });
+    }
+  }
+
+  function confirmChoiceSelection() {
+    const cf = choiceQueue[choiceQueueIdx];
+    if (!cf) return;
+    const key = `${cf.entity_name}__${cf.feature_name}`;
+    update({ choiceSelections: { ...draft.choiceSelections, [key]: currentSelections } });
+
+    const nextIdx = choiceQueueIdx + 1;
+    if (nextIdx < choiceQueue.length) {
+      setChoiceQueueIdx(nextIdx);
+      setCurrentSelections([]);
+    } else {
+      setChoiceQueue([]);
+      setChoiceQueueIdx(0);
+      setCurrentSelections([]);
+      if (pendingStep !== null) {
+        setStep(pendingStep);
+        setPendingStep(null);
+      }
+    }
+  }
+
   function handleNext() {
     if (!canAdvance()) return;
-    setStep((s) => Math.min(s + 1, STEPS.length));
+    const nextStep = Math.min(step + 1, STEPS.length);
+
+    // After profession — check base features for on_gain choices
+    if (step === 2 && selectedProf) {
+      const queue = getUnresolvedOnGain(
+        selectedProf.baseFeatures.map((f) => f.name),
+        selectedProf.name,
+      );
+      if (queue.length > 0) { startChoiceQueue(queue, nextStep); return; }
+    }
+
+    // After feats — check selected feats for on_gain choices
+    if (step === 7) {
+      const featQueue: ChoiceFeature[] = [];
+      for (const id of draft.selectedFeatIds) {
+        const feat = allFeats.find((f) => f.id === id);
+        if (!feat) continue;
+        const unresolvedForFeat = getUnresolvedOnGain([feat.name], feat.ownerName);
+        featQueue.push(...unresolvedForFeat);
+      }
+      if (featQueue.length > 0) { startChoiceQueue(featQueue, nextStep); return; }
+    }
+
+    setStep(nextStep);
   }
 
   function handleBack() {
+    if (choiceQueue.length > 0) {
+      // Cancel the current choice queue and stay on the triggering step
+      setChoiceQueue([]);
+      setChoiceQueueIdx(0);
+      setCurrentSelections([]);
+      setPendingStep(null);
+      return;
+    }
     setStep((s) => Math.max(s - 1, 1));
   }
 
@@ -322,7 +419,14 @@ export default function CharacterBuilder({ professions, origins, professionFeats
       const dependents = allFeats
         .filter((f) => f.required === removedFeat.name && current.includes(f.id))
         .map((f) => f.id);
-      update({ selectedFeatIds: current.filter((f) => f !== id && !dependents.includes(f)) });
+      const removedIds = [id, ...dependents];
+      // Also clear any choice selections for removed feats
+      const newChoiceSelections = { ...draft.choiceSelections };
+      for (const rid of removedIds) {
+        const feat = allFeats.find((f) => f.id === rid);
+        if (feat) delete newChoiceSelections[`${feat.ownerName}__${feat.name}`];
+      }
+      update({ selectedFeatIds: current.filter((f) => !removedIds.includes(f)), choiceSelections: newChoiceSelections });
     } else {
       const status = getFeatStatus(
         allFeats.find((f) => f.id === id)!,
@@ -333,6 +437,87 @@ export default function CharacterBuilder({ professions, origins, professionFeats
       if (status.blocked) return;
       update({ selectedFeatIds: [...current, id] });
     }
+  }
+
+  // ─── Choice resolution UI ────────────────────────────────────────────────
+
+  function renderChoiceResolution(): React.ReactNode {
+    const cf = choiceQueue[choiceQueueIdx];
+    if (!cf) return null;
+    const needed = cf.min_choices;
+    const canConfirm = currentSelections.length >= needed;
+    const isLast = choiceQueueIdx + 1 >= choiceQueue.length;
+    const progressStr = choiceQueue.length > 1 ? ` (${choiceQueueIdx + 1} of ${choiceQueue.length})` : '';
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div>
+          <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--primary)', fontFamily: 'var(--font-heading)', marginBottom: '0.375rem' }}>
+            Feature Choice{progressStr}
+          </div>
+          <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--text)', margin: '0 0 0.25rem' }}>{cf.feature_name}</h3>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+            {cf.selection_rule === 'single'
+              ? 'Choose one option.'
+              : `Choose ${needed} options. (${currentSelections.length} / ${needed} selected)`}
+          </p>
+          {cf.notes && (
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.375rem 0 0', fontStyle: 'italic' }}>{cf.notes}</p>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {cf.options.map((opt) => {
+            const sel = currentSelections.includes(opt.name);
+            const atCap = !sel && currentSelections.length >= needed && cf.selection_rule === 'fixed_count';
+            return (
+              <button
+                key={opt.name}
+                onClick={() => !atCap && toggleChoiceSelection(opt.name)}
+                style={{
+                  padding: '0.875rem 1rem', borderRadius: '0.5rem', cursor: atCap ? 'not-allowed' : 'pointer',
+                  textAlign: 'left', border: `2px solid ${sel ? 'var(--primary)' : 'var(--border)'}`,
+                  backgroundColor: sel ? 'var(--primary-light)' : 'var(--bg-card)',
+                  opacity: atCap ? 0.45 : 1, transition: 'all 0.12s',
+                }}
+              >
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9rem', color: sel ? 'var(--primary)' : 'var(--text)', marginBottom: '0.25rem' }}>
+                  {sel && '✓ '}{opt.name}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{opt.effect_text}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+          <button
+            onClick={() => {
+              setChoiceQueue([]);
+              setChoiceQueueIdx(0);
+              setCurrentSelections([]);
+              setPendingStep(null);
+            }}
+            style={{ padding: '0.625rem 1.25rem', border: '1.5px solid var(--border)', borderRadius: '0.5rem', cursor: 'pointer', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem' }}
+          >
+            ← Back
+          </button>
+          <button
+            onClick={confirmChoiceSelection}
+            disabled={!canConfirm}
+            style={{
+              padding: '0.625rem 1.5rem', border: 'none', borderRadius: '0.5rem',
+              cursor: canConfirm ? 'pointer' : 'not-allowed',
+              backgroundColor: canConfirm ? 'var(--primary)' : 'var(--border)',
+              color: canConfirm ? '#fff' : 'var(--text-muted)',
+              fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem',
+            }}
+          >
+            {isLast ? 'Confirm & Continue →' : 'Confirm →'}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // ─── Steps ────────────────────────────────────────────────────────────────
@@ -487,12 +672,27 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                   Base Features <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(automatically granted)</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                  {detailProf.baseFeatures.map((f) => (
-                    <div key={f.id} style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.375rem', fontSize: '0.8rem' }}>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text)', marginBottom: '0.125rem' }}>{f.name}</div>
-                      <div style={{ color: 'var(--text-muted)', lineHeight: 1.5 }}>{f.descriptionMarkdown.slice(0, 160)}{f.descriptionMarkdown.length > 160 ? '…' : ''}</div>
-                    </div>
-                  ))}
+                  {detailProf.baseFeatures.map((f) => {
+                    const choiceKey = `${detailProf.name}__${f.name}`;
+                    const resolved = draft.choiceSelections[choiceKey];
+                    const hasChoice = choiceFeatures.some(
+                      (cf) => cf.feature_name === f.name && cf.entity_name === detailProf.name && cf.selection_timing === 'on_gain'
+                    );
+                    return (
+                      <div key={f.id} style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-card)', border: `1px solid ${resolved ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '0.375rem', fontSize: '0.8rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.125rem' }}>
+                          <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text)' }}>{f.name}</span>
+                          {hasChoice && resolved && (
+                            <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--primary)' }}>✓ {resolved.join(', ')}</span>
+                          )}
+                          {hasChoice && !resolved && (
+                            <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-heading)', color: 'var(--accent)', fontWeight: 600 }}>Choice required</span>
+                          )}
+                        </div>
+                        <div style={{ color: 'var(--text-muted)', lineHeight: 1.5 }}>{f.descriptionMarkdown.slice(0, 160)}{f.descriptionMarkdown.length > 160 ? '…' : ''}</div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1131,7 +1331,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <h2 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--text)', margin: 0 }}>
-            {STEP_TITLES[step]}
+            {choiceQueue.length > 0 ? 'Feature Choices' : STEP_TITLES[step]}
           </h2>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)' }}>
             {step} / {STEPS.length}
@@ -1141,10 +1341,11 @@ export default function CharacterBuilder({ professions, origins, professionFeats
 
       {/* Content */}
       <div style={{ marginBottom: '2rem', minHeight: '200px' }}>
-        {stepContent[step]?.()}
+        {choiceQueue.length > 0 ? renderChoiceResolution() : stepContent[step]?.()}
       </div>
 
-      {/* Navigation */}
+      {/* Navigation — hidden when choice resolution is active (it has its own nav) */}
+      {choiceQueue.length === 0 && (
       <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
         <button
           onClick={handleBack}
@@ -1186,6 +1387,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
           </button>
         )}
       </div>
+      )}
     </div>
   );
 }

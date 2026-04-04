@@ -80,12 +80,39 @@ export interface Character {
   // Rest tracking
   currentRespites: number;
 
+  // Choice selections: key = "EntityName__FeatureName", value = selected option names
+  choiceSelections: Record<string, string[]>;
+
   // Play tracking (updated on character sheet)
   currentVitality: number;
   maxVitality: number | null;
   currentWounds: number;
   renown: number;
   featsPurchased: number;
+}
+
+// ─── Choice feature resolution ────────────────────────────────────────────────
+
+export interface ChoiceFeatureOption {
+  name: string;
+  effect_text: string;
+}
+
+export interface ChoiceFeature {
+  entity_type: string;
+  entity_name: string;
+  source_kind: string;
+  feature_name: string;
+  tier: number | null;
+  path: string | null;
+  choice_type: string;
+  selection_rule: 'single' | 'fixed_count';
+  min_choices: number;
+  max_choices: number;
+  selection_timing: 'on_gain' | 'on_rest' | 'on_use' | 'on_activation';
+  branches_from_feature: string | null;
+  notes: string | null;
+  options: ChoiceFeatureOption[];
 }
 
 // ─── Builder data shapes (passed from server to client) ──────────────────────

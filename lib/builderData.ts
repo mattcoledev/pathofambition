@@ -3,6 +3,7 @@ import path from 'path';
 import type {
   BuilderProfession, BuilderOrigin, BuilderFeat, BuilderSpell, BuilderFeatureEntry,
   AttributeKey, BuilderVocationCaster, BuilderStartingPack, BuilderOriginPackCategory,
+  ChoiceFeature,
 } from './characterTypes';
 
 function readJSON<T>(filename: string): T {
@@ -234,6 +235,11 @@ export function getBuilderSpells(): BuilderSpell[] {
       duration: (s.duration as string) ?? '',
       descriptionMarkdown: (s.description_markdown as string) ?? '',
     } satisfies BuilderSpell));
+}
+
+export function getChoiceFeatures(): ChoiceFeature[] {
+  const data = readJSON<{ features: ChoiceFeature[] }>('choice_features_normalized.json');
+  return data.features ?? [];
 }
 
 // ─── Item catalog ─────────────────────────────────────────────────────────────
