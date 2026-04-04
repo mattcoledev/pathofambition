@@ -15,6 +15,7 @@ import type {
   InventoryItem, InventoryCategory, InventorySlot, ChoiceFeature,
 } from '@/lib/characterTypes';
 import type { CatalogItem } from '@/lib/builderData';
+import { getFeatStatus, parseRequired, FEAT_COST_BY_TIER } from '@/lib/featLogic';
 
 interface Props {
   id: string;
@@ -117,6 +118,13 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   const [expandedSpells, setExpandedSpells] = useState<Set<string>>(new Set());
   const [showSpellManager, setShowSpellManager] = useState(false);
   const [spellManagerSearch, setSpellManagerSearch] = useState('');
+
+  // Feat shop state
+  const [showFeatShop, setShowFeatShop] = useState(false);
+  const [shopExpandedIds, setShopExpandedIds] = useState<Set<string>>(new Set());
+  const [shopChoiceQueue, setShopChoiceQueue] = useState<ChoiceFeature[]>([]);
+  const [shopChoiceIdx, setShopChoiceIdx] = useState(0);
+  const [shopCurrentSels, setShopCurrentSels] = useState<string[]>([]);
 
   useEffect(() => {
     const loaded = getCharacter(id);
@@ -406,7 +414,15 @@ export default function CharacterSheetPage({ id, professions, origins, professio
                   ))}
                 </div>
               )}
-              {required && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Requires: {required}</div>}
+              {required && (() => {
+                const { positiveReqs, exclusions } = parseRequired(required);
+                return (
+                  <>
+                    {positiveReqs.length > 0 && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Requires: {positiveReqs.join(', ')}</div>}
+                    {exclusions.length > 0 && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Cannot own: {exclusions.join(', ')}</div>}
+                  </>
+                );
+              })()}
               {pathInvestment && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Investment: {pathInvestment}</div>}
               <MarkdownContent content={descriptionMarkdown} />
             </div>
@@ -415,8 +431,117 @@ export default function CharacterSheetPage({ id, professions, origins, professio
       );
     }
 
+    // ─── Feat Shop helpers ────────────────────────────────────────────────────
+    const tierCost = FEAT_COST_BY_TIER[c.tier] ?? 6;
+    const shopAllFeats = [...professionFeats, ...originFeats];
+    const shopProfFeats = professionFeats.filter((f) => f.ownerId === c.professionId);
+    const shopOriginFeats = originFeats.filter((f) => f.ownerId === c.originId);
+
+    function purchaseFeat(feat: BuilderFeat) {
+      const renown = c.renown ?? 0;
+      if (renown < tierCost) return;
+      const newSelected = [...c.selectedFeatIds, feat.id];
+      persist({ selectedFeatIds: newSelected, renown: renown - tierCost });
+      // Queue any on_gain choices for this feat
+      const onGainChoices = choiceFeatures.filter(
+        (cf) => cf.feature_name === feat.name && cf.entity_name === feat.ownerName && cf.selection_timing === 'on_gain' && !c.choiceSelections?.[`${feat.ownerName}__${feat.name}`],
+      );
+      if (onGainChoices.length > 0) {
+        setShopChoiceQueue(onGainChoices);
+        setShopChoiceIdx(0);
+        setShopCurrentSels([]);
+      }
+    }
+
+    function confirmShopChoice() {
+      const current = shopChoiceQueue[shopChoiceIdx];
+      if (!current) return;
+      const key = `${current.entity_name}__${current.feature_name}`;
+      const updatedSelections = { ...(c.choiceSelections ?? {}), [key]: shopCurrentSels };
+      persist({ choiceSelections: updatedSelections });
+      if (shopChoiceIdx + 1 < shopChoiceQueue.length) {
+        setShopChoiceIdx((i) => i + 1);
+        setShopCurrentSels([]);
+      } else {
+        setShopChoiceQueue([]);
+        setShopChoiceIdx(0);
+        setShopCurrentSels([]);
+      }
+    }
+
+    function renderShopFeatGroup(feats: BuilderFeat[], title: string) {
+      const byTier: Record<number, BuilderFeat[]> = {};
+      feats.forEach((f) => { const t = f.tier ?? 1; if (!byTier[t]) byTier[t] = []; byTier[t].push(f); });
+      if (feats.length === 0) return null;
+      return (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h4 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', margin: '0 0 0.625rem', paddingBottom: '0.25rem', borderBottom: '2px solid var(--primary)', display: 'inline-block' }}>{title}</h4>
+          {Object.keys(byTier).map(Number).sort().map((tier) => (
+            <div key={tier} style={{ marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.35rem' }}>Tier {tier}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                {byTier[tier].map((feat) => {
+                  const owned = c.selectedFeatIds.includes(feat.id);
+                  const status = getFeatStatus(feat, c.selectedFeatIds, shopAllFeats, false);
+                  const blocked = status.blocked && !owned;
+                  const canAfford = (c.renown ?? 0) >= tierCost;
+                  const expanded = shopExpandedIds.has(feat.id);
+                  const { positiveReqs, exclusions } = parseRequired(feat.required);
+                  return (
+                    <div key={feat.id} style={{ border: `1.5px solid ${owned ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '0.375rem', overflow: 'hidden', opacity: blocked ? 0.55 : 1 }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', padding: '0.5rem 0.75rem', backgroundColor: owned ? 'var(--primary-light)' : 'var(--bg-card)' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.875rem', color: owned ? 'var(--primary)' : 'var(--text)' }}>{feat.name}</span>
+                            {owned && <span style={{ fontSize: '0.6rem', fontWeight: 700, fontFamily: 'var(--font-heading)', padding: '0.1rem 0.35rem', borderRadius: '9999px', backgroundColor: 'var(--primary)', color: '#fff' }}>Owned</span>}
+                            {feat.activationRaw && feat.activationRaw !== '-' && feat.activationRaw !== 'null' && (
+                              <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--accent)', padding: '0.1rem 0.35rem', borderRadius: '9999px', backgroundColor: 'var(--accent-light)', border: '1px solid #FCD34D' }}>{feat.activationRaw}</span>
+                            )}
+                          </div>
+                          {status.reason && !owned && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '0.1rem' }}>⚠ {status.reason}</div>}
+                          {!status.reason && positiveReqs.length > 0 && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>Requires: {positiveReqs.join(', ')}</div>}
+                          {!status.reason && exclusions.length > 0 && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>Cannot own: {exclusions.join(', ')}</div>}
+                          {feat.pathInvestment && !status.reason && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>Investment: {feat.pathInvestment}</div>}
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexShrink: 0 }}>
+                          <button
+                            onClick={() => setShopExpandedIds((prev) => { const n = new Set(prev); n.has(feat.id) ? n.delete(feat.id) : n.add(feat.id); return n; })}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.65rem', color: 'var(--text-muted)', padding: '0.15rem 0.25rem' }}
+                          >{expanded ? '▲' : '▼'}</button>
+                          {!owned && (
+                            <button
+                              onClick={() => purchaseFeat(feat)}
+                              disabled={blocked || !canAfford}
+                              style={{ padding: '0.2rem 0.625rem', fontSize: '0.72rem', fontFamily: 'var(--font-heading)', fontWeight: 700, border: 'none', borderRadius: '0.25rem', cursor: blocked || !canAfford ? 'not-allowed' : 'pointer', backgroundColor: blocked || !canAfford ? 'var(--border)' : 'var(--primary)', color: '#fff' }}
+                            >{tierCost} Renown</button>
+                          )}
+                        </div>
+                      </div>
+                      {expanded && (
+                        <div style={{ padding: '0.5rem 0.75rem', borderTop: '1px solid var(--border)', backgroundColor: 'var(--bg-nav)', fontSize: '0.82rem', lineHeight: 1.65, color: 'var(--text)' }}>
+                          <MarkdownContent content={feat.descriptionMarkdown} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        {/* Purchase Feats button */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+          <button
+            onClick={() => setShowFeatShop(true)}
+            style={{ padding: '0.35rem 0.875rem', border: '1.5px solid var(--primary)', borderRadius: '0.375rem', backgroundColor: 'transparent', cursor: 'pointer', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.8rem' }}
+          >Purchase Feats</button>
+        </div>
+
         {baseFeatures.length > 0 && (
           <>
             <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.2rem' }}>Base Features</div>
@@ -434,6 +559,90 @@ export default function CharacterSheetPage({ id, professions, origins, professio
             <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginTop: '0.5rem', marginBottom: '0.2rem' }}>Selected Feats</div>
             {selectedFeats.map((f) => <FeatRow key={f.id} id={f.id} name={f.name} tier={f.tier} activationRaw={f.activationRaw} traits={f.traits} descriptionMarkdown={f.descriptionMarkdown} required={f.required} pathInvestment={f.pathInvestment} resolvedOptions={getResolvedOptions(f.name, f.ownerName)} />)}
           </>
+        )}
+        {baseFeatures.length === 0 && vocationFeatures.length === 0 && selectedFeats.length === 0 && (
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No feats or features yet.</p>
+        )}
+
+        {/* Feat Shop Modal */}
+        {showFeatShop && (
+          <div
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '2rem 1rem', overflowY: 'auto' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowFeatShop(false); }}
+          >
+            <div style={{ width: '100%', maxWidth: '660px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.75rem', overflow: 'hidden' }}>
+              {/* Shop header */}
+              <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', backgroundColor: 'var(--bg-nav)' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1rem', color: 'var(--text)' }}>Purchase Feats</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)' }}>Tier {c.tier}</span>
+                  <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--primary)' }}>Renown: {c.renown ?? 0}</span>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Cost: {tierCost} Renown / feat</span>
+                </div>
+                <button onClick={() => setShowFeatShop(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem' }}>✕</button>
+              </div>
+
+              {/* Choice resolution overlay inside shop */}
+              {shopChoiceQueue.length > 0 && shopChoiceIdx < shopChoiceQueue.length && (
+                <div style={{ padding: '1rem 1.25rem', backgroundColor: 'var(--primary-light)', borderBottom: '1px solid var(--primary)' }}>
+                  {(() => {
+                    const cf = shopChoiceQueue[shopChoiceIdx];
+                    const canConfirm = shopCurrentSels.length >= cf.min_choices;
+                    return (
+                      <div>
+                        <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--primary)', marginBottom: '0.375rem' }}>
+                          Choose for: {cf.feature_name}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.625rem' }}>
+                          Select {cf.min_choices === cf.max_choices ? cf.min_choices : `${cf.min_choices}–${cf.max_choices}`} option{cf.max_choices !== 1 ? 's' : ''}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginBottom: '0.75rem' }}>
+                          {cf.options.map((opt) => {
+                            const sel = shopCurrentSels.includes(opt.name);
+                            return (
+                              <button
+                                key={opt.name}
+                                onClick={() => {
+                                  setShopCurrentSels((prev) => {
+                                    if (sel) return prev.filter((n) => n !== opt.name);
+                                    if (prev.length >= cf.max_choices) return [...prev.slice(1), opt.name];
+                                    return [...prev, opt.name];
+                                  });
+                                }}
+                                style={{ padding: '0.5rem 0.875rem', border: `2px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '0.375rem', backgroundColor: sel ? 'var(--primary-light)' : 'var(--bg-card)', cursor: 'pointer', textAlign: 'left' }}
+                              >
+                                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.85rem', color: sel ? 'var(--primary)' : 'var(--text)' }}>{opt.name}</span>
+                                {opt.effect_text && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>{opt.effect_text}</div>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          onClick={confirmShopChoice}
+                          disabled={!canConfirm}
+                          style={{ padding: '0.375rem 0.875rem', border: 'none', borderRadius: '0.375rem', backgroundColor: canConfirm ? 'var(--primary)' : 'var(--border)', color: '#fff', cursor: canConfirm ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.8rem' }}
+                        >Confirm</button>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* Feat list */}
+              <div style={{ padding: '1.25rem', maxHeight: '65vh', overflowY: 'auto' }}>
+                {(c.renown ?? 0) < tierCost && (
+                  <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--accent-light)', border: '1px solid #FCD34D', borderRadius: '0.375rem', fontSize: '0.8rem', color: '#92400E', marginBottom: '1rem' }}>
+                    Not enough Renown to purchase this feat. You need {tierCost} Renown (have {c.renown ?? 0}).
+                  </div>
+                )}
+                {renderShopFeatGroup(shopProfFeats, `${c.professionName} Feats`)}
+                {renderShopFeatGroup(shopOriginFeats, `${c.originName} Feats`)}
+                {shopProfFeats.length === 0 && shopOriginFeats.length === 0 && (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No feats available for your profession and origin.</p>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     );

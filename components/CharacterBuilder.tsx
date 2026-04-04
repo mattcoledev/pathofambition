@@ -14,6 +14,8 @@ import type {
   Character, AttributeKey, CharacterAttributes, BuilderVocationCaster,
   ChoiceFeature,
 } from '@/lib/characterTypes';
+import { getFeatStatus, parseRequired } from '@/lib/featLogic';
+import type { FeatStatus } from '@/lib/featLogic';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -82,56 +84,7 @@ const emptyDraft: Draft = {
   choiceSelections: {},
 };
 
-// ─── Feat logic helpers ───────────────────────────────────────────────────────
-
-function parsePathInvestment(pi: string): { count: number; keyword: string } | null {
-  if (!pi) return null;
-  const num = pi.match(/^(\d+|one|two|three|four|five)\s+/i);
-  if (!num) return null;
-  const wordMap: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
-  const count = isNaN(Number(num[1])) ? (wordMap[num[1].toLowerCase()] ?? 1) : Number(num[1]);
-  const keyword = pi.slice(num[0].length).replace(/\s+[Ff]eats?$/, '').trim().toLowerCase();
-  return { count, keyword };
-}
-
-interface FeatStatus {
-  blocked: boolean;
-  reason: string | null;
-}
-
-function getFeatStatus(
-  feat: BuilderFeat,
-  selectedIds: string[],
-  allFeats: BuilderFeat[],
-  atCap: boolean,
-): FeatStatus {
-  const isSelected = selectedIds.includes(feat.id);
-
-  // Feat cap
-  if (!isSelected && atCap) return { blocked: true, reason: 'Feat cap reached for this Tier' };
-
-  // Requires
-  if (feat.required) {
-    const reqMet = allFeats.some((f) => f.name === feat.required && selectedIds.includes(f.id));
-    if (!reqMet) return { blocked: true, reason: `Requires: ${feat.required}` };
-  }
-
-  // Path investment
-  if (feat.pathInvestment) {
-    const parsed = parsePathInvestment(feat.pathInvestment);
-    if (parsed) {
-      const selectedFromPath = allFeats.filter(
-        (f) => selectedIds.includes(f.id) && f.id !== feat.id &&
-          (f.ownerName.toLowerCase().includes(parsed.keyword) || (f.tag?.toLowerCase().includes(parsed.keyword) ?? false))
-      ).length;
-      if (selectedFromPath < parsed.count) {
-        return { blocked: true, reason: `Investment: ${feat.pathInvestment}` };
-      }
-    }
-  }
-
-  return { blocked: false, reason: null };
-}
+// ─── Feat logic helpers are imported from @/lib/featLogic ────────────────────
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
 
@@ -1164,7 +1117,15 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                           {status.reason && !selected && (
                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>⚠ {status.reason}</div>
                           )}
-                          {feat.required && !status.reason && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Requires: {feat.required}</div>}
+                          {feat.required && !status.reason && (() => {
+                            const { positiveReqs, exclusions } = parseRequired(feat.required);
+                            return (
+                              <>
+                                {positiveReqs.length > 0 && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Requires: {positiveReqs.join(', ')}</div>}
+                                {exclusions.length > 0 && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Cannot own: {exclusions.join(', ')}</div>}
+                              </>
+                            );
+                          })()}
                           {feat.pathInvestment && !status.reason && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Investment: {feat.pathInvestment}</div>}
                           {feat.activationRaw && feat.activationRaw !== '-' && feat.activationRaw !== 'null' && (
                             <div style={{ fontSize: '0.68rem', color: 'var(--accent)', fontFamily: 'var(--font-heading)', fontWeight: 600, marginTop: '0.1rem' }}>{feat.activationRaw}</div>
