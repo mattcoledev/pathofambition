@@ -284,26 +284,52 @@ export interface CatalogItem {
   armorBonus?: number;
   armorCategory?: string | null;
   equippable: boolean;
+  // Weapon structured fields
+  armamentTags: string[];     // e.g. ["simple", "finesse"]
+  damageTypeTags: string[];   // e.g. ["puncture", "slash"]
+  isRanged: boolean;
+  equipSlots: string[];       // e.g. ["main_hand", "off_hand"]
+  damageDiceCount: number;
+  damageDiceSize: number;
 }
 
 export function getItemCatalog(): CatalogItem[] {
   const data = readJSON<{ catalog: Record<string, unknown[]> }>('item_database.json');
   const items: CatalogItem[] = [];
 
+  // Damage type code → tag mapping
+  const DAMAGE_CODE_TO_TAG: Record<string, string> = { B: 'blunt', S: 'slash', P: 'puncture' };
+
   function mapItem(raw: Record<string, unknown>, cat: string): CatalogItem {
     const template = raw.inventory_template as Record<string, unknown> ?? {};
     const traits = (raw.traits as Array<{ name: string }> | string[] | undefined) ?? [];
+    const groups = (raw.groups as string[] | undefined) ?? [];
+    const damageTypes = (raw.damage_types as Array<{ code: string }> | undefined) ?? [];
+    const equipSlots = (raw.equip_slots as string[] | undefined) ?? [];
+
+    // Parse damage string e.g. "1d8" → count/size
+    const damageStr = (raw.damage as string | undefined) ?? '';
+    const diceMatch = damageStr.match(/^(\d+)d(\d+)$/i);
+    const damageDiceCount = diceMatch ? parseInt(diceMatch[1]) : 0;
+    const damageDiceSize = diceMatch ? parseInt(diceMatch[2]) : 6;
+
     return {
       id: raw.id as string,
       name: raw.name as string,
       category: cat,
       weight: (raw.weight as number) ?? 1,
-      slot: (template.slot as string) ?? null,
+      slot: (template.slot as string) ?? (equipSlots[0] ?? null),
       traits: Array.isArray(traits) ? traits.map((t) => typeof t === 'string' ? t : (t as { name: string }).name) : [],
       damage: raw.damage as string | undefined,
       armorBonus: (raw.armor_bonus_range as { value?: number } | undefined)?.value,
       armorCategory: (raw.armor_type as string | undefined) ?? null,
       equippable: (raw.equippable as boolean) ?? false,
+      armamentTags: groups.map((g) => g.toLowerCase()),
+      damageTypeTags: damageTypes.map((d) => DAMAGE_CODE_TO_TAG[d.code] ?? d.code.toLowerCase()).filter(Boolean),
+      isRanged: groups.map((g) => g.toLowerCase()).includes('ranged'),
+      equipSlots,
+      damageDiceCount,
+      damageDiceSize,
     };
   }
 

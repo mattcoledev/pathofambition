@@ -18,12 +18,14 @@ export interface InventoryItem {
   // Armor fields
   armorBonus: number;
   armorCategory: 'Light' | 'Medium' | 'Heavy' | null;
-  // Weapon fields
-  modifierStat: 'Body' | 'Mind' | 'Will' | null;
+  // Weapon fields — all rules logic must use these structured fields, never display strings
+  armamentTags: string[];         // e.g. ["simple", "finesse"] — used for proficiency matching
+  modifierStat: AttributeKey | null; // "body" | "mind" | "will"
   isRanged: boolean;
   damageDiceCount: number;
   damageDiceSize: number;
-  damageTypes: string[];
+  damageTypeTags: string[];       // e.g. ["puncture", "slash", "blunt"]
+  equipSlots: string[];           // e.g. ["main_hand", "off_hand"] — slots this item can go in
   // Masterwork
   masterworkBonus: number;
   // Equippable

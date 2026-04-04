@@ -58,6 +58,16 @@ export function getCharacter(id: string): Character | null {
     const rawDice = (rawItem.damageDice as string) ?? '';
     const rawType = (rawItem.damageType as string) ?? '';
     const diceMatch = rawDice.match(/^(\d+)d(\d+)$/i);
+    // Normalise legacy modifierStat (Title-case → lower-case AttributeKey)
+    const rawModStat = (item.modifierStat ?? rawItem.modifierStat ?? null) as string | null;
+    const modStatNorm = rawModStat ? rawModStat.toLowerCase() as 'body' | 'mind' | 'will' : null;
+    // Normalise legacy damageTypes free-text to damageTypeTags enum values
+    const legacyTypes = (rawItem.damageTypes as string[] | undefined) ?? [];
+    const rawDamTypeTags = (rawItem.damageTypeTags as string[] | undefined);
+    const damTypeTagsNorm = rawDamTypeTags ?? legacyTypes.map((t) => t.toLowerCase()).filter((t): t is 'puncture' | 'slash' | 'blunt' => ['puncture', 'slash', 'blunt'].includes(t));
+    // Backfill equipSlots from legacy slot field
+    const slotToTag: Record<string, string> = { 'Main Hand': 'main_hand', 'Off Hand': 'off_hand', 'Two Hands': 'two_hands', 'Body': 'body' };
+    const equipSlotsNorm = (rawItem.equipSlots as string[] | undefined) ?? (item.slot ? [slotToTag[item.slot] ?? ''].filter(Boolean) : []);
     return {
       ...item,
       slot: item.slot ?? null,
@@ -66,11 +76,13 @@ export function getCharacter(id: string): Character | null {
       catalogItemId: item.catalogItemId ?? null,
       armorBonus: item.armorBonus ?? 0,
       armorCategory: item.armorCategory ?? null,
-      modifierStat: item.modifierStat ?? null,
+      armamentTags: (rawItem.armamentTags as string[] | undefined) ?? [],
+      modifierStat: modStatNorm,
       isRanged: item.isRanged ?? false,
       damageDiceCount: item.damageDiceCount ?? (diceMatch ? parseInt(diceMatch[1]) : 0),
       damageDiceSize: item.damageDiceSize ?? (diceMatch ? parseInt(diceMatch[2]) : 6),
-      damageTypes: item.damageTypes ?? (rawType ? [rawType] : []),
+      damageTypeTags: damTypeTagsNorm,
+      equipSlots: equipSlotsNorm,
       masterworkBonus: item.masterworkBonus ?? 0,
       equippable: item.equippable ?? (item.slot !== null),
     };

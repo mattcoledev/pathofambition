@@ -95,11 +95,13 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   const [newSlot, setNewSlot] = useState<InventorySlot>(null);
   const [newArmorBonus, setNewArmorBonus] = useState(0);
   const [newArmorCategory, setNewArmorCategory] = useState<'Light' | 'Medium' | 'Heavy' | null>(null);
-  const [newModifierStat, setNewModifierStat] = useState<'Body' | 'Mind' | 'Will' | null>(null);
+  const [newModifierStat, setNewModifierStat] = useState<'body' | 'mind' | 'will' | null>(null);
   const [newIsRanged, setNewIsRanged] = useState(false);
   const [newDamageDiceCount, setNewDamageDiceCount] = useState(0);
   const [newDamageDiceSize, setNewDamageDiceSize] = useState(6);
-  const [newDamageTypes, setNewDamageTypes] = useState('');
+  const [newDamageTypeTags, setNewDamageTypeTags] = useState<string[]>([]);
+  const [newArmamentTags, setNewArmamentTags] = useState<string[]>([]);
+  const [newEquipSlots, setNewEquipSlots] = useState<string[]>([]);
   const [newMasterworkBonus, setNewMasterworkBonus] = useState(0);
 
   // Item editing
@@ -248,13 +250,13 @@ export default function CharacterSheetPage({ id, professions, origins, professio
     setNewNotes('');
     setNewArmorBonus(item.armorBonus ?? 0);
     setNewArmorCategory((item.armorCategory as 'Light' | 'Medium' | 'Heavy' | null) ?? null);
-    // Parse catalog damage string e.g. "2d6" into count/size
-    const diceMatch = (item.damage ?? '').match(/^(\d+)d(\d+)$/i);
-    setNewDamageDiceCount(diceMatch ? parseInt(diceMatch[1]) : 0);
-    setNewDamageDiceSize(diceMatch ? parseInt(diceMatch[2]) : 6);
-    setNewDamageTypes('');
-    setNewModifierStat(null);
-    setNewIsRanged(false);
+    setNewDamageDiceCount(item.damageDiceCount ?? 0);
+    setNewDamageDiceSize(item.damageDiceSize ?? 6);
+    setNewDamageTypeTags(item.damageTypeTags ?? []);
+    setNewArmamentTags(item.armamentTags ?? []);
+    setNewEquipSlots(item.equipSlots ?? []);
+    setNewModifierStat(null); // modifier_stat not in catalog — user sets it
+    setNewIsRanged(item.isRanged ?? false);
     setNewMasterworkBonus(0);
   }
 
@@ -274,18 +276,21 @@ export default function CharacterSheetPage({ id, professions, origins, professio
       catalogItemId: catalogSelected?.id ?? null,
       armorBonus: newArmorBonus,
       armorCategory: newArmorCategory,
+      armamentTags: newArmamentTags,
       modifierStat: newModifierStat,
       isRanged: newIsRanged,
       damageDiceCount: newDamageDiceCount,
       damageDiceSize: newDamageDiceSize,
-      damageTypes: newDamageTypes.split(',').map((t) => t.trim()).filter(Boolean),
+      damageTypeTags: newDamageTypeTags,
+      equipSlots: newEquipSlots,
       masterworkBonus: newMasterworkBonus,
       equippable: catalogSelected ? (catalogSelected.equippable ?? newSlot !== null) : newSlot !== null,
     };
     persist({ inventory: [...inventory, item] });
     setNewName(''); setNewCategory('Misc'); setNewQty(1); setNewWeight(0); setNewNotes(''); setNewSlot(null);
     setNewArmorBonus(0); setNewArmorCategory(null);
-    setNewModifierStat(null); setNewIsRanged(false); setNewDamageDiceCount(0); setNewDamageDiceSize(6); setNewDamageTypes('');
+    setNewArmamentTags([]); setNewModifierStat(null); setNewIsRanged(false);
+    setNewDamageDiceCount(0); setNewDamageDiceSize(6); setNewDamageTypeTags([]); setNewEquipSlots([]);
     setNewMasterworkBonus(0);
     setCatalogSelected(null); setCatalogSearch(''); setAddingItem(false);
   }
@@ -328,20 +333,41 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   const equippedShield = inventory.find((i) => i.equipped && i.slot === 'Off Hand' && i.category === 'Shield') ?? null;
   const armorDefense = calcArmorDefense(equippedBody, equippedShield, attrs, hasAgile);
 
-  // Weapon combat stats helper
+  // Map profession armament display strings → lowercase tags for proficiency matching
+  const armamentProficiencyTags = useMemo(() => {
+    const tags: string[] = [];
+    for (const a of prof?.armaments ?? []) {
+      const lower = a.toLowerCase();
+      if (lower.includes('finesse')) tags.push('finesse');
+      if (lower.includes('martial')) tags.push('martial');
+      if (lower.includes('simple')) tags.push('simple');
+      if (lower.includes('defensive')) tags.push('defensive');
+      if (lower.includes('catalyst')) tags.push('catalyst');
+      if (lower.includes('ranged')) tags.push('ranged');
+    }
+    return [...new Set(tags)];
+  }, [prof]);
+
+  const DAMAGE_TYPE_LABEL: Record<string, string> = { puncture: 'Puncture', slash: 'Slash', blunt: 'Blunt' };
+
+  // Weapon combat stats — all derived from structured tag fields only
   function weaponStats(item: InventoryItem | null): { toHit: string; damage: string } | null {
-    if (!item || item.category !== 'Weapon') return null;
-    const modAttr = item.modifierStat ? attrs[item.modifierStat.toLowerCase() as keyof typeof attrs] : null;
+    if (!item || item.category !== 'Weapon' || !item.modifierStat) return null;
+    const modAttr = attrs[item.modifierStat];
     const mw = item.masterworkBonus ?? 0;
-    const toHitVal = (modAttr ?? 0) + mw;
+    const proficient = item.armamentTags.length > 0
+      ? item.armamentTags.some((tag) => armamentProficiencyTags.includes(tag))
+      : false;
+    const tierBonus = proficient ? c.tier : 0;
+    const toHitVal = modAttr + tierBonus + mw;
     const diceStr = item.damageDiceCount > 0 ? `${item.damageDiceCount}d${item.damageDiceSize}` : '—';
-    const damageMod = !item.isRanged && modAttr !== null ? modAttr + mw : mw > 0 ? mw : null;
-    const damageStr = damageMod !== null && damageMod !== 0
-      ? `${diceStr} ${damageMod >= 0 ? '+' : ''}${damageMod}`
-      : diceStr;
+    // Ranged: no stat mod on damage; only masterwork applies
+    const damageMod = item.isRanged ? mw : modAttr + mw;
+    const damageStr = damageMod !== 0 ? `${diceStr}${damageMod >= 0 ? '+' : ''}${damageMod}` : diceStr;
+    const typeLabels = (item.damageTypeTags ?? []).map((t) => DAMAGE_TYPE_LABEL[t] ?? t).join('/');
     return {
       toHit: toHitVal >= 0 ? `+${toHitVal}` : String(toHitVal),
-      damage: damageStr + (item.damageTypes.length > 0 ? ` (${item.damageTypes.join('/')})` : ''),
+      damage: damageStr + (typeLabels ? ` ${typeLabels}` : ''),
     };
   }
 
@@ -792,35 +818,77 @@ export default function CharacterSheetPage({ id, professions, origins, professio
                             </div>
                           )}
                           {(editFields.category === 'Weapon') && (
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end', flexWrap: 'wrap' }}>
-                              <div>
-                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Modifier</div>
-                                <select value={editFields.modifierStat ?? ''} onChange={(e) => setEditFields((f) => ({ ...f, modifierStat: (e.target.value || null) as 'Body' | 'Mind' | 'Will' | null }))} style={{ ...inputStyle, width: '70px' }}>
-                                  <option value="">—</option>
-                                  <option value="Body">Body</option>
-                                  <option value="Mind">Mind</option>
-                                  <option value="Will">Will</option>
-                                </select>
-                              </div>
-                              <div>
-                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Dice</div>
-                                <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
-                                  <input type="number" value={editFields.damageDiceCount ?? 0} min={0} max={20} onChange={(e) => setEditFields((f) => ({ ...f, damageDiceCount: parseInt(e.target.value) || 0 }))} style={{ ...inputStyle, width: '40px' }} />
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>d</span>
-                                  <select value={editFields.damageDiceSize ?? 6} onChange={(e) => setEditFields((f) => ({ ...f, damageDiceSize: parseInt(e.target.value) }))} style={{ ...inputStyle, width: '55px' }}>
-                                    {[4, 6, 8, 10, 12, 20].map((d) => <option key={d} value={d}>d{d}</option>)}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end', flexWrap: 'wrap' }}>
+                                <div>
+                                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Modifier Stat</div>
+                                  <select value={editFields.modifierStat ?? ''} onChange={(e) => setEditFields((f) => ({ ...f, modifierStat: (e.target.value || null) as 'body' | 'mind' | 'will' | null }))} style={{ ...inputStyle, width: '70px' }}>
+                                    <option value="">—</option>
+                                    <option value="body">Body</option>
+                                    <option value="mind">Mind</option>
+                                    <option value="will">Will</option>
                                   </select>
                                 </div>
+                                <div>
+                                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Dice</div>
+                                  <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+                                    <input type="number" value={editFields.damageDiceCount ?? 0} min={0} max={20} onChange={(e) => setEditFields((f) => ({ ...f, damageDiceCount: parseInt(e.target.value) || 0 }))} style={{ ...inputStyle, width: '40px' }} />
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>d</span>
+                                    <select value={editFields.damageDiceSize ?? 6} onChange={(e) => setEditFields((f) => ({ ...f, damageDiceSize: parseInt(e.target.value) }))} style={{ ...inputStyle, width: '55px' }}>
+                                      {[4, 6, 8, 10, 12, 20].map((d) => <option key={d} value={d}>d{d}</option>)}
+                                    </select>
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>MW Rank</div>
+                                  <select value={editFields.masterworkBonus ?? 0} onChange={(e) => setEditFields((f) => ({ ...f, masterworkBonus: parseInt(e.target.value) }))} style={{ ...inputStyle, width: '80px' }}>
+                                    <option value={0}>None</option>
+                                    <option value={1}>Superior (+1)</option>
+                                    <option value={2}>Mastered (+2)</option>
+                                    <option value={3}>Fabled (+3)</option>
+                                  </select>
+                                </div>
+                                <div style={{ paddingBottom: '0.15rem' }}>
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                    <input type="checkbox" checked={editFields.isRanged ?? false} onChange={(e) => setEditFields((f) => ({ ...f, isRanged: e.target.checked }))} />
+                                    Ranged
+                                  </label>
+                                </div>
                               </div>
-                              <div>
-                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Damage Type(s)</div>
-                                <input value={(editFields.damageTypes ?? []).join(', ')} onChange={(e) => setEditFields((f) => ({ ...f, damageTypes: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) }))} placeholder="Slashing…" style={{ ...inputStyle, width: '110px' }} />
-                              </div>
-                              <div style={{ paddingBottom: '0.15rem' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                  <input type="checkbox" checked={editFields.isRanged ?? false} onChange={(e) => setEditFields((f) => ({ ...f, isRanged: e.target.checked }))} />
-                                  Ranged
-                                </label>
+                              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                <div>
+                                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Armament Type</div>
+                                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                    {(['simple', 'martial', 'finesse', 'ranged', 'catalyst', 'defensive'] as const).map((tag) => {
+                                      const active = (editFields.armamentTags ?? []).includes(tag);
+                                      return (
+                                        <button key={tag} type="button" onClick={() => setEditFields((f) => ({ ...f, armamentTags: active ? (f.armamentTags ?? []).filter((t) => t !== tag) : [...(f.armamentTags ?? []), tag] }))} style={{ padding: '0.1rem 0.4rem', fontSize: '0.65rem', fontFamily: 'var(--font-heading)', fontWeight: 600, borderRadius: '9999px', border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`, backgroundColor: active ? 'var(--primary-light)' : 'transparent', color: active ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', textTransform: 'capitalize' }}>{tag}</button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Damage Type</div>
+                                  <div style={{ display: 'flex', gap: '0.35rem' }}>
+                                    {(['puncture', 'slash', 'blunt'] as const).map((tag) => {
+                                      const active = (editFields.damageTypeTags ?? []).includes(tag);
+                                      return (
+                                        <button key={tag} type="button" onClick={() => setEditFields((f) => ({ ...f, damageTypeTags: active ? (f.damageTypeTags ?? []).filter((t) => t !== tag) : [...(f.damageTypeTags ?? []), tag] }))} style={{ padding: '0.1rem 0.4rem', fontSize: '0.65rem', fontFamily: 'var(--font-heading)', fontWeight: 600, borderRadius: '9999px', border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`, backgroundColor: active ? 'var(--primary-light)' : 'transparent', color: active ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', textTransform: 'capitalize' }}>{tag}</button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Equip Slots</div>
+                                  <div style={{ display: 'flex', gap: '0.35rem' }}>
+                                    {[{ tag: 'main_hand', label: 'Main Hand' }, { tag: 'off_hand', label: 'Off Hand' }, { tag: 'two_hands', label: '2H' }].map(({ tag, label }) => {
+                                      const active = (editFields.equipSlots ?? []).includes(tag);
+                                      return (
+                                        <button key={tag} type="button" onClick={() => setEditFields((f) => ({ ...f, equipSlots: active ? (f.equipSlots ?? []).filter((t) => t !== tag) : [...(f.equipSlots ?? []), tag] }))} style={{ padding: '0.1rem 0.4rem', fontSize: '0.65rem', fontFamily: 'var(--font-heading)', fontWeight: 600, borderRadius: '9999px', border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`, backgroundColor: active ? 'var(--primary-light)' : 'transparent', color: active ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer' }}>{label}</button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           )}
@@ -924,35 +992,71 @@ export default function CharacterSheetPage({ id, professions, origins, professio
               </div>
             )}
             {newCategory === 'Weapon' && (
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end', flexWrap: 'wrap' }}>
-                <div>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Modifier</div>
-                  <select value={newModifierStat ?? ''} onChange={(e) => setNewModifierStat((e.target.value || null) as 'Body' | 'Mind' | 'Will' | null)} style={{ ...inputStyle, width: '70px' }}>
-                    <option value="">—</option>
-                    <option value="Body">Body</option>
-                    <option value="Mind">Mind</option>
-                    <option value="Will">Will</option>
-                  </select>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Dice</div>
-                  <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
-                    <input type="number" value={newDamageDiceCount} min={0} max={20} onChange={(e) => setNewDamageDiceCount(parseInt(e.target.value) || 0)} style={{ ...inputStyle, width: '40px' }} />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>d</span>
-                    <select value={newDamageDiceSize} onChange={(e) => setNewDamageDiceSize(parseInt(e.target.value))} style={{ ...inputStyle, width: '55px' }}>
-                      {[4, 6, 8, 10, 12, 20].map((d) => <option key={d} value={d}>d{d}</option>)}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Modifier Stat</div>
+                    <select value={newModifierStat ?? ''} onChange={(e) => setNewModifierStat((e.target.value || null) as 'body' | 'mind' | 'will' | null)} style={{ ...inputStyle, width: '70px' }}>
+                      <option value="">—</option>
+                      <option value="body">Body</option>
+                      <option value="mind">Mind</option>
+                      <option value="will">Will</option>
                     </select>
                   </div>
+                  <div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Dice</div>
+                    <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+                      <input type="number" value={newDamageDiceCount} min={0} max={20} onChange={(e) => setNewDamageDiceCount(parseInt(e.target.value) || 0)} style={{ ...inputStyle, width: '40px' }} />
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>d</span>
+                      <select value={newDamageDiceSize} onChange={(e) => setNewDamageDiceSize(parseInt(e.target.value))} style={{ ...inputStyle, width: '55px' }}>
+                        {[4, 6, 8, 10, 12, 20].map((d) => <option key={d} value={d}>d{d}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>MW Rank</div>
+                    <select value={newMasterworkBonus} onChange={(e) => setNewMasterworkBonus(parseInt(e.target.value))} style={{ ...inputStyle, width: '80px' }}>
+                      <option value={0}>None</option>
+                      <option value={1}>Superior (+1)</option>
+                      <option value={2}>Mastered (+2)</option>
+                      <option value={3}>Fabled (+3)</option>
+                    </select>
+                  </div>
+                  <div style={{ paddingBottom: '0.2rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      <input type="checkbox" checked={newIsRanged} onChange={(e) => setNewIsRanged(e.target.checked)} />
+                      Ranged
+                    </label>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Damage Type(s)</div>
-                  <input value={newDamageTypes} onChange={(e) => setNewDamageTypes(e.target.value)} placeholder="Slashing, Piercing…" style={{ ...inputStyle, width: '130px' }} />
-                </div>
-                <div style={{ paddingBottom: '0.2rem' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    <input type="checkbox" checked={newIsRanged} onChange={(e) => setNewIsRanged(e.target.checked)} />
-                    Ranged
-                  </label>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Armament Type</div>
+                    <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                      {(['simple', 'martial', 'finesse', 'ranged', 'catalyst', 'defensive'] as const).map((tag) => {
+                        const active = newArmamentTags.includes(tag);
+                        return <button key={tag} type="button" onClick={() => setNewArmamentTags((prev) => active ? prev.filter((t) => t !== tag) : [...prev, tag])} style={{ padding: '0.1rem 0.4rem', fontSize: '0.65rem', fontFamily: 'var(--font-heading)', fontWeight: 600, borderRadius: '9999px', border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`, backgroundColor: active ? 'var(--primary-light)' : 'transparent', color: active ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', textTransform: 'capitalize' }}>{tag}</button>;
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Damage Type</div>
+                    <div style={{ display: 'flex', gap: '0.3rem' }}>
+                      {(['puncture', 'slash', 'blunt'] as const).map((tag) => {
+                        const active = newDamageTypeTags.includes(tag);
+                        return <button key={tag} type="button" onClick={() => setNewDamageTypeTags((prev) => active ? prev.filter((t) => t !== tag) : [...prev, tag])} style={{ padding: '0.1rem 0.4rem', fontSize: '0.65rem', fontFamily: 'var(--font-heading)', fontWeight: 600, borderRadius: '9999px', border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`, backgroundColor: active ? 'var(--primary-light)' : 'transparent', color: active ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', textTransform: 'capitalize' }}>{tag}</button>;
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Equip Slots</div>
+                    <div style={{ display: 'flex', gap: '0.3rem' }}>
+                      {[{ tag: 'main_hand', label: 'Main Hand' }, { tag: 'off_hand', label: 'Off Hand' }, { tag: 'two_hands', label: '2H' }].map(({ tag, label }) => {
+                        const active = newEquipSlots.includes(tag);
+                        return <button key={tag} type="button" onClick={() => setNewEquipSlots((prev) => active ? prev.filter((t) => t !== tag) : [...prev, tag])} style={{ padding: '0.1rem 0.4rem', fontSize: '0.65rem', fontFamily: 'var(--font-heading)', fontWeight: 600, borderRadius: '9999px', border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`, backgroundColor: active ? 'var(--primary-light)' : 'transparent', color: active ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer' }}>{label}</button>;
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1324,26 +1428,22 @@ export default function CharacterSheetPage({ id, professions, origins, professio
         </div>
         {(primaryWeaponStats || offWeaponStats) && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
-            {primaryWeaponStats && (
-              <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
-                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.2rem' }}>
-                  {primaryWeapon?.name ?? 'Weapon'}{primaryWeapon?.isRanged ? ' (Ranged)' : ''}
+            {primaryWeaponStats && primaryWeapon && (
+              <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--primary)', borderRadius: '0.5rem' }}>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.8rem', color: 'var(--text)', marginBottom: '0.1rem' }}>{primaryWeapon.name}</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
+                  {primaryWeaponStats.toHit}, {primaryWeaponStats.damage}
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.78rem', color: 'var(--text)' }}>
-                  <span><span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>To Hit </span><strong style={{ color: 'var(--primary)' }}>{primaryWeaponStats.toHit}</strong></span>
-                  <span><span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>Dmg </span><strong>{primaryWeaponStats.damage}</strong></span>
-                </div>
+                {primaryWeapon.isRanged && <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ranged</div>}
               </div>
             )}
             {offWeaponStats && equippedOff && (
-              <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
-                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.2rem' }}>
-                  {equippedOff.name} (Off)
+              <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--primary)', borderRadius: '0.5rem' }}>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.8rem', color: 'var(--text)', marginBottom: '0.1rem' }}>{equippedOff.name}</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
+                  {offWeaponStats.toHit}, {offWeaponStats.damage}
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.78rem', color: 'var(--text)' }}>
-                  <span><span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>To Hit </span><strong style={{ color: 'var(--primary)' }}>{offWeaponStats.toHit}</strong></span>
-                  <span><span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>Dmg </span><strong>{offWeaponStats.damage}</strong></span>
-                </div>
+                {equippedOff.isRanged && <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ranged</div>}
               </div>
             )}
           </div>
