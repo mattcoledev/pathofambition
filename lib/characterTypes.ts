@@ -19,10 +19,15 @@ export interface InventoryItem {
   armorBonus: number;
   armorCategory: 'Light' | 'Medium' | 'Heavy' | null;
   // Weapon fields
-  damageDice: string;
-  damageType: string;
+  modifierStat: 'Body' | 'Mind' | 'Will' | null;
+  isRanged: boolean;
+  damageDiceCount: number;
+  damageDiceSize: number;
+  damageTypes: string[];
   // Masterwork
   masterworkBonus: number;
+  // Equippable
+  equippable: boolean;
 }
 
 export interface CharacterAttributes {
@@ -67,6 +72,8 @@ export interface Character {
 
   // Step 7: Known Spells (captured in Summary step for casters)
   knownSpellIds: string[];
+  // Spells toggled on in the active spell feed (subset of knownSpellIds)
+  activeFeedSpellIds: string[];
 
   // Summary step
   ambition: string;
@@ -218,4 +225,5 @@ export interface BuilderSpell {
   range: string;
   duration: string;
   descriptionMarkdown: string;
+  amps: Array<{ cost: string; effect: string }>;
 }

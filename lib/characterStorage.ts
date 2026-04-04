@@ -50,18 +50,30 @@ export function getCharacter(id: string): Character | null {
   if (found.currentReservoir === undefined) (found as Character).currentReservoir = 0;
   if (found.currentRespites === undefined) (found as Character).currentRespites = 3;
   if (!found.choiceSelections) (found as Character).choiceSelections = {};
+  if (!found.activeFeedSpellIds) (found as Character).activeFeedSpellIds = (found as Character).knownSpellIds ?? [];
   // Backfill slot/equipped/traits on inventory items
-  (found as Character).inventory = ((found as Character).inventory ?? []).map((item) => ({
-    ...item,
-    slot: item.slot ?? null,
-    equipped: item.equipped ?? false,
-    traits: item.traits ?? [],
-    catalogItemId: item.catalogItemId ?? null,
-    armorBonus: item.armorBonus ?? 0,
-    armorCategory: item.armorCategory ?? null,
-    damageDice: item.damageDice ?? '',
-    damageType: item.damageType ?? '',
-    masterworkBonus: item.masterworkBonus ?? 0,
-  }));
+  (found as Character).inventory = ((found as Character).inventory ?? []).map((item) => {
+    // Parse legacy damageDice string (e.g. "2d6") into count/size
+    const rawItem = item as unknown as Record<string, unknown>;
+    const rawDice = (rawItem.damageDice as string) ?? '';
+    const rawType = (rawItem.damageType as string) ?? '';
+    const diceMatch = rawDice.match(/^(\d+)d(\d+)$/i);
+    return {
+      ...item,
+      slot: item.slot ?? null,
+      equipped: item.equipped ?? false,
+      traits: item.traits ?? [],
+      catalogItemId: item.catalogItemId ?? null,
+      armorBonus: item.armorBonus ?? 0,
+      armorCategory: item.armorCategory ?? null,
+      modifierStat: item.modifierStat ?? null,
+      isRanged: item.isRanged ?? false,
+      damageDiceCount: item.damageDiceCount ?? (diceMatch ? parseInt(diceMatch[1]) : 0),
+      damageDiceSize: item.damageDiceSize ?? (diceMatch ? parseInt(diceMatch[2]) : 6),
+      damageTypes: item.damageTypes ?? (rawType ? [rawType] : []),
+      masterworkBonus: item.masterworkBonus ?? 0,
+      equippable: item.equippable ?? (item.slot !== null),
+    };
+  });
   return found;
 }

@@ -380,7 +380,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
     // Build structured inventory from starting packs
     let itemIdCounter = 0;
     function makeItem(name: string, category: import('@/lib/characterTypes').InventoryCategory, slot: import('@/lib/characterTypes').InventorySlot = null): import('@/lib/characterTypes').InventoryItem {
-      return { id: `item_${Date.now()}_${itemIdCounter++}`, name, category, quantity: 1, weight: 0, notes: '', source: 'creation', slot, equipped: false, traits: [], catalogItemId: null, armorBonus: 0, armorCategory: null, damageDice: '', damageType: '', masterworkBonus: 0 };
+      return { id: `item_${Date.now()}_${itemIdCounter++}`, name, category, quantity: 1, weight: 0, notes: '', source: 'creation', slot, equipped: false, traits: [], catalogItemId: null, armorBonus: 0, armorCategory: null, modifierStat: null, isRanged: false, damageDiceCount: 0, damageDiceSize: 6, damageTypes: [], masterworkBonus: 0, equippable: slot !== null };
     }
     const startingInventory: import('@/lib/characterTypes').InventoryItem[] = [];
     const profPack = selectedProf?.startingPack;
@@ -426,6 +426,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
       currentWounds: 0,
       renown: 0,
       featsPurchased: draft.selectedFeatIds.length,
+      activeFeedSpellIds: draft.knownSpellIds,
     };
     const saved = saveCharacter(charData);
     router.push(`/characters/${saved.id}`);

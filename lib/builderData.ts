@@ -262,6 +262,7 @@ export function getBuilderSpells(): BuilderSpell[] {
       range: (s.range as string) ?? '',
       duration: (s.duration as string) ?? '',
       descriptionMarkdown: (s.description_markdown as string) ?? '',
+      amps: (s.amps as Array<{ cost: string; effect: string }>) ?? [],
     } satisfies BuilderSpell));
 }
 

@@ -94,8 +94,11 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   const [newSlot, setNewSlot] = useState<InventorySlot>(null);
   const [newArmorBonus, setNewArmorBonus] = useState(0);
   const [newArmorCategory, setNewArmorCategory] = useState<'Light' | 'Medium' | 'Heavy' | null>(null);
-  const [newDamageDice, setNewDamageDice] = useState('');
-  const [newDamageType, setNewDamageType] = useState('');
+  const [newModifierStat, setNewModifierStat] = useState<'Body' | 'Mind' | 'Will' | null>(null);
+  const [newIsRanged, setNewIsRanged] = useState(false);
+  const [newDamageDiceCount, setNewDamageDiceCount] = useState(0);
+  const [newDamageDiceSize, setNewDamageDiceSize] = useState(6);
+  const [newDamageTypes, setNewDamageTypes] = useState('');
   const [newMasterworkBonus, setNewMasterworkBonus] = useState(0);
 
   // Item editing
@@ -110,7 +113,10 @@ export default function CharacterSheetPage({ id, professions, origins, professio
 
   // Spell amp state (temporary, not persisted)
   const [activeAmps, setActiveAmps] = useState<Record<string, Set<number>>>({});
-  const [expandedAmps, setExpandedAmps] = useState<Set<string>>(new Set());
+  // Spell feed / manager state
+  const [expandedSpells, setExpandedSpells] = useState<Set<string>>(new Set());
+  const [showSpellManager, setShowSpellManager] = useState(false);
+  const [spellManagerSearch, setSpellManagerSearch] = useState('');
 
   useEffect(() => {
     const loaded = getCharacter(id);
@@ -234,8 +240,13 @@ export default function CharacterSheetPage({ id, professions, origins, professio
     setNewNotes('');
     setNewArmorBonus(item.armorBonus ?? 0);
     setNewArmorCategory((item.armorCategory as 'Light' | 'Medium' | 'Heavy' | null) ?? null);
-    setNewDamageDice(item.damage ?? '');
-    setNewDamageType('');
+    // Parse catalog damage string e.g. "2d6" into count/size
+    const diceMatch = (item.damage ?? '').match(/^(\d+)d(\d+)$/i);
+    setNewDamageDiceCount(diceMatch ? parseInt(diceMatch[1]) : 0);
+    setNewDamageDiceSize(diceMatch ? parseInt(diceMatch[2]) : 6);
+    setNewDamageTypes('');
+    setNewModifierStat(null);
+    setNewIsRanged(false);
     setNewMasterworkBonus(0);
   }
 
@@ -255,13 +266,19 @@ export default function CharacterSheetPage({ id, professions, origins, professio
       catalogItemId: catalogSelected?.id ?? null,
       armorBonus: newArmorBonus,
       armorCategory: newArmorCategory,
-      damageDice: newDamageDice,
-      damageType: newDamageType,
+      modifierStat: newModifierStat,
+      isRanged: newIsRanged,
+      damageDiceCount: newDamageDiceCount,
+      damageDiceSize: newDamageDiceSize,
+      damageTypes: newDamageTypes.split(',').map((t) => t.trim()).filter(Boolean),
       masterworkBonus: newMasterworkBonus,
+      equippable: catalogSelected ? (catalogSelected.equippable ?? newSlot !== null) : newSlot !== null,
     };
     persist({ inventory: [...inventory, item] });
     setNewName(''); setNewCategory('Misc'); setNewQty(1); setNewWeight(0); setNewNotes(''); setNewSlot(null);
-    setNewArmorBonus(0); setNewArmorCategory(null); setNewDamageDice(''); setNewDamageType(''); setNewMasterworkBonus(0);
+    setNewArmorBonus(0); setNewArmorCategory(null);
+    setNewModifierStat(null); setNewIsRanged(false); setNewDamageDiceCount(0); setNewDamageDiceSize(6); setNewDamageTypes('');
+    setNewMasterworkBonus(0);
     setCatalogSelected(null); setCatalogSearch(''); setAddingItem(false);
   }
 
@@ -302,6 +319,27 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   const equippedBody = inventory.find((i) => i.equipped && i.slot === 'Body') ?? null;
   const equippedShield = inventory.find((i) => i.equipped && i.slot === 'Off Hand' && i.category === 'Shield') ?? null;
   const armorDefense = calcArmorDefense(equippedBody, equippedShield, attrs, hasAgile);
+
+  // Weapon combat stats helper
+  function weaponStats(item: InventoryItem | null): { toHit: string; damage: string } | null {
+    if (!item || item.category !== 'Weapon') return null;
+    const modAttr = item.modifierStat ? attrs[item.modifierStat.toLowerCase() as keyof typeof attrs] : null;
+    const mw = item.masterworkBonus ?? 0;
+    const toHitVal = (modAttr ?? 0) + mw;
+    const diceStr = item.damageDiceCount > 0 ? `${item.damageDiceCount}d${item.damageDiceSize}` : '—';
+    const damageMod = !item.isRanged && modAttr !== null ? modAttr + mw : mw > 0 ? mw : null;
+    const damageStr = damageMod !== null && damageMod !== 0
+      ? `${diceStr} ${damageMod >= 0 ? '+' : ''}${damageMod}`
+      : diceStr;
+    return {
+      toHit: toHitVal >= 0 ? `+${toHitVal}` : String(toHitVal),
+      damage: damageStr + (item.damageTypes.length > 0 ? ` (${item.damageTypes.join('/')})` : ''),
+    };
+  }
+
+  const primaryWeapon = equippedTwoHands ?? equippedMain;
+  const primaryWeaponStats = weaponStats(primaryWeapon);
+  const offWeaponStats = weaponStats(equippedOff?.category === 'Weapon' ? equippedOff : null);
 
   // ─── Tab content renderers ───────────────────────────────────────────────
 
@@ -474,7 +512,7 @@ export default function CharacterSheetPage({ id, professions, origins, professio
                     </td>
                     <td style={{ padding: '0.3rem 0.4rem', color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.78rem' }}>{item.weight > 0 ? item.weight : '—'}</td>
                     <td style={{ padding: '0.3rem 0.25rem', textAlign: 'center' }}>
-                      {item.slot ? (
+                      {item.equippable ? (
                         <button
                           onClick={() => item.equipped ? updateItem(item.id, { equipped: false }) : equipItem(item.id, item.slot)}
                           style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', border: `1px solid ${item.equipped ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '0.25rem', backgroundColor: item.equipped ? 'var(--primary)' : 'transparent', color: item.equipped ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontFamily: 'var(--font-heading)', fontWeight: 600 }}
@@ -545,14 +583,35 @@ export default function CharacterSheetPage({ id, professions, origins, professio
                             </div>
                           )}
                           {(editFields.category === 'Weapon') && (
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end', flexWrap: 'wrap' }}>
                               <div>
-                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Damage Dice</div>
-                                <input value={editFields.damageDice ?? ''} onChange={(e) => setEditFields((f) => ({ ...f, damageDice: e.target.value }))} placeholder="1d6" style={{ ...inputStyle, width: '70px' }} />
+                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Modifier</div>
+                                <select value={editFields.modifierStat ?? ''} onChange={(e) => setEditFields((f) => ({ ...f, modifierStat: (e.target.value || null) as 'Body' | 'Mind' | 'Will' | null }))} style={{ ...inputStyle, width: '70px' }}>
+                                  <option value="">—</option>
+                                  <option value="Body">Body</option>
+                                  <option value="Mind">Mind</option>
+                                  <option value="Will">Will</option>
+                                </select>
                               </div>
                               <div>
-                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Damage Type</div>
-                                <input value={editFields.damageType ?? ''} onChange={(e) => setEditFields((f) => ({ ...f, damageType: e.target.value }))} placeholder="Slashing…" style={{ ...inputStyle, width: '100px' }} />
+                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Dice</div>
+                                <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+                                  <input type="number" value={editFields.damageDiceCount ?? 0} min={0} max={20} onChange={(e) => setEditFields((f) => ({ ...f, damageDiceCount: parseInt(e.target.value) || 0 }))} style={{ ...inputStyle, width: '40px' }} />
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>d</span>
+                                  <select value={editFields.damageDiceSize ?? 6} onChange={(e) => setEditFields((f) => ({ ...f, damageDiceSize: parseInt(e.target.value) }))} style={{ ...inputStyle, width: '55px' }}>
+                                    {[4, 6, 8, 10, 12, 20].map((d) => <option key={d} value={d}>d{d}</option>)}
+                                  </select>
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Damage Type(s)</div>
+                                <input value={(editFields.damageTypes ?? []).join(', ')} onChange={(e) => setEditFields((f) => ({ ...f, damageTypes: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) }))} placeholder="Slashing…" style={{ ...inputStyle, width: '110px' }} />
+                              </div>
+                              <div style={{ paddingBottom: '0.15rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                  <input type="checkbox" checked={editFields.isRanged ?? false} onChange={(e) => setEditFields((f) => ({ ...f, isRanged: e.target.checked }))} />
+                                  Ranged
+                                </label>
                               </div>
                             </div>
                           )}
@@ -656,14 +715,35 @@ export default function CharacterSheetPage({ id, professions, origins, professio
               </div>
             )}
             {newCategory === 'Weapon' && (
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end', flexWrap: 'wrap' }}>
                 <div>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Damage Dice</div>
-                  <input value={newDamageDice} onChange={(e) => setNewDamageDice(e.target.value)} placeholder="1d6" style={{ ...inputStyle, width: '70px' }} />
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Modifier</div>
+                  <select value={newModifierStat ?? ''} onChange={(e) => setNewModifierStat((e.target.value || null) as 'Body' | 'Mind' | 'Will' | null)} style={{ ...inputStyle, width: '70px' }}>
+                    <option value="">—</option>
+                    <option value="Body">Body</option>
+                    <option value="Mind">Mind</option>
+                    <option value="Will">Will</option>
+                  </select>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Damage Type</div>
-                  <input value={newDamageType} onChange={(e) => setNewDamageType(e.target.value)} placeholder="Slashing…" style={{ ...inputStyle, width: '100px' }} />
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Dice</div>
+                  <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+                    <input type="number" value={newDamageDiceCount} min={0} max={20} onChange={(e) => setNewDamageDiceCount(parseInt(e.target.value) || 0)} style={{ ...inputStyle, width: '40px' }} />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>d</span>
+                    <select value={newDamageDiceSize} onChange={(e) => setNewDamageDiceSize(parseInt(e.target.value))} style={{ ...inputStyle, width: '55px' }}>
+                      {[4, 6, 8, 10, 12, 20].map((d) => <option key={d} value={d}>d{d}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Damage Type(s)</div>
+                  <input value={newDamageTypes} onChange={(e) => setNewDamageTypes(e.target.value)} placeholder="Slashing, Piercing…" style={{ ...inputStyle, width: '130px' }} />
+                </div>
+                <div style={{ paddingBottom: '0.2rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    <input type="checkbox" checked={newIsRanged} onChange={(e) => setNewIsRanged(e.target.checked)} />
+                    Ranged
+                  </label>
                 </div>
               </div>
             )}
@@ -678,52 +758,152 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   }
 
   function renderSpellcastingTab() {
-    const cantrips = mySpells.filter((s) => s.isCantrip);
-    const tiered = mySpells.filter((s) => !s.isCantrip);
+    if (!isCaster && mySpells.length === 0) return <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No spellcasting.</p>;
+
+    // Active feed: use persisted list, defaulting to all known spells
+    const feedIds = (c.activeFeedSpellIds ?? []).length > 0 ? c.activeFeedSpellIds : c.knownSpellIds;
+    const feedSpells = mySpells.filter((s) => feedIds.includes(s.id));
+    const cantrips = feedSpells.filter((s) => s.isCantrip);
+    const tiered = feedSpells.filter((s) => !s.isCantrip);
     const byTier: Record<number, typeof tiered> = {};
     tiered.forEach((s) => { if (!byTier[s.tier]) byTier[s.tier] = []; byTier[s.tier].push(s); });
 
-    if (!isCaster && mySpells.length === 0) return <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No spellcasting.</p>;
+    function toggleSpellExpand(id: string) {
+      setExpandedSpells((prev) => {
+        const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
+      });
+    }
+
+    function toggleAmp(spellId: string, ampIdx: number) {
+      setActiveAmps((prev) => {
+        const current = new Set(prev[spellId] ?? []);
+        current.has(ampIdx) ? current.delete(ampIdx) : current.add(ampIdx);
+        return { ...prev, [spellId]: current };
+      });
+    }
+
+    function toggleFeedSpell(spellId: string) {
+      const current = (c.activeFeedSpellIds ?? []).length > 0 ? c.activeFeedSpellIds : c.knownSpellIds;
+      const next = current.includes(spellId) ? current.filter((id) => id !== spellId) : [...current, spellId];
+      persist({ activeFeedSpellIds: next });
+    }
+
+    function addToKnown(spellId: string) {
+      if (c.knownSpellIds.includes(spellId)) return;
+      const newKnown = [...c.knownSpellIds, spellId];
+      const newFeed = [...(c.activeFeedSpellIds ?? c.knownSpellIds), spellId];
+      persist({ knownSpellIds: newKnown, activeFeedSpellIds: newFeed });
+    }
+
+    function removeFromKnown(spellId: string) {
+      persist({
+        knownSpellIds: c.knownSpellIds.filter((id) => id !== spellId),
+        activeFeedSpellIds: (c.activeFeedSpellIds ?? []).filter((id) => id !== spellId),
+      });
+    }
 
     function SpellCard({ spell }: { spell: typeof mySpells[0] }) {
-      const ampToggle = activeAmps[spell.id] ?? new Set<number>();
-      const ampExpanded = expandedAmps.has(spell.id);
-      // Spell cost = 1 per tier (cantrips = 0) + amp costs
+      const expanded = expandedSpells.has(spell.id);
+      const ampState = activeAmps[spell.id] ?? new Set<number>();
       const baseCost = spell.isCantrip ? 0 : spell.tier;
-      const totalCost = baseCost; // Amp support: would add amp costs here
-      const canCast = currentReservoir >= totalCost;
+      const ampCost = (spell.amps ?? []).reduce((sum, amp, i) =>
+        ampState.has(i) ? sum + parseInt(amp.cost.replace('+', '')) : sum, 0);
+      const totalCost = baseCost + ampCost;
+      const canCast = spell.isCantrip || currentReservoir >= totalCost;
+      const hasAmps = (spell.amps ?? []).length > 0;
 
       function handleCast() {
-        if (!canCast) return;
+        if (!canCast || spell.isCantrip) { if (spell.isCantrip) return; return; }
         persist({ currentReservoir: Math.max(0, currentReservoir - totalCost) });
       }
 
+      const badgeStyle: React.CSSProperties = { fontSize: '0.62rem', fontWeight: 700, fontFamily: 'var(--font-heading)', padding: '0.1rem 0.35rem', borderRadius: '9999px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-nav)', color: 'var(--text-muted)', whiteSpace: 'nowrap' };
+
       return (
-        <div style={{ padding: '0.875rem 1rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--primary)', flex: 1 }}>{spell.name}</span>
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, fontFamily: 'var(--font-heading)', padding: '0.1rem 0.4rem', borderRadius: '9999px', backgroundColor: 'var(--bg-nav)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+        <div style={{ border: `1px solid ${expanded ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '0.5rem', overflow: 'hidden', backgroundColor: 'var(--bg-card)' }}>
+          {/* Collapsed header */}
+          <button
+            onClick={() => toggleSpellExpand(spell.id)}
+            style={{ width: '100%', padding: '0.6rem 0.875rem', border: 'none', cursor: 'pointer', textAlign: 'left', backgroundColor: expanded ? 'var(--primary-light)' : 'var(--bg-card)', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}
+          >
+            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9rem', color: expanded ? 'var(--primary)' : 'var(--text)', flex: 1, minWidth: '120px' }}>{spell.name}</span>
+            <span style={{ ...badgeStyle, backgroundColor: spell.isCantrip ? 'var(--accent-light)' : 'var(--bg-nav)', color: spell.isCantrip ? 'var(--accent)' : 'var(--text-muted)', border: spell.isCantrip ? '1px solid #FCD34D' : '1px solid var(--border)' }}>
               {spell.isCantrip ? 'Cantrip' : `Tier ${spell.tier}`}
             </span>
-            <button
-              onClick={handleCast}
-              disabled={!canCast}
-              style={{ padding: '0.2rem 0.625rem', border: 'none', borderRadius: '0.375rem', backgroundColor: canCast ? 'var(--primary)' : 'var(--border)', color: '#fff', cursor: canCast ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.72rem' }}
-            >{spell.isCantrip ? 'Cast (free)' : `Cast (${totalCost})`}</button>
-          </div>
-          {!canCast && !spell.isCantrip && <div style={{ fontSize: '0.72rem', color: '#EF4444', fontStyle: 'italic', marginBottom: '0.25rem' }}>Not enough Reservoir to cast this spell.</div>}
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-            {spell.range && <span style={{ marginRight: '0.75rem' }}>Range: {spell.range}</span>}
-            {spell.duration && <span>Duration: {spell.duration}</span>}
-          </div>
-          <MarkdownContent content={spell.descriptionMarkdown} />
+            {!spell.isCantrip && (
+              <span style={{ ...badgeStyle, backgroundColor: canCast ? 'var(--primary-light)' : 'var(--bg-nav)', color: canCast ? 'var(--primary)' : 'var(--text-muted)', border: canCast ? '1px solid var(--primary)' : '1px solid var(--border)' }}>
+                Cost: {totalCost}
+              </span>
+            )}
+            {spell.range && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{spell.range}</span>}
+            {spell.duration && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{spell.duration}</span>}
+            {hasAmps && <span style={{ ...badgeStyle, backgroundColor: '#FEF3C7', color: '#92400E', border: '1px solid #FCD34D' }}>Amps</span>}
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>{expanded ? '▲' : '▼'}</span>
+          </button>
+
+          {/* Expanded content */}
+          {expanded && (
+            <div style={{ padding: '0.75rem 0.875rem', borderTop: `1px solid ${expanded ? 'var(--primary)' : 'var(--border)'}` }}>
+              <MarkdownContent content={spell.descriptionMarkdown} />
+
+              {/* Amp panel */}
+              {hasAmps && (
+                <div style={{ marginTop: '0.75rem', padding: '0.625rem 0.75rem', backgroundColor: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: '0.375rem' }}>
+                  <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#92400E', fontFamily: 'var(--font-heading)', marginBottom: '0.375rem' }}>Amps</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                    {(spell.amps ?? []).map((amp, i) => {
+                      const active = ampState.has(i);
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => toggleAmp(spell.id, i)}
+                          style={{ width: '100%', textAlign: 'left', padding: '0.375rem 0.625rem', border: `1.5px solid ${active ? '#D97706' : '#FCD34D'}`, borderRadius: '0.375rem', backgroundColor: active ? '#FEF3C7' : '#FFFBEB', cursor: 'pointer', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}
+                        >
+                          <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.72rem', color: active ? '#92400E' : '#D97706', whiteSpace: 'nowrap', minWidth: '50px' }}>Amp {amp.cost}</span>
+                          <span style={{ fontSize: '0.78rem', color: '#78350F', lineHeight: 1.45 }}>{amp.effect}</span>
+                          {active && <span style={{ marginLeft: 'auto', fontSize: '0.65rem', fontWeight: 700, color: '#92400E', fontFamily: 'var(--font-heading)' }}>✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {ampCost > 0 && (
+                    <div style={{ marginTop: '0.375rem', fontSize: '0.72rem', color: '#92400E', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
+                      Total cost: {baseCost} + {ampCost} amps = {totalCost}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Cast button */}
+              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {!spell.isCantrip ? (
+                  <>
+                    <button
+                      onClick={handleCast}
+                      disabled={!canCast}
+                      style={{ padding: '0.3rem 0.875rem', border: 'none', borderRadius: '0.375rem', backgroundColor: canCast ? 'var(--primary)' : 'var(--border)', color: '#fff', cursor: canCast ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.8rem' }}
+                    >Cast ({totalCost})</button>
+                    {!canCast && <span style={{ fontSize: '0.72rem', color: '#EF4444', fontStyle: 'italic' }}>Not enough Reservoir.</span>}
+                  </>
+                ) : (
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Cantrip — free to cast.</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       );
     }
 
+    // ─── Known Spells Manager Modal ─────────────────────────────────────────
+    const allSearchable = spellManagerSearch.trim()
+      ? spells.filter((s) => s.name.toLowerCase().includes(spellManagerSearch.toLowerCase()) || s.school.toLowerCase().includes(spellManagerSearch.toLowerCase()))
+      : spells;
+    const unknownSpells = allSearchable.filter((s) => !c.knownSpellIds.includes(s.id));
+
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {/* Spellcasting stats + reservoir control */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+        {/* Summary row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
           <StatCard label="Caster" value={casterInfo?.casterType === 'full' ? 'Full' : casterInfo?.casterType === 'half' ? 'Half' : 'Ltd.'} sub={casterInfo?.casterSource ?? ''} />
           <div style={{ textAlign: 'center', padding: '0.625rem 0.5rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
@@ -738,20 +918,113 @@ export default function CharacterSheetPage({ id, professions, origins, professio
           <StatCard label="Modifier" value={fmtAttr(modVal)} sub={modKey} />
         </div>
 
-        {mySpells.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No known spells selected.</p>}
+        {/* Known Spells button */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => setShowSpellManager(true)}
+            style={{ padding: '0.35rem 0.875rem', border: '1.5px solid var(--primary)', borderRadius: '0.375rem', backgroundColor: 'transparent', cursor: 'pointer', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.8rem' }}
+          >Known Spells ({c.knownSpellIds.length})</button>
+        </div>
+
+        {/* Spell feed */}
+        {feedSpells.length === 0 && (
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+            {mySpells.length === 0 ? 'No known spells. Use "Known Spells" to add spells.' : 'All spells hidden. Use "Known Spells" to toggle spells into your feed.'}
+          </p>
+        )}
 
         {cantrips.length > 0 && (
-          <>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)' }}>Cantrips</div>
-            {cantrips.map((s) => <SpellCard key={s.id} spell={s} />)}
-          </>
+          <div>
+            <div style={{ fontSize: '0.63rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.375rem' }}>Cantrips</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {cantrips.map((s) => <SpellCard key={s.id} spell={s} />)}
+            </div>
+          </div>
         )}
         {Object.keys(byTier).map(Number).sort().map((tier) => (
           <div key={tier}>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.25rem' }}>Tier {tier}</div>
-            {byTier[tier].map((s) => <SpellCard key={s.id} spell={s} />)}
+            <div style={{ fontSize: '0.63rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.375rem' }}>Tier {tier}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {byTier[tier].map((s) => <SpellCard key={s.id} spell={s} />)}
+            </div>
           </div>
         ))}
+
+        {/* Known Spells Manager Modal */}
+        {showSpellManager && (
+          <div
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '2rem 1rem', overflowY: 'auto' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowSpellManager(false); }}
+          >
+            <div style={{ width: '100%', maxWidth: '600px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.75rem', overflow: 'hidden' }}>
+              <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1rem', color: 'var(--text)' }}>Known Spells</h3>
+                <button onClick={() => setShowSpellManager(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem' }}>✕</button>
+              </div>
+
+              <div style={{ padding: '1rem 1.25rem', maxHeight: '70vh', overflowY: 'auto' }}>
+                {/* Known spells list */}
+                {mySpells.length > 0 && (
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.5rem' }}>
+                      Your Known Spells — toggle to show/hide in feed
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      {mySpells.map((s) => {
+                        const inFeed = feedIds.includes(s.id);
+                        return (
+                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.625rem', backgroundColor: inFeed ? 'var(--primary-light)' : 'var(--bg-nav)', border: `1px solid ${inFeed ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '0.375rem' }}>
+                            <button
+                              onClick={() => toggleFeedSpell(s.id)}
+                              style={{ width: '22px', height: '22px', borderRadius: '50%', border: `2px solid ${inFeed ? 'var(--primary)' : 'var(--border)'}`, backgroundColor: inFeed ? 'var(--primary)' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.65rem' }}
+                            >{inFeed ? '✓' : ''}</button>
+                            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text)', flex: 1 }}>{s.name}</span>
+                            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{s.isCantrip ? 'Cantrip' : `Tier ${s.tier}`}</span>
+                            {s.range && <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{s.range}</span>}
+                            {s.duration && <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{s.duration}</span>}
+                            <button
+                              onClick={() => removeFromKnown(s.id)}
+                              title="Remove from known spells"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.7rem', padding: '0.1rem 0.25rem', flexShrink: 0 }}
+                            >✕</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add spell search */}
+                <div>
+                  <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.5rem' }}>Add Spell</div>
+                  <input
+                    value={spellManagerSearch}
+                    onChange={(e) => setSpellManagerSearch(e.target.value)}
+                    placeholder="Search by name or school…"
+                    style={{ width: '100%', padding: '0.375rem 0.625rem', fontSize: '0.825rem', fontFamily: 'var(--font-body)', border: '1px solid var(--border)', borderRadius: '0.375rem', backgroundColor: 'var(--bg-nav)', color: 'var(--text)', outline: 'none', marginBottom: '0.5rem', boxSizing: 'border-box' }}
+                  />
+                  {spellManagerSearch.trim() && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '220px', overflowY: 'auto' }}>
+                      {unknownSpells.length === 0 ? (
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0 }}>No results.</p>
+                      ) : unknownSpells.map((s) => (
+                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.625rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.375rem' }}>
+                          <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text)', flex: 1 }}>{s.name}</span>
+                          <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>{s.isCantrip ? 'Cantrip' : `Tier ${s.tier}`}</span>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{s.school}</span>
+                          <button
+                            onClick={() => addToKnown(s.id)}
+                            style={{ padding: '0.15rem 0.5rem', border: 'none', borderRadius: '0.25rem', backgroundColor: 'var(--primary)', color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.72rem', flexShrink: 0 }}
+                          >+ Add</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -840,6 +1113,32 @@ export default function CharacterSheetPage({ id, professions, origins, professio
           {isCaster && <StatCard label="Max Reservoir" value={maxReservoir} sub={casterInfo?.casterSource ?? ''} />}
           {isCaster && <StatCard label="Spell DC" value={spellDC ?? '—'} />}
         </div>
+        {(primaryWeaponStats || offWeaponStats) && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
+            {primaryWeaponStats && (
+              <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
+                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.2rem' }}>
+                  {primaryWeapon?.name ?? 'Weapon'}{primaryWeapon?.isRanged ? ' (Ranged)' : ''}
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.78rem', color: 'var(--text)' }}>
+                  <span><span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>To Hit </span><strong style={{ color: 'var(--primary)' }}>{primaryWeaponStats.toHit}</strong></span>
+                  <span><span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>Dmg </span><strong>{primaryWeaponStats.damage}</strong></span>
+                </div>
+              </div>
+            )}
+            {offWeaponStats && equippedOff && (
+              <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
+                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.2rem' }}>
+                  {equippedOff.name} (Off)
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.78rem', color: 'var(--text)' }}>
+                  <span><span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>To Hit </span><strong style={{ color: 'var(--primary)' }}>{offWeaponStats.toHit}</strong></span>
+                  <span><span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>Dmg </span><strong>{offWeaponStats.damage}</strong></span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Section>
 
       {/* Rest Tracker (Issue 5) */}
