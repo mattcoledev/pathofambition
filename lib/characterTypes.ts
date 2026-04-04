@@ -187,6 +187,8 @@ export interface BuilderOrigin {
   flavor: string;
   vocations: BuilderVocation[];
   originPack: { name: string; categories: BuilderOriginPackCategory[] } | null;
+  baseFeatures: BuilderFeatureEntry[];
+  caster: BuilderVocationCaster | null;
 }
 
 export interface BuilderFeat {

@@ -142,7 +142,7 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   // Caster: from profession OR any selected feat
   const allFeats = [...professionFeats, ...originFeats];
   const featCaster = allFeats.find((f) => c.selectedFeatIds.includes(f.id) && f.casterInfo)?.casterInfo ?? null;
-  const casterInfo = prof?.casterType ? { casterType: prof.casterType, casterSource: prof.casterSource ?? '', casterModifierOptions: prof.casterModifierOptions } : featCaster;
+  const casterInfo = prof?.casterType ? { casterType: prof.casterType, casterSource: prof.casterSource ?? '', casterModifierOptions: prof.casterModifierOptions } : c.vocationCaster ?? featCaster;
   const isCaster = !!casterInfo;
   const modKey = (casterInfo?.casterModifierOptions?.length === 1 ? casterInfo.casterModifierOptions[0] : c.spellcastingModifier) ?? 'mind';
   const modVal = attrs[modKey];

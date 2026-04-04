@@ -38,19 +38,25 @@ interface CasterInfo {
 }
 
 function detectCasterFromMarkdown(md: string): CasterInfo {
+  // Normalize non-breaking spaces before matching
+  const normalized = md.replace(/\u00a0/g, ' ');
   // Strict match: must say "You are a **X-caster**" or "You're a **X-caster**"
-  const typeMatch = md.match(/You(?:'re| are) a \*\*(Full|Half|Limited)-[Cc]aster\*\*/i);
+  const typeMatch = normalized.match(/You(?:'re| are) a \*\*(Full|Half|Limited)-[Cc]aster\*\*/i);
   if (!typeMatch) return { casterType: null, casterSource: null, casterModifierOptions: [] };
 
   const casterType = typeMatch[1].toLowerCase() as 'full' | 'half' | 'limited';
 
-  const sourceMatch = md.match(/\*\*[Ss]ource\*\*\s+is\s+\*\*(.*?)\*\*/i) ||
-                      md.match(/\*\*[Ss]ource\*\*:\s*_?(.*?)_?\n/i) ||
-                      md.match(/[Ss]ource\*\*[^*\n]+\*\*(.*?)\*\*/i);
+  const sourceMatch = normalized.match(/\*\*[Ss]ource\*\*\s+is\s+\*\*(.*?)\*\*/i) ||
+                      normalized.match(/\*\*[Ss]ource\*\*:\s*_?(.*?)_?\n/i) ||
+                      normalized.match(/[Ss]ource\*\*[^*\n]+\*\*(.*?)\*\*/i) ||
+                      normalized.match(/\*\*source\*\* is \*\*(.*?)\*\*/i) ||
+                      normalized.match(/source\*\* is \*\*(.*?)\*\*/i);
   const casterSource = sourceMatch ? sourceMatch[1].trim() : null;
 
-  const modMatch = md.match(/Spellcasting Modifier\*\*\s+is\s+\*\*(.*?)\*\*/i) ||
-                   md.match(/Spellcasting Modifier\*\*:\s*_?(.*?)_?[\n.]/i);
+  const modMatch = normalized.match(/Spellcasting Modifier\*\*\s+is\s+\*\*(.*?)\*\*/i) ||
+                   normalized.match(/Spellcasting Modifier\*\*:\s*_?(.*?)_?[\n.]/i) ||
+                   normalized.match(/spell casting modifier\*\* is \*\*(.*?)\*\*/i) ||
+                   normalized.match(/spellcasting modifier\*\* is \*\*(.*?)\*\*/i);
   const modRaw = modMatch ? modMatch[1].trim() : '';
 
   const casterModifierOptions: AttributeKey[] = [];
@@ -154,6 +160,7 @@ export function getBuilderOrigins(): BuilderOrigin[] {
     const origin = o as {
       id: string; name: string; flavor: string; pack_name: string;
       origin_pack: Record<string, unknown>;
+      origin_features: Array<{ id?: string; name?: string; description_markdown?: string; traits?: string[]; activation?: { raw?: string } }>;
       vocations: Array<{
         id: string; name: string; flavor: string;
         attribute_bonus: { attribute: string; value: number };
@@ -161,10 +168,24 @@ export function getBuilderOrigins(): BuilderOrigin[] {
       }>;
     };
 
+    const originFeatures = origin.origin_features ?? [];
+    const originCasterInfo = detectCasterFromFeatures(originFeatures);
+    const originCaster: BuilderVocationCaster | null = originCasterInfo.casterType
+      ? { casterType: originCasterInfo.casterType, casterSource: originCasterInfo.casterSource ?? '', casterModifierOptions: originCasterInfo.casterModifierOptions }
+      : null;
+
     return {
       id: origin.id,
       name: origin.name,
       flavor: origin.flavor ?? '',
+      baseFeatures: originFeatures.map((f) => ({
+        id: f.id ?? '',
+        name: f.name ?? '',
+        descriptionMarkdown: f.description_markdown ?? '',
+        traits: f.traits ?? [],
+        activationRaw: f.activation?.raw ?? null,
+      })),
+      caster: originCaster,
       vocations: (origin.vocations ?? []).map((v) => {
         const casterInfo = detectCasterFromFeatures(v.features ?? []);
         const vocationCaster: BuilderVocationCaster | null = casterInfo.casterType

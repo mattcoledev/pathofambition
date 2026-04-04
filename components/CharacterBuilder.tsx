@@ -333,12 +333,15 @@ export default function CharacterBuilder({ professions, origins, professionFeats
       if (queue.length > 0) { startChoiceQueue(queue, nextStep); return; }
     }
 
-    // After origin — check vocation features for on_gain choices
-    if (step === 3 && selectedVocation) {
-      const queue = getUnresolvedOnGain(
-        selectedVocation.features.map((f) => f.name),
-        selectedVocation.name,
-      );
+    // After origin — check origin base features + vocation features for on_gain choices
+    if (step === 3) {
+      const queue: ChoiceFeature[] = [];
+      if (selectedOrigin?.baseFeatures.length) {
+        queue.push(...getUnresolvedOnGain(selectedOrigin.baseFeatures.map((f) => f.name), selectedOrigin.name));
+      }
+      if (selectedVocation?.features.length) {
+        queue.push(...getUnresolvedOnGain(selectedVocation.features.map((f) => f.name), selectedVocation.name));
+      }
       if (queue.length > 0) { startChoiceQueue(queue, nextStep); return; }
     }
 
@@ -746,7 +749,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                 <button
                   key={o.id}
                   onClick={() => {
-                    update({ originId: o.id, originName: o.name, vocationId: '', vocationName: '', vocationAttributeBonus: { attribute: 'body', value: 1 }, vocationCaster: null });
+                    update({ originId: o.id, originName: o.name, vocationId: '', vocationName: '', vocationAttributeBonus: { attribute: 'body', value: 1 }, vocationCaster: o.caster ?? null });
                     setOriginDetail(o.id);
                     setVocDetail(null);
                   }}
@@ -772,6 +775,23 @@ export default function CharacterBuilder({ professions, origins, professionFeats
             <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.05rem', color: 'var(--text)', margin: '0 0 0.375rem' }}>{detailOrigin.name}</h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '1rem' }}>{detailOrigin.flavor}</p>
 
+            {/* Origin base features */}
+            {detailOrigin.baseFeatures.length > 0 && (
+              <div style={{ marginBottom: '1rem' }}>
+                <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.375rem' }}>
+                  Origin Features <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(automatically granted)</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  {detailOrigin.baseFeatures.map((f) => (
+                    <div key={f.id} style={{ padding: '0.35rem 0.625rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.375rem', fontSize: '0.78rem' }}>
+                      <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text)' }}>{f.name}</span>
+                      {f.activationRaw && <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{f.activationRaw}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <SectionLabel>Choose a Vocation</SectionLabel>
             {/* Vocation pills */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.875rem' }}>
@@ -783,7 +803,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                     key={v.id}
                     onClick={() => {
                       setVocDetail(v.id);
-                      update({ vocationId: v.id, vocationName: v.name, vocationAttributeBonus: v.attributeBonus, vocationCaster: v.caster });
+                      update({ vocationId: v.id, vocationName: v.name, vocationAttributeBonus: v.attributeBonus, vocationCaster: v.caster ?? detailOrigin?.caster ?? null });
                     }}
                     style={{
                       padding: '0.3rem 0.75rem', borderRadius: '9999px', cursor: 'pointer',
