@@ -1,5 +1,17 @@
 export type AttributeKey = 'body' | 'mind' | 'will';
 
+export type InventoryCategory = 'Weapon' | 'Armor' | 'Shield' | 'Kit' | 'Consumable' | 'Misc';
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: InventoryCategory;
+  quantity: number;
+  weight: number;
+  notes: string;
+  source: 'creation' | 'manual';
+}
+
 export interface CharacterAttributes {
   body: number;
   mind: number;
@@ -49,12 +61,16 @@ export interface Character {
   currency: string;
   notes: string;
 
+  // Inventory (structured table)
+  inventory: InventoryItem[];
+
   // Play tracking (updated on character sheet)
   currentVitality: number;
   maxVitality: number | null;
   currentWounds: number;
   renown: number;
   featsPurchased: number;
+  currentAmbition: number;
 }
 
 // ─── Builder data shapes (passed from server to client) ──────────────────────
@@ -78,6 +94,14 @@ export interface BuilderOriginPackCategory {
   items: string[];
 }
 
+export interface BuilderFeatureEntry {
+  id: string;
+  name: string;
+  descriptionMarkdown: string;
+  traits: string[];
+  activationRaw: string | null;
+}
+
 export interface BuilderProfession {
   id: string;
   name: string;
@@ -95,6 +119,7 @@ export interface BuilderProfession {
   casterSource: string | null;
   casterModifierOptions: AttributeKey[];
   startingPack: BuilderStartingPack;
+  baseFeatures: BuilderFeatureEntry[];
 }
 
 export interface BuilderVocation {

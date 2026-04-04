@@ -256,13 +256,46 @@ export default function CharacterBuilder({ professions, origins, professionFeats
     if (!draft.name.trim()) return;
     const attrs = totalAttributes;
     const startVit = selectedProf ? calcStartingVitality(selectedProf, attrs) + featVitalityBonus : 10;
+
+    // Build structured inventory from starting packs
+    let itemIdCounter = 0;
+    function makeItem(name: string, category: import('@/lib/characterTypes').InventoryCategory): import('@/lib/characterTypes').InventoryItem {
+      return { id: `item_${Date.now()}_${itemIdCounter++}`, name, category, quantity: 1, weight: 0, notes: '', source: 'creation' };
+    }
+    const startingInventory: import('@/lib/characterTypes').InventoryItem[] = [];
+    const profPack = selectedProf?.startingPack;
+    if (profPack) {
+      profPack.weapons.forEach((n) => startingInventory.push(makeItem(n, 'Weapon')));
+      profPack.armor.forEach((n) => startingInventory.push(makeItem(n, 'Armor')));
+      profPack.kit.forEach((n) => startingInventory.push(makeItem(n, 'Kit')));
+      profPack.inventory.forEach((n) => startingInventory.push(makeItem(n, 'Misc')));
+    }
+    const originPack = selectedOrigin?.originPack;
+    if (originPack) {
+      originPack.categories.forEach((cat) => {
+        const category: import('@/lib/characterTypes').InventoryCategory =
+          cat.label.toLowerCase().includes('weapon') ? 'Weapon' :
+          cat.label.toLowerCase().includes('armor') ? 'Armor' :
+          cat.label.toLowerCase().includes('kit') ? 'Kit' : 'Misc';
+        cat.items.forEach((n) => startingInventory.push(makeItem(n, category)));
+      });
+    }
+
+    // Sum currency from both packs
+    const profCurrency = profPack?.currency ?? '';
+    const originCurrency = '';  // origins tracked via originPack categories
+    const combinedCurrency = [profCurrency, originCurrency].filter(Boolean).join(', ');
+
     const charData: Omit<Character, 'id' | 'createdAt' | 'updatedAt'> = {
       ...draft,
+      currency: draft.currency || combinedCurrency,
+      inventory: startingInventory,
       currentVitality: startVit,
       maxVitality: null,
       currentWounds: 0,
       renown: 0,
       featsPurchased: draft.selectedFeatIds.length,
+      currentAmbition: 0,
     };
     const saved = saveCharacter(charData);
     router.push(`/characters/${saved.id}`);
@@ -450,6 +483,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
 
   // Origin step — compact list + expand + vocation select
   const [originDetail, setOriginDetail] = useState<string | null>(null);
+  const [vocDetail, setVocDetail] = useState<string | null>(null);
   const detailOrigin = origins.find((o) => o.id === (originDetail ?? draft.originId)) ?? null;
 
   function renderStep3() {
@@ -467,6 +501,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                   onClick={() => {
                     update({ originId: o.id, originName: o.name, vocationId: '', vocationName: '', vocationAttributeBonus: { attribute: 'body', value: 1 }, vocationCaster: null });
                     setOriginDetail(o.id);
+                    setVocDetail(null);
                   }}
                   style={{
                     padding: '0.3rem 0.75rem', borderRadius: '9999px', cursor: 'pointer',
@@ -491,40 +526,51 @@ export default function CharacterBuilder({ professions, origins, professionFeats
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '1rem' }}>{detailOrigin.flavor}</p>
 
             <SectionLabel>Choose a Vocation</SectionLabel>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.625rem' }}>
+            {/* Vocation pills */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.875rem' }}>
               {detailOrigin.vocations.map((v) => {
                 const sel = draft.vocationId === v.id;
+                const previewing = vocDetail === v.id || (!vocDetail && sel);
                 return (
-                  <div
+                  <button
                     key={v.id}
-                    onClick={() => update({
-                      vocationId: v.id, vocationName: v.name,
-                      vocationAttributeBonus: v.attributeBonus,
-                      vocationCaster: v.caster,
-                    })}
+                    onClick={() => {
+                      setVocDetail(v.id);
+                      update({ vocationId: v.id, vocationName: v.name, vocationAttributeBonus: v.attributeBonus, vocationCaster: v.caster });
+                    }}
                     style={{
-                      padding: '0.875rem 1rem', borderRadius: '0.5rem', cursor: 'pointer',
-                      border: `2px solid ${sel ? 'var(--accent)' : 'var(--border)'}`,
-                      backgroundColor: sel ? 'var(--accent-light)' : 'var(--bg-card)',
+                      padding: '0.3rem 0.75rem', borderRadius: '9999px', cursor: 'pointer',
+                      fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.85rem',
+                      border: `1.5px solid ${sel ? 'var(--accent)' : previewing ? 'var(--border)' : 'var(--border)'}`,
+                      backgroundColor: sel ? 'var(--accent)' : 'var(--bg-card)',
+                      color: sel ? '#fff' : 'var(--text-muted)',
                       transition: 'all 0.12s',
                     }}
-                  >
-                    <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9rem', color: sel ? 'var(--accent)' : 'var(--text)', marginBottom: '0.25rem' }}>{v.name}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.4rem', lineHeight: 1.5 }}>{v.flavor.slice(0, 80)}{v.flavor.length > 80 ? '…' : ''}</div>
-                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 700, fontFamily: 'var(--font-heading)', color: 'var(--accent)' }}>
-                        +{v.attributeBonus.value} {v.attributeBonus.attribute.charAt(0).toUpperCase() + v.attributeBonus.attribute.slice(1)}
-                      </span>
-                      {v.caster && (
-                        <span style={{ fontSize: '0.62rem', padding: '0.1rem 0.4rem', borderRadius: '9999px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', border: '1px solid var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
-                          {v.caster.casterType.charAt(0).toUpperCase() + v.caster.casterType.slice(1)} Caster
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  >{v.name}</button>
                 );
               })}
             </div>
+            {/* Vocation detail panel */}
+            {(() => {
+              const v = detailOrigin.vocations.find((v) => v.id === (vocDetail ?? draft.vocationId));
+              if (!v) return null;
+              return (
+                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', marginBottom: '0.25rem' }}>{v.name}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '0.5rem' }}>{v.flavor}</div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, fontFamily: 'var(--font-heading)', color: 'var(--accent)' }}>
+                      +{v.attributeBonus.value} {v.attributeBonus.attribute.charAt(0).toUpperCase() + v.attributeBonus.attribute.slice(1)}
+                    </span>
+                    {v.caster && (
+                      <span style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem', borderRadius: '9999px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', border: '1px solid var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
+                        {v.caster.casterType.charAt(0).toUpperCase() + v.caster.casterType.slice(1)} Caster — {v.caster.casterSource}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {draft.vocationId && detailOrigin.id === draft.originId && (
               <div style={{ marginTop: '1rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: '0.375rem', fontSize: '0.8rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>

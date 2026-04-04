@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import path from 'path';
 import type {
-  BuilderProfession, BuilderOrigin, BuilderFeat, BuilderSpell,
+  BuilderProfession, BuilderOrigin, BuilderFeat, BuilderSpell, BuilderFeatureEntry,
   AttributeKey, BuilderVocationCaster, BuilderStartingPack, BuilderOriginPackCategory,
 } from './characterTypes';
 
@@ -114,7 +114,7 @@ export function getBuilderProfessions(): BuilderProfession[] {
       starting_vitality: string; vitality_gained_per_tier: string;
       path_options: string[];
       proficiencies: { vitals_skills: string[]; armaments: string[]; protection: string[]; tool_kits: string[] };
-      features: Array<{ description_markdown?: string }>;
+      features: Array<{ id?: string; name?: string; description_markdown?: string; traits?: string[]; activation?: { raw?: string } }>;
       starting_pack: Record<string, unknown>;
     };
 
@@ -136,6 +136,13 @@ export function getBuilderProfessions(): BuilderProfession[] {
       toolKits: prof.proficiencies?.tool_kits ?? [],
       ...caster,
       startingPack: extractProfessionPack(prof.starting_pack ?? {}),
+      baseFeatures: (prof.features ?? []).map((f) => ({
+        id: f.id ?? '',
+        name: f.name ?? '',
+        descriptionMarkdown: f.description_markdown ?? '',
+        traits: f.traits ?? [],
+        activationRaw: f.activation?.raw ?? null,
+      })),
     } satisfies BuilderProfession;
   });
 }

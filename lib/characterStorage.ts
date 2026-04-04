@@ -40,5 +40,10 @@ export function deleteCharacter(id: string): void {
 }
 
 export function getCharacter(id: string): Character | null {
-  return loadCharacters().find((c) => c.id === id) ?? null;
+  const found = loadCharacters().find((c) => c.id === id) ?? null;
+  if (!found) return null;
+  // Backfill fields added after initial release
+  if (!found.inventory) (found as Character).inventory = [];
+  if (found.currentAmbition === undefined) (found as Character).currentAmbition = 0;
+  return found;
 }
