@@ -45,5 +45,17 @@ export function getCharacter(id: string): Character | null {
   // Backfill fields added after initial release
   if (!found.inventory) (found as Character).inventory = [];
   if (found.currentAmbition === undefined) (found as Character).currentAmbition = 0;
+  if (found.maxAmbition === undefined) (found as Character).maxAmbition = 4;
+  if (found.ambitionDice === undefined) (found as Character).ambitionDice = 'd4';
+  if (found.currentReservoir === undefined) (found as Character).currentReservoir = 0;
+  if (found.currentRespites === undefined) (found as Character).currentRespites = 3;
+  // Backfill slot/equipped/traits on inventory items
+  (found as Character).inventory = ((found as Character).inventory ?? []).map((item) => ({
+    ...item,
+    slot: item.slot ?? null,
+    equipped: item.equipped ?? false,
+    traits: item.traits ?? [],
+    catalogItemId: item.catalogItemId ?? null,
+  }));
   return found;
 }

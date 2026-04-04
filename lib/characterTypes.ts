@@ -1,6 +1,7 @@
 export type AttributeKey = 'body' | 'mind' | 'will';
 
 export type InventoryCategory = 'Weapon' | 'Armor' | 'Shield' | 'Kit' | 'Consumable' | 'Misc';
+export type InventorySlot = 'Main Hand' | 'Off Hand' | 'Two Hands' | 'Body' | null;
 
 export interface InventoryItem {
   id: string;
@@ -9,7 +10,11 @@ export interface InventoryItem {
   quantity: number;
   weight: number;
   notes: string;
-  source: 'creation' | 'manual';
+  source: 'creation' | 'manual' | 'catalog';
+  slot: InventorySlot;
+  equipped: boolean;
+  traits: string[];
+  catalogItemId: string | null;
 }
 
 export interface CharacterAttributes {
@@ -64,13 +69,23 @@ export interface Character {
   // Inventory (structured table)
   inventory: InventoryItem[];
 
+  // Ambition
+  maxAmbition: number;
+  ambitionDice: string;
+  currentAmbition: number;
+
+  // Spellcasting play tracking
+  currentReservoir: number;
+
+  // Rest tracking
+  currentRespites: number;
+
   // Play tracking (updated on character sheet)
   currentVitality: number;
   maxVitality: number | null;
   currentWounds: number;
   renown: number;
   featsPurchased: number;
-  currentAmbition: number;
 }
 
 // ─── Builder data shapes (passed from server to client) ──────────────────────

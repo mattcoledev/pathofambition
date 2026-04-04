@@ -235,3 +235,47 @@ export function getBuilderSpells(): BuilderSpell[] {
       descriptionMarkdown: (s.description_markdown as string) ?? '',
     } satisfies BuilderSpell));
 }
+
+// ─── Item catalog ─────────────────────────────────────────────────────────────
+
+export interface CatalogItem {
+  id: string;
+  name: string;
+  category: string;
+  weight: number;
+  slot: string | null;
+  traits: string[];
+  damage?: string;
+  armorBonus?: number;
+  equippable: boolean;
+}
+
+export function getItemCatalog(): CatalogItem[] {
+  const data = readJSON<{ catalog: Record<string, unknown[]> }>('item_database.json');
+  const items: CatalogItem[] = [];
+
+  function mapItem(raw: Record<string, unknown>, cat: string): CatalogItem {
+    const template = raw.inventory_template as Record<string, unknown> ?? {};
+    const traits = (raw.traits as Array<{ name: string }> | string[] | undefined) ?? [];
+    return {
+      id: raw.id as string,
+      name: raw.name as string,
+      category: cat,
+      weight: (raw.weight as number) ?? 1,
+      slot: (template.slot as string) ?? null,
+      traits: Array.isArray(traits) ? traits.map((t) => typeof t === 'string' ? t : (t as { name: string }).name) : [],
+      damage: raw.damage as string | undefined,
+      armorBonus: (raw.armor_bonus_range as { value?: number } | undefined)?.value,
+      equippable: (raw.equippable as boolean) ?? false,
+    };
+  }
+
+  for (const [rawCat, entries] of Object.entries(data.catalog ?? {})) {
+    const cat = rawCat.charAt(0).toUpperCase() + rawCat.slice(1, -1); // "weapons" → "Weapon"
+    const display = cat === 'Weapon' ? 'Weapon' : cat === 'Armor' ? 'Armor' : cat === 'Shield' ? 'Shield' : cat === 'Kit' ? 'Kit' : cat === 'Consumable' ? 'Consumable' : 'Misc';
+    for (const entry of entries) {
+      items.push(mapItem(entry as Record<string, unknown>, display));
+    }
+  }
+  return items;
+}

@@ -7,7 +7,7 @@ import { saveCharacter } from '@/lib/characterStorage';
 import {
   calcStartingVitality, calcBodyDefense, calcMindDefense, calcWillDefense,
   calcMaxWounds, calcCarryWeight, calcReservoir, calcSpellDC,
-  FEAT_ALLOWANCE, calcFeatVitalityBonus,
+  FEAT_ALLOWANCE, calcFeatVitalityBonus, calcAmbition,
 } from '@/lib/characterCalc';
 import type {
   BuilderProfession, BuilderOrigin, BuilderFeat, BuilderSpell,
@@ -259,8 +259,8 @@ export default function CharacterBuilder({ professions, origins, professionFeats
 
     // Build structured inventory from starting packs
     let itemIdCounter = 0;
-    function makeItem(name: string, category: import('@/lib/characterTypes').InventoryCategory): import('@/lib/characterTypes').InventoryItem {
-      return { id: `item_${Date.now()}_${itemIdCounter++}`, name, category, quantity: 1, weight: 0, notes: '', source: 'creation' };
+    function makeItem(name: string, category: import('@/lib/characterTypes').InventoryCategory, slot: import('@/lib/characterTypes').InventorySlot = null): import('@/lib/characterTypes').InventoryItem {
+      return { id: `item_${Date.now()}_${itemIdCounter++}`, name, category, quantity: 1, weight: 0, notes: '', source: 'creation', slot, equipped: false, traits: [], catalogItemId: null };
     }
     const startingInventory: import('@/lib/characterTypes').InventoryItem[] = [];
     const profPack = selectedProf?.startingPack;
@@ -286,16 +286,26 @@ export default function CharacterBuilder({ professions, origins, professionFeats
     const originCurrency = '';  // origins tracked via originPack categories
     const combinedCurrency = [profCurrency, originCurrency].filter(Boolean).join(', ');
 
+    const ambition = calcAmbition(totalAttributes.will);
+    const startReservoir = effectiveCaster
+      ? (calcReservoir(effectiveCaster.casterType, draft.tier,
+          totalAttributes[(effectiveCaster.casterModifierOptions[0] ?? draft.spellcastingModifier ?? 'mind')]) ?? 0)
+      : 0;
+
     const charData: Omit<Character, 'id' | 'createdAt' | 'updatedAt'> = {
       ...draft,
       currency: draft.currency || combinedCurrency,
       inventory: startingInventory,
+      maxAmbition: ambition.max,
+      ambitionDice: ambition.dice,
+      currentAmbition: ambition.max,
+      currentReservoir: startReservoir,
+      currentRespites: 3,
       currentVitality: startVit,
       maxVitality: null,
       currentWounds: 0,
       renown: 0,
       featsPurchased: draft.selectedFeatIds.length,
-      currentAmbition: 0,
     };
     const saved = saveCharacter(charData);
     router.push(`/characters/${saved.id}`);
@@ -465,6 +475,23 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                     <span key={path} style={{ fontSize: '0.78rem', padding: '0.2rem 0.6rem', borderRadius: '9999px', backgroundColor: 'var(--accent-light)', color: 'var(--accent)', border: '1px solid #FCD34D', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
                       {path}
                     </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Base Features — auto-granted, display only */}
+            {detailProf.baseFeatures.length > 0 && (
+              <div style={{ marginTop: '0.875rem' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.5rem' }}>
+                  Base Features <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(automatically granted)</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                  {detailProf.baseFeatures.map((f) => (
+                    <div key={f.id} style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.375rem', fontSize: '0.8rem' }}>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text)', marginBottom: '0.125rem' }}>{f.name}</div>
+                      <div style={{ color: 'var(--text-muted)', lineHeight: 1.5 }}>{f.descriptionMarkdown.slice(0, 160)}{f.descriptionMarkdown.length > 160 ? '…' : ''}</div>
+                    </div>
                   ))}
                 </div>
               </div>

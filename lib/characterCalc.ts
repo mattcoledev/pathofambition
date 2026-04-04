@@ -65,3 +65,12 @@ export function calcSpellDC(tier: number, modifierValue: number): number {
 export const FEAT_ALLOWANCE: Record<number, number> = { 1: 0, 2: 3, 3: 6, 4: 8, 5: 10 };
 
 export const TIER_TOTAL_SLOTS = [4, 8, 11, 13, 16];
+
+/** Returns the Ambition dice type and max pool for a given Will modifier. */
+export function calcAmbition(will: number): { dice: string; max: number } {
+  if (will >= 12) return { dice: 'd12', max: Math.max(4, will * 2) };
+  if (will >= 10) return { dice: 'd10', max: Math.max(4, will * 2) };
+  if (will >= 8)  return { dice: 'd8',  max: Math.max(4, will * 2) };
+  if (will >= 4)  return { dice: 'd6',  max: Math.max(4, will * 2) };
+  return { dice: 'd4', max: Math.max(4, will * 2) };
+}
