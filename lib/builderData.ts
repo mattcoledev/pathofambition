@@ -157,7 +157,7 @@ export function getBuilderOrigins(): BuilderOrigin[] {
       vocations: Array<{
         id: string; name: string; flavor: string;
         attribute_bonus: { attribute: string; value: number };
-        features: Array<{ description_markdown?: string }>;
+        features: Array<{ id?: string; name?: string; description_markdown?: string; traits?: string[]; activation?: { raw?: string } }>;
       }>;
     };
 
@@ -179,6 +179,13 @@ export function getBuilderOrigins(): BuilderOrigin[] {
             value: v.attribute_bonus?.value ?? 1,
           },
           caster: vocationCaster,
+          features: (v.features ?? []).map((f) => ({
+            id: f.id ?? '',
+            name: f.name ?? '',
+            descriptionMarkdown: f.description_markdown ?? '',
+            traits: f.traits ?? [],
+            activationRaw: f.activation?.raw ?? null,
+          })),
         };
       }),
       originPack: extractOriginPack(origin.origin_pack, origin.pack_name),
@@ -253,6 +260,7 @@ export interface CatalogItem {
   traits: string[];
   damage?: string;
   armorBonus?: number;
+  armorCategory?: string | null;
   equippable: boolean;
 }
 
@@ -272,6 +280,7 @@ export function getItemCatalog(): CatalogItem[] {
       traits: Array.isArray(traits) ? traits.map((t) => typeof t === 'string' ? t : (t as { name: string }).name) : [],
       damage: raw.damage as string | undefined,
       armorBonus: (raw.armor_bonus_range as { value?: number } | undefined)?.value,
+      armorCategory: (raw.armor_type as string | undefined) ?? null,
       equippable: (raw.equippable as boolean) ?? false,
     };
   }

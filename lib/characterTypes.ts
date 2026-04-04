@@ -15,6 +15,14 @@ export interface InventoryItem {
   equipped: boolean;
   traits: string[];
   catalogItemId: string | null;
+  // Armor fields
+  armorBonus: number;
+  armorCategory: 'Light' | 'Medium' | 'Heavy' | null;
+  // Weapon fields
+  damageDice: string;
+  damageType: string;
+  // Masterwork
+  masterworkBonus: number;
 }
 
 export interface CharacterAttributes {
@@ -170,6 +178,7 @@ export interface BuilderVocation {
   attributeBonus: { attribute: AttributeKey; value: number };
   flavor: string;
   caster: BuilderVocationCaster | null;
+  features: BuilderFeatureEntry[];
 }
 
 export interface BuilderOrigin {

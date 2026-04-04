@@ -40,6 +40,24 @@ export function calcFeatVitalityBonus(selectedFeatIds: string[], allFeats: Build
   }, 0);
 }
 
+export function calcArmorDefense(
+  equippedArmor: { armorBonus?: number; armorCategory?: string | null; masterworkBonus?: number } | null,
+  equippedShield: { id: string } | null,
+  attrs: CharacterAttributes,
+  hasAgile: boolean,
+): number {
+  const armorBonus = (equippedArmor?.armorBonus ?? 0) + (equippedArmor?.masterworkBonus ?? 0);
+  const armorCategory = equippedArmor?.armorCategory ?? null;
+  if (
+    hasAgile &&
+    !equippedShield &&
+    (armorCategory === null || armorCategory === 'Light')
+  ) {
+    return 10 + armorBonus + Math.max(attrs.body, attrs.mind);
+  }
+  return 10 + armorBonus;
+}
+
 export function calcBodyDefense(attrs: CharacterAttributes): number { return 10 + attrs.body; }
 export function calcMindDefense(attrs: CharacterAttributes): number { return 10 + attrs.mind; }
 export function calcWillDefense(attrs: CharacterAttributes): number { return 10 + attrs.will; }

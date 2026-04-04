@@ -57,6 +57,11 @@ export function getCharacter(id: string): Character | null {
     equipped: item.equipped ?? false,
     traits: item.traits ?? [],
     catalogItemId: item.catalogItemId ?? null,
+    armorBonus: item.armorBonus ?? 0,
+    armorCategory: item.armorCategory ?? null,
+    damageDice: item.damageDice ?? '',
+    damageType: item.damageType ?? '',
+    masterworkBonus: item.masterworkBonus ?? 0,
   }));
   return found;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import MarkdownContent from './MarkdownContent';
@@ -8,11 +8,11 @@ import { getCharacter, updateCharacter, deleteCharacter } from '@/lib/characterS
 import {
   getTotalAttributes, calcStartingVitality, calcBodyDefense, calcMindDefense,
   calcWillDefense, calcMaxWounds, calcCarryWeight, calcReservoir, calcSpellDC,
-  calcAmbition,
+  calcAmbition, calcArmorDefense,
 } from '@/lib/characterCalc';
 import type {
   Character, BuilderProfession, BuilderOrigin, BuilderFeat, BuilderSpell,
-  InventoryItem, InventoryCategory, InventorySlot,
+  InventoryItem, InventoryCategory, InventorySlot, ChoiceFeature,
 } from '@/lib/characterTypes';
 import type { CatalogItem } from '@/lib/builderData';
 
@@ -24,6 +24,7 @@ interface Props {
   originFeats: BuilderFeat[];
   spells: BuilderSpell[];
   catalog: CatalogItem[];
+  choiceFeatures: ChoiceFeature[];
 }
 
 type TabId = 'feats' | 'inventory' | 'spellcasting' | 'notes';
@@ -68,7 +69,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function CharacterSheetPage({ id, professions, professionFeats, originFeats, spells, catalog }: Props) {
+export default function CharacterSheetPage({ id, professions, origins, professionFeats, originFeats, spells, catalog, choiceFeatures }: Props) {
   const router = useRouter();
   const [char, setChar] = useState<Character | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -91,6 +92,15 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
   const [newWeight, setNewWeight] = useState(0);
   const [newNotes, setNewNotes] = useState('');
   const [newSlot, setNewSlot] = useState<InventorySlot>(null);
+  const [newArmorBonus, setNewArmorBonus] = useState(0);
+  const [newArmorCategory, setNewArmorCategory] = useState<'Light' | 'Medium' | 'Heavy' | null>(null);
+  const [newDamageDice, setNewDamageDice] = useState('');
+  const [newDamageType, setNewDamageType] = useState('');
+  const [newMasterworkBonus, setNewMasterworkBonus] = useState(0);
+
+  // Item editing
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState<Partial<InventoryItem>>({});
 
   const filteredCatalog = useMemo(() => {
     const q = catalogSearch.toLowerCase().trim();
@@ -125,6 +135,8 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
 
   const c = char!;
   const prof = professions.find((p) => p.id === c.professionId) ?? null;
+  const origin = origins.find((o) => o.id === c.originId) ?? null;
+  const vocation = origin?.vocations.find((v) => v.id === c.vocationId) ?? null;
   const attrs = getTotalAttributes(c);
 
   // Caster: from profession OR any selected feat
@@ -157,6 +169,13 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
 
   const currentReservoir = c.currentReservoir ?? maxReservoir;
   const currentRespites = c.currentRespites ?? 3;
+
+  // Agile detection: check profession base features, vocation features, and selected feats
+  const hasAgile = !!(
+    prof?.baseFeatures.some((f) => f.name === 'Agile') ||
+    vocation?.features.some((f) => f.name === 'Agile') ||
+    selectedFeats.some((f) => f.name === 'Agile')
+  );
 
   function persist(updates: Partial<Character>) {
     const updated = updateCharacter(id, updates);
@@ -213,6 +232,11 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
     setNewSlot(item.slot as InventorySlot);
     setNewQty(1);
     setNewNotes('');
+    setNewArmorBonus(item.armorBonus ?? 0);
+    setNewArmorCategory((item.armorCategory as 'Light' | 'Medium' | 'Heavy' | null) ?? null);
+    setNewDamageDice(item.damage ?? '');
+    setNewDamageType('');
+    setNewMasterworkBonus(0);
   }
 
   function addItem() {
@@ -229,9 +253,15 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
       equipped: false,
       traits: catalogSelected?.traits ?? [],
       catalogItemId: catalogSelected?.id ?? null,
+      armorBonus: newArmorBonus,
+      armorCategory: newArmorCategory,
+      damageDice: newDamageDice,
+      damageType: newDamageType,
+      masterworkBonus: newMasterworkBonus,
     };
     persist({ inventory: [...inventory, item] });
     setNewName(''); setNewCategory('Misc'); setNewQty(1); setNewWeight(0); setNewNotes(''); setNewSlot(null);
+    setNewArmorBonus(0); setNewArmorCategory(null); setNewDamageDice(''); setNewDamageType(''); setNewMasterworkBonus(0);
     setCatalogSelected(null); setCatalogSearch(''); setAddingItem(false);
   }
 
@@ -270,12 +300,15 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
   const equippedOff = inventory.find((i) => i.equipped && i.slot === 'Off Hand') ?? null;
   const equippedTwoHands = inventory.find((i) => i.equipped && i.slot === 'Two Hands') ?? null;
   const equippedBody = inventory.find((i) => i.equipped && i.slot === 'Body') ?? null;
+  const equippedShield = inventory.find((i) => i.equipped && i.slot === 'Off Hand' && i.category === 'Shield') ?? null;
+  const armorDefense = calcArmorDefense(equippedBody, equippedShield, attrs, hasAgile);
 
   // ─── Tab content renderers ───────────────────────────────────────────────
 
   function renderFeatsTab() {
     const baseFeatures = prof?.baseFeatures ?? [];
-    if (baseFeatures.length === 0 && selectedFeats.length === 0) {
+    const vocationFeatures = vocation?.features ?? [];
+    if (baseFeatures.length === 0 && vocationFeatures.length === 0 && selectedFeats.length === 0) {
       return <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No feats or features.</p>;
     }
 
@@ -287,9 +320,20 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
       });
     }
 
-    function FeatRow({ id, name, tier, activationRaw, traits, descriptionMarkdown, required, pathInvestment }: {
+    /** Look up resolved option names + effect text from choice_selections. */
+    function getResolvedOptions(featureName: string, entityName: string): { name: string; effectText: string }[] | null {
+      const key = `${entityName}__${featureName}`;
+      const selected = c.choiceSelections?.[key];
+      if (!selected?.length) return null;
+      const cf = choiceFeatures.find((f) => f.feature_name === featureName && f.entity_name === entityName);
+      if (!cf) return null;
+      return cf.options.filter((o) => selected.includes(o.name)).map((o) => ({ name: o.name, effectText: o.effect_text }));
+    }
+
+    function FeatRow({ id, name, tier, activationRaw, traits, descriptionMarkdown, required, pathInvestment, resolvedOptions }: {
       id: string; name: string; tier?: number; activationRaw?: string | null; traits?: string[];
       descriptionMarkdown: string; required?: string | null; pathInvestment?: string | null;
+      resolvedOptions?: { name: string; effectText: string }[] | null;
     }) {
       const expanded = expandedFeats.has(id);
       return (
@@ -299,6 +343,11 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
             style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: expanded ? 'var(--primary-light)' : 'var(--bg-card)', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}
           >
             <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9rem', color: expanded ? 'var(--primary)' : 'var(--text)', flex: 1 }}>{name}</span>
+            {resolvedOptions && resolvedOptions.length > 0 && (
+              <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--primary)', backgroundColor: 'var(--primary-light)', padding: '0.1rem 0.4rem', borderRadius: '9999px', border: '1px solid var(--primary)' }}>
+                {resolvedOptions.map((o) => o.name).join(', ')}
+              </span>
+            )}
             {tier !== undefined && <span style={{ fontSize: '0.62rem', fontWeight: 700, fontFamily: 'var(--font-heading)', padding: '0.1rem 0.35rem', borderRadius: '9999px', backgroundColor: 'var(--bg-nav)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>Tier {tier}</span>}
             {activationRaw && activationRaw !== '-' && activationRaw !== 'null' && <span style={{ fontSize: '0.62rem', fontWeight: 700, fontFamily: 'var(--font-heading)', padding: '0.1rem 0.35rem', borderRadius: '9999px', backgroundColor: 'var(--accent-light)', color: 'var(--accent)', border: '1px solid #FCD34D' }}>{activationRaw}</span>}
             {traits?.filter((t) => t).map((t) => <span key={t} style={{ fontSize: '0.6rem', padding: '0.1rem 0.35rem', borderRadius: '9999px', backgroundColor: 'var(--bg-nav)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontFamily: 'var(--font-heading)' }}>{t}</span>)}
@@ -306,6 +355,19 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
           </button>
           {expanded && (
             <div style={{ padding: '0.75rem 0.875rem', borderTop: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}>
+              {resolvedOptions && resolvedOptions.length > 0 && (
+                <div style={{ marginBottom: '0.625rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: '0.375rem' }}>
+                  <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--primary)', fontFamily: 'var(--font-heading)', marginBottom: '0.25rem' }}>
+                    {resolvedOptions.length > 1 ? 'Chosen options' : 'Chosen option'}
+                  </div>
+                  {resolvedOptions.map((o) => (
+                    <div key={o.name}>
+                      <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--primary)' }}>{o.name}: </span>
+                      <span style={{ fontSize: '0.825rem', color: 'var(--text)', lineHeight: 1.5 }}>{o.effectText}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {required && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Requires: {required}</div>}
               {pathInvestment && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Investment: {pathInvestment}</div>}
               <MarkdownContent content={descriptionMarkdown} />
@@ -320,13 +382,19 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
         {baseFeatures.length > 0 && (
           <>
             <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.2rem' }}>Base Features</div>
-            {baseFeatures.map((f) => <FeatRow key={f.id} id={`base-${f.id}`} name={f.name} activationRaw={f.activationRaw} traits={f.traits} descriptionMarkdown={f.descriptionMarkdown} />)}
+            {baseFeatures.map((f) => <FeatRow key={f.id} id={`base-${f.id}`} name={f.name} activationRaw={f.activationRaw} traits={f.traits} descriptionMarkdown={f.descriptionMarkdown} resolvedOptions={getResolvedOptions(f.name, c.professionName)} />)}
+          </>
+        )}
+        {vocationFeatures.length > 0 && (
+          <>
+            <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginTop: '0.5rem', marginBottom: '0.2rem' }}>Vocation Features</div>
+            {vocationFeatures.map((f) => <FeatRow key={f.id} id={`voc-${f.id}`} name={f.name} activationRaw={f.activationRaw} traits={f.traits} descriptionMarkdown={f.descriptionMarkdown} resolvedOptions={getResolvedOptions(f.name, c.vocationName)} />)}
           </>
         )}
         {selectedFeats.length > 0 && (
           <>
-            {baseFeatures.length > 0 && <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginTop: '0.5rem', marginBottom: '0.2rem' }}>Selected Feats</div>}
-            {selectedFeats.map((f) => <FeatRow key={f.id} id={f.id} name={f.name} tier={f.tier} activationRaw={f.activationRaw} traits={f.traits} descriptionMarkdown={f.descriptionMarkdown} required={f.required} pathInvestment={f.pathInvestment} />)}
+            <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginTop: '0.5rem', marginBottom: '0.2rem' }}>Selected Feats</div>
+            {selectedFeats.map((f) => <FeatRow key={f.id} id={f.id} name={f.name} tier={f.tier} activationRaw={f.activationRaw} traits={f.traits} descriptionMarkdown={f.descriptionMarkdown} required={f.required} pathInvestment={f.pathInvestment} resolvedOptions={getResolvedOptions(f.name, f.ownerName)} />)}
           </>
         )}
       </div>
@@ -383,14 +451,15 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                  {['Name', 'Cat.', 'Slot', 'Qty', 'Wt', 'Eq.', ''].map((h) => (
+                  {['Name', 'Cat.', 'Slot', 'Qty', 'Wt', 'Eq.', '', ''].map((h) => (
                     <th key={h} style={{ padding: '0.3rem 0.4rem', textAlign: 'left', fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {inventory.map((item) => (
-                  <tr key={item.id} style={{ borderBottom: '1px solid var(--border)', backgroundColor: item.equipped ? 'var(--primary-light)' : 'transparent' }}>
+                  <React.Fragment key={item.id}>
+                  <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: item.equipped ? 'var(--primary-light)' : 'transparent' }}>
                     <td style={{ padding: '0.3rem 0.4rem', color: 'var(--text)', fontWeight: 600 }}>{item.name}</td>
                     <td style={{ padding: '0.3rem 0.4rem' }}>
                       <span style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem', borderRadius: '9999px', backgroundColor: 'var(--bg-nav)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontFamily: 'var(--font-heading)', fontWeight: 600, whiteSpace: 'nowrap' }}>{item.category}</span>
@@ -412,10 +481,94 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
                         >{item.equipped ? 'ON' : 'OFF'}</button>
                       ) : <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>—</span>}
                     </td>
+                    <td style={{ padding: '0.3rem 0.15rem' }}>
+                      <button onClick={() => { setEditingItemId(editingItemId === item.id ? null : item.id); setEditFields({ ...item }); }} style={{ padding: '0.15rem 0.3rem', border: '1px solid var(--border)', borderRadius: '0.25rem', backgroundColor: editingItemId === item.id ? 'var(--primary-light)' : 'transparent', cursor: 'pointer', color: editingItemId === item.id ? 'var(--primary)' : 'var(--text-muted)', fontSize: '0.7rem' }}>✎</button>
+                    </td>
                     <td style={{ padding: '0.3rem 0.25rem' }}>
                       <button onClick={() => removeItem(item.id)} style={{ padding: '0.15rem 0.3rem', border: '1px solid var(--border)', borderRadius: '0.25rem', backgroundColor: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.7rem' }}>✕</button>
                     </td>
                   </tr>
+                  {editingItemId === item.id && (
+                    <tr style={{ backgroundColor: 'var(--bg-nav)' }}>
+                      <td colSpan={8} style={{ padding: '0.75rem', borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', gap: '0.5rem', alignItems: 'end' }}>
+                            <div>
+                              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Name</div>
+                              <input value={editFields.name ?? ''} onChange={(e) => setEditFields((f) => ({ ...f, name: e.target.value }))} style={{ ...inputStyle, width: '100%' }} />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Category</div>
+                              <select value={editFields.category ?? 'Misc'} onChange={(e) => setEditFields((f) => ({ ...f, category: e.target.value as InventoryCategory }))} style={inputStyle}>
+                                {INVENTORY_CATEGORIES.map((cat) => <option key={cat}>{cat}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Weight</div>
+                              <input type="number" value={editFields.weight ?? 0} min={0} step={0.1} onChange={(e) => setEditFields((f) => ({ ...f, weight: parseFloat(e.target.value) || 0 }))} style={{ ...inputStyle, width: '55px' }} />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>MW Bonus</div>
+                              <select value={editFields.masterworkBonus ?? 0} onChange={(e) => setEditFields((f) => ({ ...f, masterworkBonus: parseInt(e.target.value) }))} style={{ ...inputStyle, width: '65px' }}>
+                                <option value={0}>None</option>
+                                <option value={1}>+1</option>
+                                <option value={2}>+2</option>
+                                <option value={3}>+3</option>
+                              </select>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Slot</div>
+                              <select value={editFields.slot ?? ''} onChange={(e) => setEditFields((f) => ({ ...f, slot: (e.target.value || null) as InventorySlot }))} style={inputStyle}>
+                                <option value="">None</option>
+                                <option value="Main Hand">Main Hand</option>
+                                <option value="Off Hand">Off Hand</option>
+                                <option value="Two Hands">Two Hands</option>
+                                <option value="Body">Body</option>
+                              </select>
+                            </div>
+                          </div>
+                          {(editFields.category === 'Armor') && (
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end' }}>
+                              <div>
+                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Armor Category</div>
+                                <select value={editFields.armorCategory ?? ''} onChange={(e) => setEditFields((f) => ({ ...f, armorCategory: (e.target.value || null) as 'Light' | 'Medium' | 'Heavy' | null }))} style={inputStyle}>
+                                  <option value="">—</option>
+                                  <option value="Light">Light</option>
+                                  <option value="Medium">Medium</option>
+                                  <option value="Heavy">Heavy</option>
+                                </select>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Armor Bonus</div>
+                                <input type="number" value={editFields.armorBonus ?? 0} min={0} max={10} onChange={(e) => setEditFields((f) => ({ ...f, armorBonus: parseInt(e.target.value) || 0 }))} style={{ ...inputStyle, width: '55px' }} />
+                              </div>
+                            </div>
+                          )}
+                          {(editFields.category === 'Weapon') && (
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end' }}>
+                              <div>
+                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Damage Dice</div>
+                                <input value={editFields.damageDice ?? ''} onChange={(e) => setEditFields((f) => ({ ...f, damageDice: e.target.value }))} placeholder="1d6" style={{ ...inputStyle, width: '70px' }} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Damage Type</div>
+                                <input value={editFields.damageType ?? ''} onChange={(e) => setEditFields((f) => ({ ...f, damageType: e.target.value }))} placeholder="Slashing…" style={{ ...inputStyle, width: '100px' }} />
+                              </div>
+                            </div>
+                          )}
+                          <div>
+                            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Notes</div>
+                            <input value={editFields.notes ?? ''} onChange={(e) => setEditFields((f) => ({ ...f, notes: e.target.value }))} placeholder="Optional…" style={{ ...inputStyle, width: '100%' }} />
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button onClick={() => { updateItem(item.id, editFields); setEditingItemId(null); }} style={{ padding: '0.3rem 0.75rem', backgroundColor: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.8rem' }}>Save</button>
+                            <button onClick={() => setEditingItemId(null)} style={{ padding: '0.3rem 0.75rem', backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
@@ -485,6 +638,35 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
                 </select>
               </div>
             </div>
+            {newCategory === 'Armor' && (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end' }}>
+                <div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Armor Category</div>
+                  <select value={newArmorCategory ?? ''} onChange={(e) => setNewArmorCategory((e.target.value || null) as 'Light' | 'Medium' | 'Heavy' | null)} style={inputStyle}>
+                    <option value="">—</option>
+                    <option value="Light">Light</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Heavy">Heavy</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Armor Bonus</div>
+                  <input type="number" value={newArmorBonus} min={0} max={10} onChange={(e) => setNewArmorBonus(parseInt(e.target.value) || 0)} style={{ ...inputStyle, width: '55px' }} />
+                </div>
+              </div>
+            )}
+            {newCategory === 'Weapon' && (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end' }}>
+                <div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Damage Dice</div>
+                  <input value={newDamageDice} onChange={(e) => setNewDamageDice(e.target.value)} placeholder="1d6" style={{ ...inputStyle, width: '70px' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Damage Type</div>
+                  <input value={newDamageType} onChange={(e) => setNewDamageType(e.target.value)} placeholder="Slashing…" style={{ ...inputStyle, width: '100px' }} />
+                </div>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={addItem} disabled={!newName.trim()} style={{ padding: '0.375rem 0.875rem', backgroundColor: newName.trim() ? 'var(--primary)' : 'var(--border)', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: newName.trim() ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.8rem' }}>Add</button>
               <button onClick={() => { setAddingItem(false); setNewName(''); setCatalogSearch(''); setCatalogSelected(null); }} style={{ padding: '0.375rem 0.875rem', backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>
@@ -648,7 +830,7 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <StatCard label="Armor Def" value={10} sub="Base (+ armor)" />
+          <StatCard label="Armor Def" value={armorDefense} sub={hasAgile && !equippedShield && (!equippedBody || equippedBody.armorCategory === 'Light' || !equippedBody.armorCategory) ? 'Agile' : equippedBody ? `${equippedBody.name} +${equippedBody.armorBonus}` : 'Base'} />
           <StatCard label="Body Def" value={bodyDef} />
           <StatCard label="Mind Def" value={mindDef} />
           <StatCard label="Will Def" value={willDef} />

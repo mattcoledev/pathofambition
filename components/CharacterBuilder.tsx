@@ -322,6 +322,15 @@ export default function CharacterBuilder({ professions, origins, professionFeats
       if (queue.length > 0) { startChoiceQueue(queue, nextStep); return; }
     }
 
+    // After origin — check vocation features for on_gain choices
+    if (step === 3 && selectedVocation) {
+      const queue = getUnresolvedOnGain(
+        selectedVocation.features.map((f) => f.name),
+        selectedVocation.name,
+      );
+      if (queue.length > 0) { startChoiceQueue(queue, nextStep); return; }
+    }
+
     // After feats — check selected feats for on_gain choices
     if (step === 7) {
       const featQueue: ChoiceFeature[] = [];
@@ -357,7 +366,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
     // Build structured inventory from starting packs
     let itemIdCounter = 0;
     function makeItem(name: string, category: import('@/lib/characterTypes').InventoryCategory, slot: import('@/lib/characterTypes').InventorySlot = null): import('@/lib/characterTypes').InventoryItem {
-      return { id: `item_${Date.now()}_${itemIdCounter++}`, name, category, quantity: 1, weight: 0, notes: '', source: 'creation', slot, equipped: false, traits: [], catalogItemId: null };
+      return { id: `item_${Date.now()}_${itemIdCounter++}`, name, category, quantity: 1, weight: 0, notes: '', source: 'creation', slot, equipped: false, traits: [], catalogItemId: null, armorBonus: 0, armorCategory: null, damageDice: '', damageType: '', masterworkBonus: 0 };
     }
     const startingInventory: import('@/lib/characterTypes').InventoryItem[] = [];
     const profPack = selectedProf?.startingPack;
@@ -785,7 +794,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                 <div style={{ padding: '1rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
                   <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', marginBottom: '0.25rem' }}>{v.name}</div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '0.5rem' }}>{v.flavor}</div>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.375rem' }}>
                     <span style={{ fontSize: '0.72rem', fontWeight: 700, fontFamily: 'var(--font-heading)', color: 'var(--accent)' }}>
                       +{v.attributeBonus.value} {v.attributeBonus.attribute.charAt(0).toUpperCase() + v.attributeBonus.attribute.slice(1)}
                     </span>
@@ -795,6 +804,19 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                       </span>
                     )}
                   </div>
+                  {v.features.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.3rem' }}>Granted Features</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {v.features.map((f) => (
+                          <div key={f.id} style={{ padding: '0.35rem 0.625rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.375rem', fontSize: '0.78rem' }}>
+                            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text)' }}>{f.name}</span>
+                            {f.activationRaw && <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{f.activationRaw}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}

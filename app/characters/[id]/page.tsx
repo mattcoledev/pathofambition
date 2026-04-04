@@ -5,6 +5,7 @@ import {
   getBuilderFeats,
   getBuilderSpells,
   getItemCatalog,
+  getChoiceFeatures,
 } from '@/lib/builderData';
 
 export default async function CharacterPage({ params }: { params: Promise<{ id: string }> }) {
@@ -14,6 +15,7 @@ export default async function CharacterPage({ params }: { params: Promise<{ id: 
   const { professionFeats, originFeats } = getBuilderFeats();
   const spells = getBuilderSpells();
   const catalog = getItemCatalog();
+  const choiceFeatures = getChoiceFeatures();
 
   return (
     <CharacterSheetPage
@@ -24,6 +26,7 @@ export default async function CharacterPage({ params }: { params: Promise<{ id: 
       originFeats={originFeats}
       spells={spells}
       catalog={catalog}
+      choiceFeatures={choiceFeatures}
     />
   );
 }
