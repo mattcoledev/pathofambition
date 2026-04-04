@@ -191,6 +191,17 @@ export default function CharacterBuilder({ professions, origins, professionFeats
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
 
+  // Expand state for feat/spell preview in builder
+  const [expandedFeatIds, setExpandedFeatIds] = useState<Set<string>>(new Set());
+  const [expandedSpellIds, setExpandedSpellIds] = useState<Set<string>>(new Set());
+
+  function toggleBuilderFeat(id: string) {
+    setExpandedFeatIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  }
+  function toggleBuilderSpell(id: string) {
+    setExpandedSpellIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  }
+
   // Choice resolution queue
   const [choiceQueue, setChoiceQueue] = useState<ChoiceFeature[]>([]);
   const [choiceQueueIdx, setChoiceQueueIdx] = useState(0);
@@ -1103,34 +1114,53 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                   const selected = draft.selectedFeatIds.includes(feat.id);
                   const status = getFeatStatus(feat, draft.selectedFeatIds, allFeats, atFeatCap && !selected);
                   const blocked = status.blocked;
+                  const expanded = expandedFeatIds.has(feat.id);
                   return (
-                    <label
+                    <div
                       key={feat.id}
                       style={{
-                        display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
-                        padding: '0.625rem 0.875rem', borderRadius: '0.375rem',
-                        cursor: blocked ? 'not-allowed' : 'pointer',
-                        border: `1.5px solid ${selected ? 'var(--primary)' : blocked ? 'var(--border)' : 'var(--border)'}`,
-                        backgroundColor: selected ? 'var(--primary-light)' : 'var(--bg-card)',
+                        borderRadius: '0.375rem', overflow: 'hidden',
+                        border: `1.5px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
                         opacity: blocked && !selected ? 0.5 : 1,
                       }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        disabled={blocked && !selected}
-                        onChange={() => toggleFeat(feat.id)}
-                        style={{ marginTop: '0.15rem', accentColor: 'var(--primary)', flexShrink: 0, cursor: blocked && !selected ? 'not-allowed' : 'pointer' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem', color: 'var(--text)', marginBottom: '0.1rem' }}>{feat.name}</div>
-                        {status.reason && !selected && (
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>⚠ {status.reason}</div>
-                        )}
-                        {feat.required && !status.reason && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Requires: {feat.required}</div>}
-                        {feat.pathInvestment && !status.reason && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Investment: {feat.pathInvestment}</div>}
+                      <div
+                        style={{
+                          display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
+                          padding: '0.625rem 0.875rem',
+                          backgroundColor: selected ? 'var(--primary-light)' : 'var(--bg-card)',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          disabled={blocked && !selected}
+                          onChange={() => toggleFeat(feat.id)}
+                          style={{ marginTop: '0.2rem', accentColor: 'var(--primary)', flexShrink: 0, cursor: blocked && !selected ? 'not-allowed' : 'pointer' }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem', color: 'var(--text)', marginBottom: '0.1rem' }}>{feat.name}</div>
+                          {status.reason && !selected && (
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>⚠ {status.reason}</div>
+                          )}
+                          {feat.required && !status.reason && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Requires: {feat.required}</div>}
+                          {feat.pathInvestment && !status.reason && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Investment: {feat.pathInvestment}</div>}
+                          {feat.activationRaw && feat.activationRaw !== '-' && feat.activationRaw !== 'null' && (
+                            <div style={{ fontSize: '0.68rem', color: 'var(--accent)', fontFamily: 'var(--font-heading)', fontWeight: 600, marginTop: '0.1rem' }}>{feat.activationRaw}</div>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleBuilderFeat(feat.id); }}
+                          style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.7rem', color: 'var(--text-muted)', padding: '0.1rem 0.25rem', lineHeight: 1 }}
+                          title={expanded ? 'Collapse' : 'Read description'}
+                        >{expanded ? '▲' : '▼'}</button>
                       </div>
-                    </label>
+                      {expanded && (
+                        <div style={{ padding: '0.625rem 0.875rem 0.75rem', borderTop: '1px solid var(--border)', backgroundColor: 'var(--bg-nav)', fontSize: '0.82rem', lineHeight: 1.65, color: 'var(--text)' }}>
+                          <MarkdownContent content={feat.descriptionMarkdown} />
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -1195,12 +1225,22 @@ export default function CharacterBuilder({ professions, origins, professionFeats
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
               {cantrips.map((s) => {
                 const sel = draft.knownSpellIds.includes(s.id);
+                const expanded = expandedSpellIds.has(s.id);
                 return (
-                  <label key={s.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', padding: '0.5rem 0.875rem', borderRadius: '0.375rem', cursor: 'pointer', border: `1.5px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, backgroundColor: sel ? 'var(--primary-light)' : 'var(--bg-card)' }}>
-                    <input type="checkbox" checked={sel} onChange={() => toggleSpell(s.id)} style={{ accentColor: 'var(--primary)', flexShrink: 0 }} />
-                    <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem', color: 'var(--text)' }}>{s.name}</span>
-                    {(s.range || s.duration) && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>{[s.range && `R: ${s.range}`, s.duration && `D: ${s.duration}`].filter(Boolean).join(' · ')}</span>}
-                  </label>
+                  <div key={s.id} style={{ borderRadius: '0.375rem', overflow: 'hidden', border: `1.5px solid ${sel ? 'var(--primary)' : 'var(--border)'}` }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', padding: '0.5rem 0.875rem', backgroundColor: sel ? 'var(--primary-light)' : 'var(--bg-card)' }}>
+                      <input type="checkbox" checked={sel} onChange={() => toggleSpell(s.id)} style={{ accentColor: 'var(--primary)', flexShrink: 0, cursor: 'pointer' }} />
+                      <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem', color: 'var(--text)', flex: 1 }}>{s.name}</span>
+                      {(s.range || s.duration) && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{[s.range && `R: ${s.range}`, s.duration && `D: ${s.duration}`].filter(Boolean).join(' · ')}</span>}
+                      <button onClick={() => toggleBuilderSpell(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.7rem', color: 'var(--text-muted)', padding: '0.1rem 0.25rem', lineHeight: 1 }}>{expanded ? '▲' : '▼'}</button>
+                    </div>
+                    {expanded && (
+                      <div style={{ padding: '0.625rem 0.875rem 0.75rem', borderTop: '1px solid var(--border)', backgroundColor: 'var(--bg-nav)', fontSize: '0.82rem', lineHeight: 1.65, color: 'var(--text)' }}>
+                        {s.school && <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.375rem' }}>{s.school}</div>}
+                        <MarkdownContent content={s.descriptionMarkdown} />
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -1213,12 +1253,22 @@ export default function CharacterBuilder({ professions, origins, professionFeats
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
               {byTier[tier].map((s) => {
                 const sel = draft.knownSpellIds.includes(s.id);
+                const expanded = expandedSpellIds.has(s.id);
                 return (
-                  <label key={s.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', padding: '0.5rem 0.875rem', borderRadius: '0.375rem', cursor: 'pointer', border: `1.5px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, backgroundColor: sel ? 'var(--primary-light)' : 'var(--bg-card)' }}>
-                    <input type="checkbox" checked={sel} onChange={() => toggleSpell(s.id)} style={{ accentColor: 'var(--primary)', flexShrink: 0 }} />
-                    <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem', color: 'var(--text)' }}>{s.name}</span>
-                    {(s.range || s.duration) && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>{[s.range && `R: ${s.range}`, s.duration && `D: ${s.duration}`].filter(Boolean).join(' · ')}</span>}
-                  </label>
+                  <div key={s.id} style={{ borderRadius: '0.375rem', overflow: 'hidden', border: `1.5px solid ${sel ? 'var(--primary)' : 'var(--border)'}` }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', padding: '0.5rem 0.875rem', backgroundColor: sel ? 'var(--primary-light)' : 'var(--bg-card)' }}>
+                      <input type="checkbox" checked={sel} onChange={() => toggleSpell(s.id)} style={{ accentColor: 'var(--primary)', flexShrink: 0, cursor: 'pointer' }} />
+                      <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem', color: 'var(--text)', flex: 1 }}>{s.name}</span>
+                      {(s.range || s.duration) && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{[s.range && `R: ${s.range}`, s.duration && `D: ${s.duration}`].filter(Boolean).join(' · ')}</span>}
+                      <button onClick={() => toggleBuilderSpell(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.7rem', color: 'var(--text-muted)', padding: '0.1rem 0.25rem', lineHeight: 1 }}>{expanded ? '▲' : '▼'}</button>
+                    </div>
+                    {expanded && (
+                      <div style={{ padding: '0.625rem 0.875rem 0.75rem', borderTop: '1px solid var(--border)', backgroundColor: 'var(--bg-nav)', fontSize: '0.82rem', lineHeight: 1.65, color: 'var(--text)' }}>
+                        {s.school && <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.375rem' }}>{s.school}</div>}
+                        <MarkdownContent content={s.descriptionMarkdown} />
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
