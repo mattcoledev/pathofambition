@@ -6,7 +6,8 @@ import {
   getBuilderSpells,
 } from '@/lib/builderData';
 
-export default function CharacterPage({ params }: { params: { id: string } }) {
+export default async function CharacterPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const professions = getBuilderProfessions();
   const origins = getBuilderOrigins();
   const { professionFeats, originFeats } = getBuilderFeats();
@@ -14,7 +15,7 @@ export default function CharacterPage({ params }: { params: { id: string } }) {
 
   return (
     <CharacterSheetPage
-      id={params.id}
+      id={id}
       professions={professions}
       origins={origins}
       professionFeats={professionFeats}
