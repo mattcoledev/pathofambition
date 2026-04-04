@@ -80,7 +80,6 @@ export default function CharacterList() {
                 <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                   {[char.professionName, char.originName && `${char.originName}${char.vocationName ? ` (${char.vocationName})` : ''}`]
                     .filter(Boolean).join(' · ')}
-                  {char.pathChoice && ` · ${char.pathChoice}`}
                 </div>
                 {char.currentVitality !== undefined && char.maxVitality && (
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>

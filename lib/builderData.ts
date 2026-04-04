@@ -1,7 +1,8 @@
 import { readFileSync } from 'fs';
 import path from 'path';
 import type {
-  BuilderProfession, BuilderOrigin, BuilderFeat, BuilderSpell, AttributeKey,
+  BuilderProfession, BuilderOrigin, BuilderFeat, BuilderSpell,
+  AttributeKey, BuilderVocationCaster, BuilderStartingPack, BuilderOriginPackCategory,
 } from './characterTypes';
 
 function readJSON<T>(filename: string): T {
@@ -18,7 +19,6 @@ function parseVitalsChoice(skills: string[]): { count: number; options: string[]
   if (first.includes('any')) return { count, options: ALL_VITALS };
 
   const options: string[] = [];
-  // Extract option from dash e.g. "Choose one — Intuition"
   const dash = skills[0].match(/[—\-]\s*([A-Z][a-z]+)/);
   if (dash) options.push(dash[1]);
   skills.slice(1).forEach((s) => {
@@ -28,41 +28,83 @@ function parseVitalsChoice(skills: string[]): { count: number; options: string[]
   return { count, options };
 }
 
-// ─── Caster detection ────────────────────────────────────────────────────────
+// ─── Caster detection — requires "You are a **X-caster**" to avoid false positives ─
+
 interface CasterInfo {
   casterType: 'full' | 'half' | 'limited' | null;
   casterSource: string | null;
   casterModifierOptions: AttributeKey[];
 }
 
-function detectCaster(features: Array<{ description_markdown?: string }>): CasterInfo {
-  const none: CasterInfo = { casterType: null, casterSource: null, casterModifierOptions: [] };
-  if (!features) return none;
+function detectCasterFromMarkdown(md: string): CasterInfo {
+  // Strict match: must say "You are a **X-caster**" or "You're a **X-caster**"
+  const typeMatch = md.match(/You(?:'re| are) a \*\*(Full|Half|Limited)-[Cc]aster\*\*/i);
+  if (!typeMatch) return { casterType: null, casterSource: null, casterModifierOptions: [] };
 
-  for (const f of features) {
-    const md = f.description_markdown ?? '';
-    const typeMatch = md.match(/\*\*(Full|Half|Limited)-caster\*\*/i);
-    if (!typeMatch) continue;
+  const casterType = typeMatch[1].toLowerCase() as 'full' | 'half' | 'limited';
 
-    const casterType = typeMatch[1].toLowerCase() as 'full' | 'half' | 'limited';
-    const sourceMatch = md.match(/\*\*source\*\* is \*\*(.*?)\*\*/i) ||
-                        md.match(/Your \*\*source\*\*[^*]+\*\*(.*?)\*\*/i);
-    const casterSource = sourceMatch ? sourceMatch[1] : null;
+  const sourceMatch = md.match(/\*\*[Ss]ource\*\*\s+is\s+\*\*(.*?)\*\*/i) ||
+                      md.match(/\*\*[Ss]ource\*\*:\s*_?(.*?)_?\n/i) ||
+                      md.match(/[Ss]ource\*\*[^*\n]+\*\*(.*?)\*\*/i);
+  const casterSource = sourceMatch ? sourceMatch[1].trim() : null;
 
-    // Modifier: could be "Will", "Mind", or "Mind or Will"
-    const modMatch = md.match(/Spellcasting Modifier\*\* is \*\*(.*?)\*\*/i);
-    const modRaw = modMatch ? modMatch[1] : '';
-    const casterModifierOptions: AttributeKey[] = [];
-    if (modRaw.toLowerCase().includes('mind')) casterModifierOptions.push('mind');
-    if (modRaw.toLowerCase().includes('will')) casterModifierOptions.push('will');
-    if (modRaw.toLowerCase().includes('body')) casterModifierOptions.push('body');
+  const modMatch = md.match(/Spellcasting Modifier\*\*\s+is\s+\*\*(.*?)\*\*/i) ||
+                   md.match(/Spellcasting Modifier\*\*:\s*_?(.*?)_?[\n.]/i);
+  const modRaw = modMatch ? modMatch[1].trim() : '';
 
-    return { casterType, casterSource, casterModifierOptions };
+  const casterModifierOptions: AttributeKey[] = [];
+  if (/mind/i.test(modRaw)) casterModifierOptions.push('mind');
+  if (/will/i.test(modRaw)) casterModifierOptions.push('will');
+  if (/body/i.test(modRaw)) casterModifierOptions.push('body');
+  if (casterModifierOptions.length === 0 && modRaw) {
+    // fallback: try lower-cased
+    const lower = modRaw.toLowerCase();
+    if (lower.includes('mind')) casterModifierOptions.push('mind');
+    else if (lower.includes('will')) casterModifierOptions.push('will');
+    else if (lower.includes('body')) casterModifierOptions.push('body');
   }
-  return none;
+
+  return { casterType, casterSource, casterModifierOptions };
 }
 
-// ─── Exported loaders ────────────────────────────────────────────────────────
+function detectCasterFromFeatures(features: Array<{ description_markdown?: string }>): CasterInfo {
+  for (const f of features ?? []) {
+    const info = detectCasterFromMarkdown(f.description_markdown ?? '');
+    if (info.casterType) return info;
+  }
+  return { casterType: null, casterSource: null, casterModifierOptions: [] };
+}
+
+// ─── Starting pack helpers ────────────────────────────────────────────────────
+
+function extractProfessionPack(rawPack: Record<string, unknown>): BuilderStartingPack {
+  function items(key: string): string[] {
+    const section = rawPack[key] as { items?: string[] } | undefined;
+    return section?.items?.filter((i) => i && i.toLowerCase() !== 'none') ?? [];
+  }
+  return {
+    weapons: items('weapons'),
+    armor: items('armor'),
+    kit: items('kit'),
+    inventory: items('inventory'),
+    currency: (rawPack.starting_currency as string | null) ?? null,
+  };
+}
+
+function extractOriginPack(rawPack: Record<string, unknown> | undefined, packName: string): { name: string; categories: BuilderOriginPackCategory[] } | null {
+  if (!rawPack?.parsed) return null;
+  const parsed = rawPack.parsed as Record<string, { items?: string[] }>;
+  const categories: BuilderOriginPackCategory[] = Object.entries(parsed)
+    .map(([key, val]) => ({
+      label: key.charAt(0).toUpperCase() + key.slice(1),
+      items: val.items ?? [],
+    }))
+    .filter((cat) => cat.items.length > 0);
+  if (categories.length === 0) return null;
+  return { name: packName ?? 'Origin Pack', categories };
+}
+
+// ─── Exported loaders ─────────────────────────────────────────────────────────
 
 export function getBuilderProfessions(): BuilderProfession[] {
   const data = readJSON<{ professions: Record<string, unknown>[] }>('professions.normalized.json');
@@ -73,10 +115,11 @@ export function getBuilderProfessions(): BuilderProfession[] {
       path_options: string[];
       proficiencies: { vitals_skills: string[]; armaments: string[]; protection: string[]; tool_kits: string[] };
       features: Array<{ description_markdown?: string }>;
+      starting_pack: Record<string, unknown>;
     };
 
     const { count, options } = parseVitalsChoice(prof.proficiencies?.vitals_skills ?? []);
-    const caster = detectCaster(prof.features ?? []);
+    const caster = detectCasterFromFeatures(prof.features ?? []);
 
     return {
       id: prof.id,
@@ -92,6 +135,7 @@ export function getBuilderProfessions(): BuilderProfession[] {
       protection: prof.proficiencies?.protection ?? [],
       toolKits: prof.proficiencies?.tool_kits ?? [],
       ...caster,
+      startingPack: extractProfessionPack(prof.starting_pack ?? {}),
     } satisfies BuilderProfession;
   });
 }
@@ -100,22 +144,36 @@ export function getBuilderOrigins(): BuilderOrigin[] {
   const data = readJSON<{ origins: Record<string, unknown>[] }>('origins.normalized.json');
   return data.origins.map((o) => {
     const origin = o as {
-      id: string; name: string; flavor: string;
-      vocations: Array<{ id: string; name: string; flavor: string; attribute_bonus: { attribute: string; value: number } }>;
+      id: string; name: string; flavor: string; pack_name: string;
+      origin_pack: Record<string, unknown>;
+      vocations: Array<{
+        id: string; name: string; flavor: string;
+        attribute_bonus: { attribute: string; value: number };
+        features: Array<{ description_markdown?: string }>;
+      }>;
     };
+
     return {
       id: origin.id,
       name: origin.name,
       flavor: origin.flavor ?? '',
-      vocations: (origin.vocations ?? []).map((v) => ({
-        id: v.id,
-        name: v.name,
-        flavor: v.flavor ?? '',
-        attributeBonus: {
-          attribute: (v.attribute_bonus?.attribute ?? 'body') as AttributeKey,
-          value: v.attribute_bonus?.value ?? 1,
-        },
-      })),
+      vocations: (origin.vocations ?? []).map((v) => {
+        const casterInfo = detectCasterFromFeatures(v.features ?? []);
+        const vocationCaster: BuilderVocationCaster | null = casterInfo.casterType
+          ? { casterType: casterInfo.casterType, casterSource: casterInfo.casterSource ?? '', casterModifierOptions: casterInfo.casterModifierOptions }
+          : null;
+        return {
+          id: v.id,
+          name: v.name,
+          flavor: v.flavor ?? '',
+          attributeBonus: {
+            attribute: (v.attribute_bonus?.attribute ?? 'body') as AttributeKey,
+            value: v.attribute_bonus?.value ?? 1,
+          },
+          caster: vocationCaster,
+        };
+      }),
+      originPack: extractOriginPack(origin.origin_pack, origin.pack_name),
     } satisfies BuilderOrigin;
   });
 }
@@ -125,6 +183,11 @@ export function getBuilderFeats(): { professionFeats: BuilderFeat[]; originFeats
   const of_ = readJSON<{ feats: Record<string, unknown>[] }>('origin_feats.normalized.json');
 
   function mapFeat(f: Record<string, unknown>, ownerType: 'profession' | 'origin'): BuilderFeat {
+    const md = (f.description_markdown as string) ?? '';
+    const casterDetected = detectCasterFromMarkdown(md);
+    const casterInfo: BuilderVocationCaster | null = casterDetected.casterType
+      ? { casterType: casterDetected.casterType, casterSource: casterDetected.casterSource ?? '', casterModifierOptions: casterDetected.casterModifierOptions }
+      : null;
     return {
       id: f.id as string,
       name: f.name as string,
@@ -135,9 +198,10 @@ export function getBuilderFeats(): { professionFeats: BuilderFeat[]; originFeats
       tag: (f.tag as string) ?? null,
       required: (f.required as string) ?? null,
       pathInvestment: (f.path_investment as string) ?? null,
-      descriptionMarkdown: (f.description_markdown as string) ?? '',
+      descriptionMarkdown: md,
       traits: (f.traits as string[]) ?? [],
       activationRaw: ((f.activation as { raw?: string })?.raw) ?? null,
+      casterInfo,
     };
   }
 

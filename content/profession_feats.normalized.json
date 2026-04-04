@@ -5513,6 +5513,78 @@
       "collection_type": "profession_feat"
     },
     {
+      "id": "profession-feats-warden-1-spell-scourge",
+      "name": "Spell Scourge",
+      "slug": "spell-scourge",
+      "owner_type": "profession",
+      "owner_id": "warden",
+      "owner_name": "Warden",
+      "tag": "Warden",
+      "tier": 1,
+      "trait_label": "Trait",
+      "trait_raw": "Passive",
+      "traits": [
+        "Passive"
+      ],
+      "activation": {
+        "raw": null,
+        "resources": {},
+        "properties": {},
+        "notes": []
+      },
+      "description_markdown": "Your training hardens your body and mind against magical harm.\n\n- Attacks from spells or magical effects against you suffer a **–2 penalty**.\n- Applies to spell attacks, magical weapon attacks, and magical trap effects.",
+      "raw_markdown": "**Trait** Passive\nYour training hardens your body and mind against magical harm.\n\n- Attacks from spells or magical effects against you suffer a **–2 penalty**.\n- Applies to spell attacks, magical weapon attacks, and magical trap effects.",
+      "collection_type": "profession_feat"
+    },
+    {
+      "id": "profession-feats-warden-1-warden-order",
+      "name": "Warden Order",
+      "slug": "warden-order",
+      "owner_type": "profession",
+      "owner_id": "warden",
+      "owner_name": "Warden",
+      "tag": "Warden",
+      "tier": 1,
+      "trait_label": "Trait",
+      "trait_raw": "Passive",
+      "traits": [
+        "Passive"
+      ],
+      "activation": {
+        "raw": null,
+        "resources": {},
+        "properties": {},
+        "notes": []
+      },
+      "description_markdown": "Spread out across the realms, different Wardens gather to form **Orders** to help tame the wilderness. Choose a **Warden Order** and gain the following boon:\n\n| Order | Boon |\n|---|---|\n| **Aegis** | When using a Shield, add Armor Bonus to **Body** and **Mind** defense. |\n| **Inquisition** | Gain an additional **Tool** and **V.I.T.A.L.S.** proficiency. Roll with **Resolve** on Scan and **Intuition** or **Awareness** Skill Checks with **Mortals**. |\n| **Severance** | +Tier to attack/damage vs Magical targets. On a **Critical Hit**, the target's next Cast a Spell is made with Strain until end of your next turn. |\n| **Thorns** | Once per turn, when a target in your Engagement uses Disengage, make an attack roll with your Bound Armament. On hit, deal damage equal to your Spellcasting Modifier; target cannot Dash until end of your next turn. |\n| **Veil** | Learn *Protection from the Inhuman*. Roll with **Resolve** on Scan and **Intuition** or **Awareness** Skill Checks with **Eidolic** or **Occult**. |",
+      "raw_markdown": "**Trait** Passive\nSpread out across the realms, different Wardens gather to form **Orders** to help tame the wilderness.",
+      "collection_type": "profession_feat"
+    },
+    {
+      "id": "profession-feats-warden-1-spellcasting",
+      "name": "Spellcasting",
+      "slug": "spellcasting-warden",
+      "owner_type": "profession",
+      "owner_id": "warden",
+      "owner_name": "Warden",
+      "tag": "Warden",
+      "tier": 1,
+      "trait_label": "Trait",
+      "trait_raw": "Passive",
+      "traits": [
+        "Passive"
+      ],
+      "activation": {
+        "raw": null,
+        "resources": {},
+        "properties": {},
+        "notes": []
+      },
+      "description_markdown": "You have enough understanding of magic to be able to wield it. Gain access to actions and spells that require spellcasting.\n\n- You are a **Half-caster**\n- Your **source** is **Mana**\n- Your **Spellcasting Modifier** is **Mind**\n- Total **reservoir** = *(1 × Tier) + Spellcasting Modifier*\n- **Prepared spells** = Spellcasting Modifier\n- **Spell DC** = 10 + Spell Tier + Spellcasting Modifier\n- Each **Respite** restores spell points equal to your Spellcasting Modifier (minimum 3)\n- You gain **three Cantrips** from the Warden source list",
+      "raw_markdown": "**Trait** Passive\nYou have enough understanding of magic to be able to wield it.",
+      "collection_type": "profession_feat"
+    },
+    {
       "id": "profession-feats-warden-1-arcane-shelter",
       "name": "Arcane Shelter",
       "slug": "arcane-shelter",

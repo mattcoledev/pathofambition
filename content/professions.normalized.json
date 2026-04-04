@@ -16,10 +16,22 @@
       "vitality_gained_per_tier": "2d8",
       "body_modifier_bonus": "1d6  per 5 Body",
       "proficiencies": {
-        "vitals_skills": ["Choose two:", "Talent,", "Awareness,", "Intuition,", "or Social"],
-        "armaments": ["Finesse"],
-        "protection": ["Light"],
-        "tool_kits": ["-"],
+        "vitals_skills": [
+          "Choose two:",
+          "Talent,",
+          "Awareness,",
+          "Intuition,",
+          "or Social"
+        ],
+        "armaments": [
+          "Finesse"
+        ],
+        "protection": [
+          "Light"
+        ],
+        "tool_kits": [
+          "-"
+        ],
         "raw": "**V.I.T.A.L.S. Skills** Choose two: Talent, Awareness, Intuition, or Social\n**Armaments** Finesse\n**Protection** Light\n**Tool Kit** -"
       },
       "starting_pack": {
@@ -1495,8 +1507,8 @@
             "properties": {},
             "notes": []
           },
-          "description_markdown": "You have trained under a wide variety of fighting styles, magical formulas, and esoteric disciplines. Choose **one** _signature feature_ from the list below as a **manuscript**. You gain the feature, and any scaling uses your **Mercenary tier**.\n\n| Class         | Manuscript                    | Gain Spellcasting    |\n| ------------- | ----------------------------- | -------------------- |\n| **Agent**     | *Undercut*                    | No                   |\n| **Berserker** | *Berserker Rage*              | No                   |\n| **Duelist**   | *Cadance, Precision Strike*   | No                   |\n| **Drifter**   | *Primeval Vessels*            | Yes - Limited-caster |\n| **Eidolon**   | *Resonance, Spell Shaping*    | Yes - Limited-caster |\n| **Fighter**   | *Adrenaline*, *Second Breath* | No                   |\n| **Mage**      | *Magic Adept*                 | Yes - Limited-caster |\n| **Mesmer**    | *Tethers*                     | No                   |\n| **Oathbound** | *Creed*                       | Yes - Limited-caster |\n| **Phagite**   | *Soulglyph*                   | No                   |\n| **Warden**    | *Spell Scourge*               | No                   |\nIf you select the *Drifter*, *Eidolon*, *Mage*, *Oathbound* manuscript:\n\n- You gain their **spellcasting features**\n- You become a **Limited-Caster** (as defined in Chapter 4)\n- You gain **two of their cantrips**\n- You follow the **limited-caster progression table**\n- You use their **source** and **spellcasting modifier**, but restricted by limited-caster scaling\n- Start with Two **Known Spells** at Tier 1",
-          "raw_markdown": "**Trait** Passive | **Cost** -\nYou have trained under a wide variety of fighting styles, magical formulas, and esoteric disciplines. Choose **one** _signature feature_ from the list below as a **manuscript**. You gain the feature, and any scaling uses your **Mercenary tier**.\n\n| Class         | Manuscript                    | Gain Spellcasting    |\n| ------------- | ----------------------------- | -------------------- |\n| **Agent**     | *Undercut*                    | No                   |\n| **Berserker** | *Berserker Rage*              | No                   |\n| **Duelist**   | *Cadance, Precision Strike*   | No                   |\n| **Drifter**   | *Primeval Vessels*            | Yes - Limited-caster |\n| **Eidolon**   | *Resonance, Spell Shaping*    | Yes - Limited-caster |\n| **Fighter**   | *Adrenaline*, *Second Breath* | No                   |\n| **Mage**      | *Magic Adept*                 | Yes - Limited-caster |\n| **Mesmer**    | *Tethers*                     | No                   |\n| **Oathbound** | *Creed*                       | Yes - Limited-caster |\n| **Phagite**   | *Soulglyph*                   | No                   |\n| **Warden**    | *Spell Scourge*               | No                   |\nIf you select the *Drifter*, *Eidolon*, *Mage*, *Oathbound* manuscript:\n\n- You gain their **spellcasting features**\n- You become a **Limited-Caster** (as defined in Chapter 4)\n- You gain **two of their cantrips**\n- You follow the **limited-caster progression table**\n- You use their **source** and **spellcasting modifier**, but restricted by limited-caster scaling\n- Start with Two **Known Spells** at Tier 1"
+          "description_markdown": "You have trained under a wide variety of fighting styles, magical formulas, and esoteric disciplines. Choose **one** _signature feature_ from the list below as a **manuscript**. You gain the feature, and any scaling uses your **Mercenary tier**.\n\n| Class          | Manuscript                    |\n| -------------- | ----------------------------- |\n| **Agent**      | *Undercut*                    |\n| **Berserker**  | *Berserker Rage*              |\n| **Duelist**    | *Cadence, Precision Strike*   |\n| **Fighter**    | *Adrenaline, Second Breath*   |\n| **Phagite**    | *Soulglyph*                   |\n| **Warden**     | *Spell Scourge*               |",
+          "raw_markdown": "**Trait** Passive | **Cost** -\nYou have trained under a wide variety of fighting styles, magical formulas, and esoteric disciplines. Choose **one** _signature feature_ from the list below as a **manuscript**. You gain the feature, and any scaling uses your **Mercenary tier**.\n\n| Class          | Manuscript                    |\n| -------------- | ----------------------------- |\n| **Agent**      | *Undercut*                    |\n| **Berserker**  | *Berserker Rage*              |\n| **Duelist**    | *Cadence, Precision Strike*   |\n| **Fighter**    | *Adrenaline, Second Breath*   |\n| **Phagite**    | *Soulglyph*                   |\n| **Warden**     | *Spell Scourge*               |"
         },
         {
           "id": "professions-mercenary-base-skilled-improvisation",
@@ -2059,9 +2071,9 @@
           ]
         },
         "armor": {
-          "raw": "Medium armor, Shield",
+          "raw": "Light, Shield",
           "items": [
-            "Medium armor",
+            "Light",
             "Shield"
           ]
         },
@@ -2133,130 +2145,6 @@
           },
           "description_markdown": "Make an **attack roll** using your **Bound Armament** or a **Spell Attack**.\n- On a **hit** against a **spellcaster**, their next **Cast a Spell** action is made with **Strain**.\n- This effect may trigger **only once**, regardless of how many times you hit or how many targets you attack.\n- On a **critical hit**, if the target is **focused** on a sustained spell, they also become **dazed**.",
           "raw_markdown": "**Trait** Offensive | **Cost** 2 AP\nMake an **attack roll** using your **Bound Armament** or a **Spell Attack**.\n- On a **hit** against a **spellcaster**, their next **Cast a Spell** action is made with **Strain**.\n- This effect may trigger **only once**, regardless of how many times you hit or how many targets you attack.\n- On a **critical hit**, if the target is **focused** on a sustained spell, they also become **dazed**."
-        },
-        {
-          "id": "professions-warden-base-spellcasting",
-          "name": "Spellcasting",
-          "slug": "spellcasting",
-          "owner_type": "profession",
-          "owner_id": "warden",
-          "owner_name": "Warden",
-          "tag": "Warden",
-          "trait_label": "Trait",
-          "trait_raw": "Passive",
-          "traits": [
-            "Passive"
-          ],
-          "activation": {
-            "raw": "-",
-            "resources": {},
-            "properties": {},
-            "notes": []
-          },
-          "description_markdown": "You have enough understanding of magic to be able to wield it. Gain access to actions and spells that require spell casting. Your spellcasting features are as follows:\nGain the following features for **spellcasting**\n- You are a **Half-caster**\n- Your **source** is **Mana** \n- Your **Spellcasting Modifier** is **Mind**\n- Your total **reservoir** equals _(1 × Tier) + Spellcasting Modifier_.\n- Your **prepared spells** equal your **Spellcasting Modifier**.\n- Your **Spell DC** = 10 + Spell Tier + Spellcasting Modifier.    \n- Each **Respite** restores spell points equal to your **Spellcasting Modifier** (minimum 3).\n- You gain three **Cantrips** listed from bellow\n\n> _Example:_  \n> A Tier 3 ***Warden*** with +8 Mind has (1 × 3)+8 = **11 spell points**.",
-          "raw_markdown": "**Trait** Passive | **Cost** -\nYou have enough understanding of magic to be able to wield it. Gain access to actions and spells that require spell casting. Your spellcasting features are as follows:\nGain the following features for **spellcasting**\n- You are a **Half-caster**\n- Your **source** is **Mana** \n- Your **Spellcasting Modifier** is **Mind**\n- Your total **reservoir** equals _(1 × Tier) + Spellcasting Modifier_.\n- Your **prepared spells** equal your **Spellcasting Modifier**.\n- Your **Spell DC** = 10 + Spell Tier + Spellcasting Modifier.    \n- Each **Respite** restores spell points equal to your **Spellcasting Modifier** (minimum 3).\n- You gain three **Cantrips** listed from bellow\n\n> _Example:_  \n> A Tier 3 ***Warden*** with +8 Mind has (1 × 3)+8 = **11 spell points**.\n\n###### Cantrips \n\n**Apprentice's Artifice**\n**Range** Close | **Duration** Instant\nYou perform a minor magical feats using your abilities such as:\n- **Alteration** You can change the physical state of an object's color, cleanliness, and temperature. If color or temperature the effect only lasts for 10 minutes. \n- **Illumination** You can instantly adjust the state of an object which can be lit by fire, or create small bursts of dim-light\n- **Sensory** Create small instant auditory, visual, or aroma effect, which is harmless in nature.\n\n**Mana Dart**\n**Range** Close | **Duration** Instant\nMake a **spell attack roll**, on hit deal 1d4 **arcane** damage. On a **critical hit**, deal one extra dice per your current **tier**.\n\n**Swift Scribe** \n**Range** Touch | **Duration** Instant\nUsing your magic you can copy visual text or symbols by etching and imprinting onto objects. These copies are non-magical in nature.\n\n**System Shock**\n**Range** Melee | **Duration** Instant\nMake **spell attack roll**, on a hit deal 2d4 **arcane** damage. On a **critical hit**, the target is **dazed** until the end of their next turn.",
-          "spellcasting": {
-            "caster_type": "Half-caster",
-            "source": "Mana",
-            "spellcasting_modifier": "Mind",
-            "reservoir_formula": "(1 × Tier) + Spellcasting Modifier",
-            "prepared_spells": "your Spellcasting Modifier",
-            "spell_dc": "10 + Spell Tier + Spellcasting Modifier.",
-            "respite_recovery": "Each Respite restores spell points equal to your Spellcasting Modifier (minimum 3).",
-            "cantrip_notes": [
-              "You gain three Cantrips listed from bellow"
-            ]
-          },
-          "granted_cantrips": [
-            {
-              "id": "spell-0-apprentice-s-artifice",
-              "name": "Apprentice's Artifice",
-              "slug": "apprentice-s-artifice",
-              "tier": 0,
-              "tier_label": "Cantrips",
-              "is_cantrip": true,
-              "reference_only": false,
-              "school_display": "",
-              "range": "Close",
-              "duration": "Instant",
-              "description_markdown": "You perform a minor magical feats using your abilities such as:\n- **Alteration** You can change the physical state of an object's color, cleanliness, and temperature. If color or temperature the effect only lasts for 10 minutes.\n- **Illumination** You can instantly adjust the state of an object which can be lit by fire, or create small bursts of dim-light\n- **Sensory** Create small instant auditory, visual, or aroma effect, which is harmless in nature.",
-              "raw_markdown": "**Apprentice's Artifice**\n**Range** Close | **Duration** Instant\nYou perform a minor magical feats using your abilities such as:\n- **Alteration** You can change the physical state of an object's color, cleanliness, and temperature. If color or temperature the effect only lasts for 10 minutes.\n- **Illumination** You can instantly adjust the state of an object which can be lit by fire, or create small bursts of dim-light\n- **Sensory** Create small instant auditory, visual, or aroma effect, which is harmless in nature.",
-              "embedded_in": {
-                "collection": "professions",
-                "owner_type": "profession",
-                "owner_id": "warden",
-                "owner_name": "Warden",
-                "feature_id": "professions-warden-base-spellcasting",
-                "feature_name": "Spellcasting"
-              }
-            },
-            {
-              "id": "spell-0-mana-dart",
-              "name": "Mana Dart",
-              "slug": "mana-dart",
-              "tier": 0,
-              "tier_label": "Cantrips",
-              "is_cantrip": true,
-              "reference_only": false,
-              "school_display": "",
-              "range": "Close",
-              "duration": "Instant",
-              "description_markdown": "Make a **spell attack roll**, on hit deal 1d4 **arcane** damage. On a **critical hit**, deal one extra dice per your current **tier**.",
-              "raw_markdown": "**Mana Dart**\n**Range** Close | **Duration** Instant\nMake a **spell attack roll**, on hit deal 1d4 **arcane** damage. On a **critical hit**, deal one extra dice per your current **tier**.",
-              "embedded_in": {
-                "collection": "professions",
-                "owner_type": "profession",
-                "owner_id": "warden",
-                "owner_name": "Warden",
-                "feature_id": "professions-warden-base-spellcasting",
-                "feature_name": "Spellcasting"
-              }
-            },
-            {
-              "id": "spell-0-swift-scribe",
-              "name": "Swift Scribe",
-              "slug": "swift-scribe",
-              "tier": 0,
-              "tier_label": "Cantrips",
-              "is_cantrip": true,
-              "reference_only": false,
-              "school_display": "",
-              "range": "Touch",
-              "duration": "Instant",
-              "description_markdown": "Using your magic you can copy visual text or symbols by etching and imprinting onto objects. These copies are non-magical in nature.",
-              "raw_markdown": "**Swift Scribe**\n**Range** Touch | **Duration** Instant\nUsing your magic you can copy visual text or symbols by etching and imprinting onto objects. These copies are non-magical in nature.",
-              "embedded_in": {
-                "collection": "professions",
-                "owner_type": "profession",
-                "owner_id": "warden",
-                "owner_name": "Warden",
-                "feature_id": "professions-warden-base-spellcasting",
-                "feature_name": "Spellcasting"
-              }
-            },
-            {
-              "id": "spell-0-system-shock",
-              "name": "System Shock",
-              "slug": "system-shock",
-              "tier": 0,
-              "tier_label": "Cantrips",
-              "is_cantrip": true,
-              "reference_only": false,
-              "school_display": "",
-              "range": "Melee",
-              "duration": "Instant",
-              "description_markdown": "Make **spell attack roll**, on a hit deal 2d4 **arcane** damage. On a **critical hit**, the target is **dazed** until the end of their next turn.",
-              "raw_markdown": "**System Shock**\n**Range** Melee | **Duration** Instant\nMake **spell attack roll**, on a hit deal 2d4 **arcane** damage. On a **critical hit**, the target is **dazed** until the end of their next turn.",
-              "embedded_in": {
-                "collection": "professions",
-                "owner_type": "profession",
-                "owner_id": "warden",
-                "owner_name": "Warden",
-                "feature_id": "professions-warden-base-spellcasting",
-                "feature_name": "Spellcasting"
-              }
-            }
-          ]
         }
       ]
     }

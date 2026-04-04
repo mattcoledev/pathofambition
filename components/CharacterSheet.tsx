@@ -146,7 +146,7 @@ export default function CharacterSheetPage({ id, professions, professionFeats, o
         </div>
         <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
           {[
-            char.professionName && `${char.professionName}${char.pathChoice ? ` — ${char.pathChoice}` : ''}`,
+            char.professionName,
             char.originName && `${char.originName}${char.vocationName ? ` (${char.vocationName})` : ''}`,
           ].filter(Boolean).join(' · ')}
         </div>

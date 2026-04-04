@@ -1,4 +1,4 @@
-import type { Character, CharacterAttributes, AttributeKey, BuilderProfession } from './characterTypes';
+import type { Character, CharacterAttributes, AttributeKey, BuilderProfession, BuilderFeat } from './characterTypes';
 
 export function getTotalAttributes(char: Character): CharacterAttributes {
   const b = char.vocationAttributeBonus;
@@ -24,25 +24,27 @@ export function calcStartingVitality(prof: BuilderProfession, attrs: CharacterAt
   return base + attrs[attribute];
 }
 
-export function calcBodyDefense(attrs: CharacterAttributes): number {
-  return 10 + attrs.body;
+/** Parse "+X maximum Vitality" bonus from a feat description. Returns 0 if none. */
+export function parseFeatVitalityBonus(feat: BuilderFeat): number {
+  const md = feat.descriptionMarkdown;
+  const match = md.match(/\+\s*(\d+)\s*(?:maximum|[Mm]ax(?:imum)?)?[^a-z\n]*?\**[Vv]itality\**/i) ||
+                md.match(/\**\+(\d+)\s*[Mm]ax(?:imum)?\s*[Vv]itality\**/i);
+  return match ? parseInt(match[1], 10) : 0;
 }
 
-export function calcMindDefense(attrs: CharacterAttributes): number {
-  return 10 + attrs.mind;
+/** Sum all vitality bonuses from the feats whose IDs are in selectedFeatIds. */
+export function calcFeatVitalityBonus(selectedFeatIds: string[], allFeats: BuilderFeat[]): number {
+  return selectedFeatIds.reduce((sum, id) => {
+    const feat = allFeats.find((f) => f.id === id);
+    return sum + (feat ? parseFeatVitalityBonus(feat) : 0);
+  }, 0);
 }
 
-export function calcWillDefense(attrs: CharacterAttributes): number {
-  return 10 + attrs.will;
-}
-
-export function calcMaxWounds(attrs: CharacterAttributes, tier: number): number {
-  return Math.floor(attrs.body / 2) + tier;
-}
-
-export function calcCarryWeight(attrs: CharacterAttributes, tier: number): number {
-  return 5 + attrs.body + tier;
-}
+export function calcBodyDefense(attrs: CharacterAttributes): number { return 10 + attrs.body; }
+export function calcMindDefense(attrs: CharacterAttributes): number { return 10 + attrs.mind; }
+export function calcWillDefense(attrs: CharacterAttributes): number { return 10 + attrs.will; }
+export function calcMaxWounds(attrs: CharacterAttributes, tier: number): number { return Math.floor(attrs.body / 2) + tier; }
+export function calcCarryWeight(attrs: CharacterAttributes, tier: number): number { return 5 + attrs.body + tier; }
 
 export function calcReservoir(
   casterType: 'full' | 'half' | 'limited' | null,
@@ -60,13 +62,6 @@ export function calcSpellDC(tier: number, modifierValue: number): number {
   return 10 + tier + modifierValue;
 }
 
-/** Tier progression thresholds — cumulative feats to reach each tier. */
-export const TIER_THRESHOLDS = [0, 3, 6, 8, 10]; // index = tier-1 needed feats
-export const TIER_TOTAL_SLOTS = [4, 8, 11, 13, 16];
+export const FEAT_ALLOWANCE: Record<number, number> = { 1: 0, 2: 3, 3: 6, 4: 8, 5: 10 };
 
-export function currentTierFromFeats(purchased: number): number {
-  for (let i = TIER_THRESHOLDS.length - 1; i >= 0; i--) {
-    if (purchased >= TIER_THRESHOLDS[i]) return i + 1;
-  }
-  return 1;
-}
+export const TIER_TOTAL_SLOTS = [4, 8, 11, 13, 16];
