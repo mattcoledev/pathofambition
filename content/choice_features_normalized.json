@@ -1469,7 +1469,7 @@
           "effect_text": "Gain Adrenaline and Second Breath."
         },
         {
-          "name": "Phagite",
+          "name": "Vescent",
           "effect_text": "Gain Soulglyph."
         },
         {
@@ -1510,7 +1510,7 @@
           "effect_text": "Gain Adrenaline and Second Breath."
         },
         {
-          "name": "Phagite",
+          "name": "Vescent",
           "effect_text": "Gain Soulglyph."
         },
         {
@@ -1634,8 +1634,8 @@
           "effect_text": "Gain access to the Fighter-related tier 1 core feat."
         },
         {
-          "name": "Phagite",
-          "effect_text": "Gain access to the Phagite-related tier 1 core feat."
+          "name": "Vescent",
+          "effect_text": "Gain access to the Vescent-related tier 1 core feat."
         },
         {
           "name": "Warden",

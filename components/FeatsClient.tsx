@@ -13,7 +13,7 @@ const ORIGINS = [
 
 const PROFESSIONS = [
   'Agent', 'Berserker', 'Drifter', 'Duelist', 'Eidolon', 'Fighter',
-  'Mage', 'Mercenary', 'Mesmer', 'Oathbound', 'Phagite', 'Warden',
+  'Mage', 'Mercenary', 'Mesmer', 'Oathbound', 'Vescent', 'Warden',
 ];
 
 function FilterPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {

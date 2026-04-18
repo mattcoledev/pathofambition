@@ -106,6 +106,10 @@ export interface Character {
   // Play tracking (updated on character sheet)
   currentVitality: number;
   maxVitality: number | null;
+  tempHp: number;
+  tempArmorDef: number;
+  tempToHit: number;
+  tempDamage: number;
   currentWounds: number;
   renown: number;
   featsPurchased: number;

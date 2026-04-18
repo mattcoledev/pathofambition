@@ -776,7 +776,7 @@
               ]
             },
             {
-              "name": "Phagite",
+              "name": "Vescent",
               "role": "Soul-powered full-caster trading life force for control, debuffs, and momentum.",
               "favored_attributes": "Will",
               "vitality": "Start 8 + Will; +2d8 per Tier",
@@ -1039,7 +1039,7 @@
                   "text": "Path of the Herald; Path of the Arbiter"
                 },
                 {
-                  "name": "Phagite",
+                  "name": "Vescent",
                   "text": "Path of the Anima; Path of the Animus"
                 },
                 {
@@ -1107,7 +1107,7 @@
                   "text": "Simple weapon of choice; magic staff or talisman; holy symbol; healer's kit; base light armor; shield."
                 },
                 {
-                  "name": "Phagite",
+                  "name": "Vescent",
                   "text": "Ritual dagger; occult staff or wand; component pouch."
                 },
                 {

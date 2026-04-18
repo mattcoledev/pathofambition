@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import MarkdownContent from './MarkdownContent';
 import { getCharacter, updateCharacter, deleteCharacter } from '@/lib/characterStorage';
 import {
-  getTotalAttributes, calcStartingVitality, calcBodyDefense, calcMindDefense,
+  getTotalAttributes, calcStartingVitality, calcFeatVitalityBonus, calcBodyDefense, calcMindDefense,
   calcWillDefense, calcMaxWounds, calcCarryWeight, calcReservoir, calcSpellDC,
   calcAmbition, calcArmorDefense, calcTierFromFeatsPurchased,
   calcSpellcastingThreshold, calcSpellcastingTier, calcKnownSpells, calcPreparedSpells,
@@ -50,6 +50,39 @@ function EditableNumber({ label, value, min, max, onChange }: {
   );
 }
 
+function DeltaNumber({ label, value, min, max, onChange }: {
+  label: string; value: number; min?: number; max?: number; onChange: (v: number) => void;
+}) {
+  const [delta, setDelta] = React.useState('');
+  function applyDelta() {
+    const n = parseInt(delta);
+    if (isNaN(n)) return;
+    const next = value + n;
+    const clamped = Math.max(min ?? -Infinity, max !== undefined ? Math.min(max, next) : next);
+    onChange(clamped);
+    setDelta('');
+  }
+  return (
+    <div style={{ textAlign: 'center', padding: '0.625rem 0.5rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
+      <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.375rem' }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+        <button onClick={() => onChange(Math.max(min ?? 0, value - 1))} style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+        <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.3rem', color: 'var(--primary)', minWidth: '32px', textAlign: 'center' }}>{value}</span>
+        <button onClick={() => onChange(max !== undefined ? Math.min(max, value + 1) : value + 1)} style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', marginTop: '0.35rem' }}>
+        <input
+          type="text" value={delta} onChange={(e) => setDelta(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') applyDelta(); }}
+          placeholder="±"
+          style={{ width: '48px', padding: '0.15rem 0.25rem', fontSize: '0.78rem', fontFamily: 'var(--font-heading)', border: '1px solid var(--border)', borderRadius: '0.25rem', backgroundColor: 'var(--bg-card)', color: 'var(--text)', textAlign: 'center' }}
+        />
+        <button onClick={applyDelta} style={{ padding: '0.15rem 0.4rem', fontSize: '0.68rem', fontFamily: 'var(--font-heading)', fontWeight: 700, border: 'none', borderRadius: '0.25rem', backgroundColor: 'var(--primary)', color: '#fff', cursor: 'pointer' }}>Apply</button>
+      </div>
+    </div>
+  );
+}
+
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
     <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
@@ -77,8 +110,7 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   const [mounted, setMounted] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesVal, setNotesVal] = useState('');
-  const [maxVitalityInput, setMaxVitalityInput] = useState('');
-  const [editingMaxVitality, setEditingMaxVitality] = useState(false);
+
   const [activeTab, setActiveTab] = useState<TabId>('feats');
 
   // Feat expand state (Issue 4 — collapsed by default)
@@ -181,8 +213,18 @@ export default function CharacterSheetPage({ id, professions, origins, professio
       if (inventoryChanged) updateCharacter(loaded.id, { inventory: updatedInventory });
       setChar(finalChar);
       setNotesVal(loaded.notes ?? '');
-      setMaxVitalityInput(loaded.maxVitality !== null ? String(loaded.maxVitality) : '');
-      setEditingMaxVitality(loaded.maxVitality === null);
+      // Auto-calculate max vitality if not yet set
+      let resolvedMaxVit = loaded.maxVitality;
+      if (resolvedMaxVit === null) {
+        const loadedProf = professions.find((p) => p.id === loaded.professionId) ?? null;
+        const loadedAllFeats = [...professionFeats, ...originFeats];
+        const loadedAttrs = getTotalAttributes(loaded);
+        if (loadedProf) {
+          const featBonus = calcFeatVitalityBonus(loaded.selectedFeatIds ?? [], loadedAllFeats);
+          resolvedMaxVit = calcStartingVitality(loadedProf, loadedAttrs) + featBonus;
+          updateCharacter(loaded.id, { maxVitality: resolvedMaxVit });
+        }
+      }
     }
     setMounted(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -800,6 +842,28 @@ export default function CharacterSheetPage({ id, professions, origins, professio
 
     return (
       <div>
+        {/* Temp combat modifiers */}
+        {(() => {
+          const tth = c.tempToHit ?? 0;
+          const tdmg = c.tempDamage ?? 0;
+          function TempCtrl({ label, value, onDec, onInc, onClear }: { label: string; value: number; onDec: () => void; onInc: () => void; onClear: () => void }) {
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', backgroundColor: 'var(--bg-nav)', border: `1px solid ${value !== 0 ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '0.5rem' }}>
+                <span style={{ fontSize: '0.6rem', fontFamily: 'var(--font-heading)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', flex: 1 }}>{label}</span>
+                <button onClick={onDec} style={{ width: '18px', height: '18px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9rem', color: value !== 0 ? 'var(--primary)' : 'var(--text)', minWidth: '28px', textAlign: 'center' }}>{value > 0 ? `+${value}` : value === 0 ? '0' : value}</span>
+                <button onClick={onInc} style={{ width: '18px', height: '18px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                {value !== 0 && <button onClick={onClear} style={{ fontSize: '0.6rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>}
+              </div>
+            );
+          }
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <TempCtrl label="Temp To Hit" value={tth} onDec={() => persist({ tempToHit: tth - 1 })} onInc={() => persist({ tempToHit: tth + 1 })} onClear={() => persist({ tempToHit: 0 })} />
+              <TempCtrl label="Temp Damage" value={tdmg} onDec={() => persist({ tempDamage: tdmg - 1 })} onInc={() => persist({ tempDamage: tdmg + 1 })} onClear={() => persist({ tempDamage: 0 })} />
+            </div>
+          );
+        })()}
         {/* Equipped gear */}
         <div style={{ marginBottom: '1.25rem' }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.5rem' }}>Equipped Gear</div>
@@ -824,7 +888,7 @@ export default function CharacterSheetPage({ id, professions, origins, professio
                             <button onClick={() => updateItem(displayItem.id, { equipped: false })} style={{ fontSize: '0.65rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>✕</button>
                           )}
                         </div>
-                        {stats && <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600, marginTop: '0.2rem' }}>{stats.toHit} · {stats.damage}</div>}
+                        {stats && <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600, marginTop: '0.2rem' }}>{stats.toHit}{(c.tempToHit ?? 0) !== 0 && <span style={{ opacity: 0.8 }}>{(c.tempToHit ?? 0) > 0 ? `+${c.tempToHit}` : c.tempToHit}</span>} · {stats.damage}{(c.tempDamage ?? 0) !== 0 && <span style={{ opacity: 0.8 }}>{(c.tempDamage ?? 0) > 0 ? `+${c.tempDamage}` : c.tempDamage}</span>}</div>}
                         {!stats && displayItem.category === 'Armor' && <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600, marginTop: '0.2rem' }}>+{displayItem.armorBonus} Armor Def{displayItem.armorCategory ? ` · ${displayItem.armorCategory}` : ''}</div>}
                         {!stats && displayItem.category === 'Shield' && <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600, marginTop: '0.2rem' }}>+{displayItem.armorBonus ?? 0} Shield Def</div>}
                       </div>
@@ -1548,24 +1612,30 @@ export default function CharacterSheetPage({ id, professions, origins, professio
 
       {/* Combat Stats */}
       <Section title="Combat Stats">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
-          <EditableNumber label={`Vitality${c.maxVitality ? ` / ${c.maxVitality}` : ''}`} value={c.currentVitality ?? 0} min={0} max={c.maxVitality ?? undefined} onChange={(v) => persist({ currentVitality: v })} />
-          <div style={{ padding: '0.625rem 0.5rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
-            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.25rem', textAlign: 'center' }}>Max Vitality</div>
-            {editingMaxVitality ? (
-              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'center' }}>
-                <input type="number" value={maxVitalityInput} onChange={(e) => setMaxVitalityInput(e.target.value)} placeholder={prof ? String(calcStartingVitality(prof, attrs)) : '—'} style={{ width: '60px', padding: '0.2rem 0.4rem', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '0.25rem', backgroundColor: 'var(--bg-card)', color: 'var(--text)', textAlign: 'center' }} />
-                <button onClick={() => { const n = parseInt(maxVitalityInput); if (!isNaN(n)) { persist({ maxVitality: n }); setEditingMaxVitality(false); } }} style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', border: 'none', borderRadius: '0.25rem', backgroundColor: 'var(--primary)', color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>Set</button>
+        {(() => {
+          const tempHp = c.tempHp ?? 0;
+          const effectiveMax = (c.maxVitality ?? 0) + tempHp;
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <DeltaNumber label={`Vitality / ${c.maxVitality ?? '?'}${tempHp !== 0 ? (tempHp > 0 ? ` +${tempHp}` : ` ${tempHp}`) : ''}`} value={c.currentVitality ?? 0} min={0} max={effectiveMax || undefined} onChange={(v) => persist({ currentVitality: v })} />
+              <div style={{ padding: '0.625rem 0.5rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.2rem', textAlign: 'center' }}>Max Vitality</div>
+                <div style={{ textAlign: 'center', marginBottom: '0.3rem' }}>
+                  <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.3rem', color: 'var(--primary)' }}>{c.maxVitality ?? '—'}</span>
+                  {tempHp !== 0 && <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.85rem', color: tempHp > 0 ? 'var(--primary)' : 'var(--text-muted)', marginLeft: '0.3rem' }}>{tempHp > 0 ? `+${tempHp}` : tempHp}</span>}
+                </div>
+                {prof && <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '0.35rem' }}>{prof.startingVitality}</div>}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>Temp</span>
+                  <button onClick={() => { const next = tempHp - 1; const newMax = (c.maxVitality ?? 0) + next; const patch: Partial<typeof c> = { tempHp: next }; if ((c.currentVitality ?? 0) > newMax) patch.currentVitality = Math.max(0, newMax); persist(patch); }} style={{ width: '18px', height: '18px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                  <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', minWidth: '24px', textAlign: 'center' }}>{tempHp}</span>
+                  <button onClick={() => persist({ tempHp: tempHp + 1 })} style={{ width: '18px', height: '18px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                  {tempHp !== 0 && <button onClick={() => { const newMax = c.maxVitality ?? 0; const patch: Partial<typeof c> = { tempHp: 0 }; if ((c.currentVitality ?? 0) > newMax) patch.currentVitality = Math.max(0, newMax); persist(patch); }} style={{ fontSize: '0.6rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-heading)' }}>✕</button>}
+                </div>
               </div>
-            ) : (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.3rem', color: 'var(--primary)' }}>{c.maxVitality ?? '—'}</div>
-                {prof && <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Formula: {prof.startingVitality}</div>}
-                <button onClick={() => setEditingMaxVitality(true)} style={{ fontSize: '0.65rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>Edit</button>
-              </div>
-            )}
-          </div>
-        </div>
+            </div>
+          );
+        })()}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
           <EditableNumber label={`Wounds / ${maxWounds}`} value={c.currentWounds ?? 0} min={0} max={maxWounds} onChange={(v) => persist({ currentWounds: v })} />
           <EditableNumber label="Renown" value={c.renown ?? 0} min={0} onChange={(v) => persist({ renown: v })} />
@@ -1580,7 +1650,26 @@ export default function CharacterSheetPage({ id, professions, origins, professio
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <StatCard label="Armor Def" value={armorDefense} sub={hasUnarmoredDefense && !equippedBody ? 'Unarmored Def' : hasAgile && !equippedShield && (!equippedBody || equippedBody.armorCategory === 'Light' || !equippedBody.armorCategory) ? 'Agile' : equippedBody ? `${equippedBody.name} +${equippedBody.armorBonus}` : 'Base'} />
+          {(() => {
+            const tempAD = c.tempArmorDef ?? 0;
+            const totalAD = armorDefense + tempAD;
+            const subLabel = hasUnarmoredDefense && !equippedBody ? 'Unarmored Def' : hasAgile && !equippedShield && (!equippedBody || equippedBody.armorCategory === 'Light' || !equippedBody.armorCategory) ? 'Agile' : equippedBody ? `${equippedBody.name} +${equippedBody.armorBonus}` : 'Base';
+            return (
+              <div style={{ textAlign: 'center', padding: '0.5rem 0.35rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>Armor Def</div>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--primary)', lineHeight: 1 }}>
+                  {totalAD}{tempAD !== 0 && <span style={{ fontSize: '0.7rem', color: tempAD > 0 ? 'var(--primary)' : 'var(--text-muted)', marginLeft: '0.15rem' }}>{tempAD > 0 ? `+${tempAD}` : tempAD}</span>}
+                </div>
+                {subLabel && <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', marginTop: '0.1rem', marginBottom: '0.25rem' }}>{subLabel}</div>}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
+                  <button onClick={() => persist({ tempArmorDef: tempAD - 1 })} style={{ width: '16px', height: '16px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', minWidth: '14px', textAlign: 'center' }}>{tempAD === 0 ? 'tmp' : tempAD}</span>
+                  <button onClick={() => persist({ tempArmorDef: tempAD + 1 })} style={{ width: '16px', height: '16px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                  {tempAD !== 0 && <button onClick={() => persist({ tempArmorDef: 0 })} style={{ fontSize: '0.55rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>}
+                </div>
+              </div>
+            );
+          })()}
           <StatCard label="Body Def" value={bodyDef} />
           <StatCard label="Mind Def" value={mindDef} />
           <StatCard label="Will Def" value={willDef} />
@@ -1648,28 +1737,6 @@ export default function CharacterSheetPage({ id, professions, origins, professio
             </div>
           );
         })()}
-        {(primaryWeaponStats || offWeaponStats) && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
-            {primaryWeaponStats && primaryWeapon && (
-              <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--primary)', borderRadius: '0.5rem' }}>
-                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.8rem', color: 'var(--text)', marginBottom: '0.1rem' }}>{primaryWeapon.name}</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
-                  {primaryWeaponStats.toHit}, {primaryWeaponStats.damage}
-                </div>
-                {primaryWeapon.isRanged && <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ranged</div>}
-              </div>
-            )}
-            {offWeaponStats && equippedOff && (
-              <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--primary)', borderRadius: '0.5rem' }}>
-                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.8rem', color: 'var(--text)', marginBottom: '0.1rem' }}>{equippedOff.name}</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
-                  {offWeaponStats.toHit}, {offWeaponStats.damage}
-                </div>
-                {equippedOff.isRanged && <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ranged</div>}
-              </div>
-            )}
-          </div>
-        )}
       </Section>
 
       {/* Rest Tracker (Issue 5) */}

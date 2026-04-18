@@ -1507,8 +1507,8 @@
             "properties": {},
             "notes": []
           },
-          "description_markdown": "You have trained under a wide variety of fighting styles, magical formulas, and esoteric disciplines. Choose **one** _signature feature_ from the list below as a **manuscript**. You gain the feature, and any scaling uses your **Mercenary tier**.\n\n| Class          | Manuscript                    |\n| -------------- | ----------------------------- |\n| **Agent**      | *Undercut*                    |\n| **Berserker**  | *Berserker Rage*              |\n| **Duelist**    | *Cadence, Precision Strike*   |\n| **Fighter**    | *Adrenaline, Second Breath*   |\n| **Phagite**    | *Soulglyph*                   |\n| **Warden**     | *Spell Scourge*               |",
-          "raw_markdown": "**Trait** Passive | **Cost** -\nYou have trained under a wide variety of fighting styles, magical formulas, and esoteric disciplines. Choose **one** _signature feature_ from the list below as a **manuscript**. You gain the feature, and any scaling uses your **Mercenary tier**.\n\n| Class          | Manuscript                    |\n| -------------- | ----------------------------- |\n| **Agent**      | *Undercut*                    |\n| **Berserker**  | *Berserker Rage*              |\n| **Duelist**    | *Cadence, Precision Strike*   |\n| **Fighter**    | *Adrenaline, Second Breath*   |\n| **Phagite**    | *Soulglyph*                   |\n| **Warden**     | *Spell Scourge*               |"
+          "description_markdown": "You have trained under a wide variety of fighting styles, magical formulas, and esoteric disciplines. Choose **one** _signature feature_ from the list below as a **manuscript**. You gain the feature, and any scaling uses your **Mercenary tier**.\n\n| Class          | Manuscript                    |\n| -------------- | ----------------------------- |\n| **Agent**      | *Undercut*                    |\n| **Berserker**  | *Berserker Rage*              |\n| **Duelist**    | *Cadence, Precision Strike*   |\n| **Fighter**    | *Adrenaline, Second Breath*   |\n| **Vescent**    | *Soulglyph*                   |\n| **Warden**     | *Spell Scourge*               |",
+          "raw_markdown": "**Trait** Passive | **Cost** -\nYou have trained under a wide variety of fighting styles, magical formulas, and esoteric disciplines. Choose **one** _signature feature_ from the list below as a **manuscript**. You gain the feature, and any scaling uses your **Mercenary tier**.\n\n| Class          | Manuscript                    |\n| -------------- | ----------------------------- |\n| **Agent**      | *Undercut*                    |\n| **Berserker**  | *Berserker Rage*              |\n| **Duelist**    | *Cadence, Precision Strike*   |\n| **Fighter**    | *Adrenaline, Second Breath*   |\n| **Vescent**    | *Soulglyph*                   |\n| **Warden**     | *Spell Scourge*               |"
         },
         {
           "id": "professions-mercenary-base-skilled-improvisation",
@@ -1883,10 +1883,10 @@
     },
     {
       "id": "phagite",
-      "name": "Phagite",
+      "name": "Vescent",
       "slug": "phagite",
-      "role": "The Phagite is a wielder of magic who draws power from personal sacrifice and souls. They excel at debuffing enemies, manipulating life force, and controlling the battlefield through supernatural means. The two paths of the Phagite are the Animus and the Anima.",
-      "flavor": "*Practitioners of the vital cycle, Phagites draw strength from the exchange between life and loss. Where others treat Vitality as sacred and inviolable, they recognize it as a current — ever flowing, ever consumed. By offering pieces of themselves, they command the same forces that bind blood, breath, and spirit. Some pursue this art as healers who trade their own vigor for another’s survival; others wield it as a weapon, turning the act of decay into dominion. To the Phagite, sacrifice is not corruption — it is currency.*",
+      "role": "The Vescent is a wielder of magic who draws power from personal sacrifice and souls. They excel at debuffing enemies, manipulating life force, and controlling the battlefield through supernatural means. The two paths of the Vescent are the Animus and the Anima.",
+      "flavor": "*Practitioners of the vital cycle, Vescents draw strength from the exchange between life and loss. Where others treat Vitality as sacred and inviolable, they recognize it as a current — ever flowing, ever consumed. By offering pieces of themselves, they command the same forces that bind blood, breath, and spirit. Some pursue this art as healers who trade their own vigor for another’s survival; others wield it as a weapon, turning the act of decay into dominion. To the Vescent, sacrifice is not corruption — it is currency.*",
       "favored_attributes_raw": "Will",
       "starting_vitality": "8 + Will",
       "vitality_gained_per_tier": "2d8",
@@ -1951,8 +1951,8 @@
           "slug": "lifeblood",
           "owner_type": "profession",
           "owner_id": "phagite",
-          "owner_name": "Phagite",
-          "tag": "Phagite",
+          "owner_name": "Vescent",
+          "tag": "Vescent",
           "trait_label": "Trait",
           "trait_raw": "Passive",
           "traits": [
@@ -1973,8 +1973,8 @@
           "slug": "soulglyph",
           "owner_type": "profession",
           "owner_id": "phagite",
-          "owner_name": "Phagite",
-          "tag": "Phagite",
+          "owner_name": "Vescent",
+          "tag": "Vescent",
           "trait_label": "Trait",
           "trait_raw": "Narrative (Resource)",
           "traits": [
@@ -2000,8 +2000,8 @@
           "slug": "spellcasting",
           "owner_type": "profession",
           "owner_id": "phagite",
-          "owner_name": "Phagite",
-          "tag": "Phagite",
+          "owner_name": "Vescent",
+          "tag": "Vescent",
           "trait_label": "Trait",
           "trait_raw": "Passive",
           "traits": [
