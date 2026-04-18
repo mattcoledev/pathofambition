@@ -8,11 +8,12 @@ import { getCharacter, updateCharacter, deleteCharacter } from '@/lib/characterS
 import {
   getTotalAttributes, calcStartingVitality, calcBodyDefense, calcMindDefense,
   calcWillDefense, calcMaxWounds, calcCarryWeight, calcReservoir, calcSpellDC,
-  calcAmbition, calcArmorDefense,
+  calcAmbition, calcArmorDefense, calcTierFromFeatsPurchased,
+  calcSpellcastingThreshold, calcSpellcastingTier, calcKnownSpells, calcPreparedSpells,
 } from '@/lib/characterCalc';
 import type {
   Character, BuilderProfession, BuilderOrigin, BuilderFeat, BuilderSpell,
-  InventoryItem, InventoryCategory, InventorySlot, ChoiceFeature,
+  InventoryItem, InventoryCategory, InventorySlot, ChoiceFeature, AttributeKey,
 } from '@/lib/characterTypes';
 import type { CatalogItem } from '@/lib/builderData';
 import { getFeatStatus, parseRequired, FEAT_COST_BY_TIER } from '@/lib/featLogic';
@@ -108,6 +109,9 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<Partial<InventoryItem>>({});
 
+  // Equipment slot picker
+  const [pickingSlot, setPickingSlot] = useState<InventorySlot>(null);
+
   const filteredCatalog = useMemo(() => {
     const q = catalogSearch.toLowerCase().trim();
     if (!q) return catalog;
@@ -131,21 +135,46 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   useEffect(() => {
     const loaded = getCharacter(id);
     if (loaded) {
-      // Backfill armamentTags on weapons missing them — catalog lookup by name
+      // Backfill armamentTags on weapons missing them — catalog lookup by name (with fuzzy fallback)
       const catalogByName = new Map(catalog.map((ci) => [ci.name.toLowerCase(), ci]));
+      function findCatalogItem(name: string) {
+        const lower = name.toLowerCase().replace(/\s*\(.*\)/, '').trim();
+        if (catalogByName.has(lower)) return catalogByName.get(lower)!;
+        // "Light armor" → "Light", "Medium armor" → "Medium", etc.
+        const noArmor = lower.replace(/\s*armor\b/, '').trim();
+        if (noArmor && catalogByName.has(noArmor)) return catalogByName.get(noArmor)!;
+        // Handle "X or Y (note)" — try each alternative
+        const parts = lower.split(/\s+or\s+/);
+        for (const part of parts) {
+          const trimmed = part.trim();
+          if (catalogByName.has(trimmed)) return catalogByName.get(trimmed)!;
+          // Try prefix match (e.g. "two throwing axes" → "throwing axe")
+          for (const [key, val] of catalogByName) {
+            if (trimmed.includes(key) || key.includes(trimmed.replace(/^(two|a|an)\s+/, '').replace(/s$/, ''))) return val;
+          }
+        }
+        return null;
+      }
       const updatedInventory = loaded.inventory.map((item) => {
-        if (item.category !== 'Weapon' || (item.armamentTags ?? []).length > 0) return item;
-        const ci = catalogByName.get(item.name.toLowerCase());
+        const needsWeaponBackfill = item.category === 'Weapon' && (item.armamentTags ?? []).length === 0;
+        const needsArmorBackfill = (item.category === 'Armor' || item.category === 'Shield') && item.armorBonus === 0;
+        if (!needsWeaponBackfill && !needsArmorBackfill) return item;
+        const ci = findCatalogItem(item.name);
         if (!ci) return item;
-        return {
-          ...item,
-          armamentTags: ci.armamentTags,
-          damageTypeTags: (item.damageTypeTags ?? []).length > 0 ? item.damageTypeTags : ci.damageTypeTags,
-          equipSlots: (item.equipSlots ?? []).length > 0 ? item.equipSlots : ci.equipSlots,
-          isRanged: ci.isRanged,
-          damageDiceCount: item.damageDiceCount > 0 ? item.damageDiceCount : ci.damageDiceCount,
-          damageDiceSize: item.damageDiceSize > 0 ? item.damageDiceSize : ci.damageDiceSize,
-        };
+        const patch: Partial<typeof item> = {};
+        if (needsWeaponBackfill) {
+          patch.armamentTags = ci.armamentTags;
+          patch.damageTypeTags = (item.damageTypeTags ?? []).length > 0 ? item.damageTypeTags : ci.damageTypeTags;
+          patch.equipSlots = (item.equipSlots ?? []).length > 0 ? item.equipSlots : ci.equipSlots;
+          patch.isRanged = ci.isRanged;
+          patch.damageDiceCount = item.damageDiceCount > 0 ? item.damageDiceCount : ci.damageDiceCount;
+          patch.damageDiceSize = item.damageDiceSize > 0 ? item.damageDiceSize : ci.damageDiceSize;
+        }
+        if (needsArmorBackfill && ci.armorBonus) {
+          patch.armorBonus = ci.armorBonus;
+          patch.armorCategory = (ci.armorCategory ?? null) as 'Light' | 'Medium' | 'Heavy' | null;
+        }
+        return { ...item, ...patch };
       });
       const inventoryChanged = updatedInventory.some((item, i) => item !== loaded.inventory[i]);
       const finalChar = inventoryChanged ? { ...loaded, inventory: updatedInventory } : loaded;
@@ -158,6 +187,24 @@ export default function CharacterSheetPage({ id, professions, origins, professio
     setMounted(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Must be before early returns to satisfy rules of hooks
+  const armamentProficiencyTags = useMemo(() => {
+    if (!char) return [];
+    if ((char.armamentProficiencyTags ?? []).length > 0) return char.armamentProficiencyTags;
+    const charProf = professions.find((p) => p.id === char.professionId) ?? null;
+    const tags: string[] = [];
+    for (const a of charProf?.armaments ?? []) {
+      const lower = a.toLowerCase();
+      if (lower.includes('finesse')) tags.push('finesse');
+      if (lower.includes('martial')) tags.push('martial');
+      if (lower.includes('simple')) tags.push('simple');
+      if (lower.includes('defensive')) tags.push('defensive');
+      if (lower.includes('catalyst')) tags.push('catalyst');
+      if (lower.includes('ranged')) tags.push('ranged');
+    }
+    return [...new Set(tags)];
+  }, [char, professions]);
 
   if (!mounted) return null;
   if (!char) {
@@ -175,6 +222,9 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   const vocation = origin?.vocations.find((v) => v.id === c.vocationId) ?? null;
   const attrs = getTotalAttributes(c);
 
+  // Tier: derived from feats purchased from Renown; creation tier is the floor
+  const effectiveTier = Math.max(c.tier, calcTierFromFeatsPurchased(c.featsPurchased ?? 0));
+
   // Caster: from profession OR any selected feat
   const allFeats = [...professionFeats, ...originFeats];
   const featCaster = allFeats.find((f) => c.selectedFeatIds.includes(f.id) && f.casterInfo)?.casterInfo ?? null;
@@ -183,15 +233,21 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   const modKey = (casterInfo?.casterModifierOptions?.length === 1 ? casterInfo.casterModifierOptions[0] : c.spellcastingModifier) ?? 'mind';
   const modVal = attrs[modKey];
 
-  const maxReservoir = isCaster ? (calcReservoir(casterInfo!.casterType, c.tier, modVal) ?? 0) : 0;
+  // Spellcasting-specific derived values
+  const spellThreshold = calcSpellcastingThreshold(c.featsPurchased ?? 0);
+  const spellTier = isCaster ? calcSpellcastingTier(casterInfo!.casterType, spellThreshold) : 0;
+  const knownSpellsMax = isCaster ? calcKnownSpells(casterInfo!.casterType, spellThreshold) : 0;
+  const preparedSpellsMax = isCaster ? calcPreparedSpells(modVal, effectiveTier) : 0;
+
+  const maxReservoir = isCaster ? (calcReservoir(casterInfo!.casterType, effectiveTier, modVal) ?? 0) : 0;
   const bodyDef = calcBodyDefense(attrs);
   const mindDef = calcMindDefense(attrs);
   const willDef = calcWillDefense(attrs);
-  const maxWounds = calcMaxWounds(attrs, c.tier);
-  const carryWeight = calcCarryWeight(attrs, c.tier);
-  const spellDC = isCaster ? calcSpellDC(c.tier, modVal) : null;
+  const maxWounds = calcMaxWounds(attrs, effectiveTier);
+  const carryWeight = calcCarryWeight(attrs, effectiveTier);
+  const spellDC = isCaster ? calcSpellDC(spellTier, modVal) : null;
 
-  const ambition = calcAmbition(attrs.will);
+  const ambition = calcAmbition(attrs.will, effectiveTier);
   const maxAmbition = c.maxAmbition ?? ambition.max;
   const ambitionDice = c.ambitionDice ?? ambition.dice;
 
@@ -211,6 +267,11 @@ export default function CharacterSheetPage({ id, professions, origins, professio
     prof?.baseFeatures.some((f) => f.name === 'Agile') ||
     vocation?.features.some((f) => f.name === 'Agile') ||
     selectedFeats.some((f) => f.name === 'Agile')
+  );
+  // Unarmored Defense: Berserker only
+  const hasUnarmoredDefense = !!(
+    prof?.baseFeatures.some((f) => f.name === 'Unarmored Defense') ||
+    c.professionName === 'Berserker'
   );
 
   function persist(updates: Partial<Character>) {
@@ -351,44 +412,31 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   const equippedTwoHands = inventory.find((i) => i.equipped && i.slot === 'Two Hands') ?? null;
   const equippedBody = inventory.find((i) => i.equipped && i.slot === 'Body') ?? null;
   const equippedShield = inventory.find((i) => i.equipped && i.slot === 'Off Hand' && i.category === 'Shield') ?? null;
-  const armorDefense = calcArmorDefense(equippedBody, equippedShield, attrs, hasAgile);
-
-  // Armament proficiency tags — use stored value (set at creation), fall back to computing from prof for older characters
-  const armamentProficiencyTags = useMemo(() => {
-    if ((c.armamentProficiencyTags ?? []).length > 0) return c.armamentProficiencyTags;
-    const tags: string[] = [];
-    for (const a of prof?.armaments ?? []) {
-      const lower = a.toLowerCase();
-      if (lower.includes('finesse')) tags.push('finesse');
-      if (lower.includes('martial')) tags.push('martial');
-      if (lower.includes('simple')) tags.push('simple');
-      if (lower.includes('defensive')) tags.push('defensive');
-      if (lower.includes('catalyst')) tags.push('catalyst');
-      if (lower.includes('ranged')) tags.push('ranged');
-    }
-    return [...new Set(tags)];
-  }, [c.armamentProficiencyTags, prof]);
+  const armorDefense = calcArmorDefense(equippedBody, equippedShield, attrs, hasAgile, hasUnarmoredDefense, effectiveTier);
 
   const DAMAGE_TYPE_LABEL: Record<string, string> = { puncture: 'Puncture', slash: 'Slash', blunt: 'Blunt' };
 
   // Weapon combat stats — all derived from structured tag fields only
-  function weaponStats(item: InventoryItem | null): { toHit: string; damage: string } | null {
-    if (!item || item.category !== 'Weapon' || !item.modifierStat) return null;
-    const modAttr = attrs[item.modifierStat];
+  function weaponStats(item: InventoryItem | null): { toHit: string; damage: string; modStat: AttributeKey } | null {
+    if (!item || item.category !== 'Weapon' || item.damageDiceCount === 0) return null;
+    // Infer default modifier: catalyst → spellcasting mod, everything else → body
+    const modStat: AttributeKey = item.modifierStat
+      ?? (item.armamentTags?.includes('catalyst') ? (c.spellcastingModifier ?? 'mind') : 'body');
+    const modAttr = attrs[modStat];
     const mw = item.masterworkBonus ?? 0;
     const proficient = item.armamentTags.length > 0
       ? item.armamentTags.some((tag) => armamentProficiencyTags.includes(tag))
       : false;
-    const tierBonus = proficient ? c.tier : 0;
+    const tierBonus = proficient ? effectiveTier : 0;
     const toHitVal = modAttr + tierBonus + mw;
-    const diceStr = item.damageDiceCount > 0 ? `${item.damageDiceCount}d${item.damageDiceSize}` : '—';
-    // Ranged: no stat mod on damage; only masterwork applies
+    const diceStr = `${item.damageDiceCount}d${item.damageDiceSize}`;
     const damageMod = item.isRanged ? mw : modAttr + mw;
     const damageStr = damageMod !== 0 ? `${diceStr}${damageMod >= 0 ? '+' : ''}${damageMod}` : diceStr;
     const typeLabels = (item.damageTypeTags ?? []).map((t) => DAMAGE_TYPE_LABEL[t] ?? t).join('/');
     return {
       toHit: toHitVal >= 0 ? `+${toHitVal}` : String(toHitVal),
       damage: damageStr + (typeLabels ? ` ${typeLabels}` : ''),
+      modStat,
     };
   }
 
@@ -479,7 +527,7 @@ export default function CharacterSheetPage({ id, professions, origins, professio
     }
 
     // ─── Feat Shop helpers ────────────────────────────────────────────────────
-    const tierCost = FEAT_COST_BY_TIER[c.tier] ?? 6;
+    const tierCost = FEAT_COST_BY_TIER[effectiveTier] ?? 6;
     const shopAllFeats = [...professionFeats, ...originFeats];
     const shopProfFeats = professionFeats.filter((f) => f.ownerId === c.professionId);
     const shopOriginFeats = originFeats.filter((f) => f.ownerId === c.originId);
@@ -488,7 +536,9 @@ export default function CharacterSheetPage({ id, professions, origins, professio
       const renown = c.renown ?? 0;
       if (renown < tierCost) return;
       const newSelected = [...c.selectedFeatIds, feat.id];
-      persist({ selectedFeatIds: newSelected, renown: renown - tierCost });
+      const newFeatsPurchased = (c.featsPurchased ?? 0) + 1;
+      const newTier = Math.max(c.tier, calcTierFromFeatsPurchased(newFeatsPurchased));
+      persist({ selectedFeatIds: newSelected, renown: renown - tierCost, featsPurchased: newFeatsPurchased, tier: newTier });
       // Queue any on_gain choices for this feat
       const onGainChoices = choiceFeatures.filter(
         (cf) => cf.feature_name === feat.name && cf.entity_name === feat.ownerName && cf.selection_timing === 'on_gain' && !c.choiceSelections?.[`${feat.ownerName}__${feat.name}`],
@@ -592,19 +642,19 @@ export default function CharacterSheetPage({ id, professions, origins, professio
         {baseFeatures.length > 0 && (
           <>
             <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.2rem' }}>Base Features</div>
-            {baseFeatures.map((f) => <FeatRow key={f.id} id={`base-${f.id}`} name={f.name} activationRaw={f.activationRaw} traits={f.traits} descriptionMarkdown={f.descriptionMarkdown} resolvedOptions={getResolvedOptions(f.name, c.professionName)} />)}
+            {baseFeatures.map((f) => <FeatRow key={`base-${f.id}`} id={`base-${f.id}`} name={f.name} activationRaw={f.activationRaw} traits={f.traits} descriptionMarkdown={f.descriptionMarkdown} resolvedOptions={getResolvedOptions(f.name, c.professionName)} />)}
           </>
         )}
         {vocationFeatures.length > 0 && (
           <>
             <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginTop: '0.5rem', marginBottom: '0.2rem' }}>Vocation Features</div>
-            {vocationFeatures.map((f) => <FeatRow key={f.id} id={`voc-${f.id}`} name={f.name} activationRaw={f.activationRaw} traits={f.traits} descriptionMarkdown={f.descriptionMarkdown} resolvedOptions={getResolvedOptions(f.name, c.vocationName)} />)}
+            {vocationFeatures.map((f) => <FeatRow key={`voc-${f.id}`} id={`voc-${f.id}`} name={f.name} activationRaw={f.activationRaw} traits={f.traits} descriptionMarkdown={f.descriptionMarkdown} resolvedOptions={getResolvedOptions(f.name, c.vocationName)} />)}
           </>
         )}
         {selectedFeats.length > 0 && (
           <>
             <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginTop: '0.5rem', marginBottom: '0.2rem' }}>Selected Feats</div>
-            {selectedFeats.map((f) => <FeatRow key={f.id} id={f.id} name={f.name} tier={f.tier} activationRaw={f.activationRaw} traits={f.traits} descriptionMarkdown={f.descriptionMarkdown} required={f.required} pathInvestment={f.pathInvestment} resolvedOptions={getResolvedOptions(f.name, f.ownerName)} />)}
+            {selectedFeats.map((f) => <FeatRow key={`feat-${f.id}`} id={f.id} name={f.name} tier={f.tier} activationRaw={f.activationRaw} traits={f.traits} descriptionMarkdown={f.descriptionMarkdown} required={f.required} pathInvestment={f.pathInvestment} resolvedOptions={getResolvedOptions(f.name, f.ownerName)} />)}
           </>
         )}
         {baseFeatures.length === 0 && vocationFeatures.length === 0 && selectedFeats.length === 0 && (
@@ -622,7 +672,7 @@ export default function CharacterSheetPage({ id, professions, origins, professio
               <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', backgroundColor: 'var(--bg-nav)' }}>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1rem', color: 'var(--text)' }}>Purchase Feats</span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)' }}>Tier {c.tier}</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)' }}>Tier {effectiveTier}</span>
                   <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--primary)' }}>Renown: {c.renown ?? 0}</span>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Cost: {tierCost} Renown / feat</span>
                 </div>
@@ -696,32 +746,114 @@ export default function CharacterSheetPage({ id, professions, origins, professio
   }
 
   function renderInventoryTab() {
-    const slots: { label: string; slot: InventorySlot; item: InventoryItem | null }[] = [
-      { label: 'Main Hand', slot: 'Main Hand', item: equippedTwoHands ?? equippedMain },
-      { label: 'Off Hand', slot: 'Off Hand', item: equippedTwoHands ?? equippedOff },
-      { label: 'Body', slot: 'Body', item: equippedBody },
+    // Derive equip-slot options for any item
+    function getEquipOptions(item: InventoryItem): { label: string; slot: InventorySlot }[] {
+      const TAG_MAP: Record<string, { label: string; slot: InventorySlot }> = {
+        main_hand: { label: 'Main', slot: 'Main Hand' },
+        off_hand:  { label: 'Off',  slot: 'Off Hand' },
+        two_hands: { label: '2H',   slot: 'Two Hands' },
+      };
+      const opts: { label: string; slot: InventorySlot }[] = [];
+      for (const tag of item.equipSlots ?? []) {
+        if (TAG_MAP[tag]) opts.push(TAG_MAP[tag]);
+      }
+      // Items named "Shield" but stored as Armor (legacy) should equip to Off Hand
+      const isShieldItem = item.category === 'Shield' || /^\s*shield\s*$/i.test(item.name);
+      if (!isShieldItem && item.category === 'Armor' && !opts.some(o => o.slot === 'Body')) opts.push({ label: 'Body', slot: 'Body' });
+      if (isShieldItem && !opts.some(o => o.slot === 'Off Hand')) opts.push({ label: 'Off', slot: 'Off Hand' });
+      // Weapon fallback: starting-pack weapons have equipSlots:[] but are still equippable
+      if (opts.length === 0 && item.category === 'Weapon') {
+        const isTwoHanded =
+          item.armamentTags?.some(t => t === 'two_handed' || t === 'two-handed') ||
+          item.traits?.some(t => /two.?hand/i.test(t));
+        if (isTwoHanded) {
+          opts.push({ label: '2H', slot: 'Two Hands' });
+        } else {
+          opts.push({ label: 'Main', slot: 'Main Hand' });
+          opts.push({ label: 'Off',  slot: 'Off Hand' });
+        }
+      }
+      if (opts.length === 0 && item.slot && item.equippable) {
+        const lm: Record<string, string> = { 'Main Hand': 'Main', 'Off Hand': 'Off', 'Two Hands': '2H', 'Body': 'Body' };
+        opts.push({ label: lm[item.slot] ?? item.slot, slot: item.slot });
+      }
+      return opts;
+    }
+
+    // Items eligible to be equipped into a given slot.
+    // Main Hand picker also surfaces 2H weapons so the user can pick them from that panel.
+    function getPickerItems(targetSlot: InventorySlot): InventoryItem[] {
+      return inventory.filter(item => {
+        if (item.equipped) return false;
+        const opts = getEquipOptions(item);
+        if (opts.some(o => o.slot === targetSlot)) return true;
+        if (targetSlot === 'Main Hand' && opts.some(o => o.slot === 'Two Hands')) return true;
+        return false;
+      });
+    }
+
+    const gearSlots: { label: string; slot: InventorySlot }[] = [
+      { label: 'Main Hand', slot: 'Main Hand' },
+      { label: 'Off Hand',  slot: 'Off Hand' },
+      { label: 'Body',      slot: 'Body' },
     ];
+
     return (
       <div>
-        {/* Equipped slots */}
+        {/* Equipped gear */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.5rem' }}>Equipped</div>
+          <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.5rem' }}>Equipped Gear</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
-            {slots.map(({ label, slot, item }) => {
-              const isTwoHandedOccupied = equippedTwoHands && (slot === 'Off Hand');
-              const displayItem = isTwoHandedOccupied ? equippedTwoHands : item;
+            {gearSlots.map(({ label, slot }) => {
+              const isTwoHandedOccupied = !!(equippedTwoHands && slot === 'Off Hand');
+              const displayItem = isTwoHandedOccupied ? equippedTwoHands : (slot === 'Main Hand' ? (equippedTwoHands ?? equippedMain) : slot === 'Off Hand' ? equippedOff : equippedBody);
+              const stats = displayItem ? weaponStats(displayItem) : null;
+              const pickerOpen = pickingSlot === slot && !displayItem;
+              const eligible = pickerOpen ? getPickerItems(slot) : [];
               return (
-                <div key={label} style={{ padding: '0.625rem', backgroundColor: 'var(--bg-nav)', border: `1px solid ${displayItem ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '0.5rem' }}>
-                  <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.25rem' }}>
-                    {label}{isTwoHandedOccupied ? ' (2H)' : ''}
-                  </div>
-                  {displayItem ? (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.25rem' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>{displayItem.name}</span>
-                      {!isTwoHandedOccupied && <button onClick={() => updateItem(displayItem.id, { equipped: false })} style={{ fontSize: '0.65rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0' }}>✕</button>}
+                <div key={label}>
+                  <div style={{ padding: '0.625rem 0.75rem', backgroundColor: displayItem ? 'var(--primary-light)' : 'var(--bg-nav)', border: `1.5px solid ${displayItem ? 'var(--primary)' : pickerOpen ? 'var(--primary)' : 'var(--border)'}`, borderRadius: pickerOpen ? '0.5rem 0.5rem 0 0' : '0.5rem' }}>
+                    <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: displayItem ? 'var(--primary)' : 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.3rem' }}>
+                      {label}{isTwoHandedOccupied ? ' (2H)' : ''}
                     </div>
-                  ) : (
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Empty</span>
+                    {displayItem ? (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.25rem' }}>
+                          <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.82rem', color: 'var(--text)', lineHeight: 1.25 }}>{displayItem.name}</span>
+                          {!isTwoHandedOccupied && (
+                            <button onClick={() => updateItem(displayItem.id, { equipped: false })} style={{ fontSize: '0.65rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>✕</button>
+                          )}
+                        </div>
+                        {stats && <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600, marginTop: '0.2rem' }}>{stats.toHit} · {stats.damage}</div>}
+                        {!stats && displayItem.category === 'Armor' && <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600, marginTop: '0.2rem' }}>+{displayItem.armorBonus} Armor Def{displayItem.armorCategory ? ` · ${displayItem.armorCategory}` : ''}</div>}
+                        {!stats && displayItem.category === 'Shield' && <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600, marginTop: '0.2rem' }}>+{displayItem.armorBonus ?? 0} Shield Def</div>}
+                      </div>
+                    ) : (
+                      <button onClick={() => setPickingSlot(pickerOpen ? null : slot)} style={{ fontSize: '0.75rem', color: pickerOpen ? 'var(--primary)' : 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
+                        + Equip {pickerOpen ? '▲' : '▼'}
+                      </button>
+                    )}
+                  </div>
+                  {pickerOpen && (
+                    <div style={{ border: '1.5px solid var(--primary)', borderTop: 'none', borderRadius: '0 0 0.5rem 0.5rem', backgroundColor: 'var(--bg-card)', maxHeight: '160px', overflowY: 'auto' }}>
+                      {eligible.length === 0
+                        ? <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nothing available for this slot</div>
+                        : eligible.map(item => {
+                          const itemOpts = getEquipOptions(item);
+                          const actualSlot: InventorySlot =
+                            slot === 'Main Hand' && itemOpts.some(o => o.slot === 'Two Hands')
+                              ? 'Two Hands'
+                              : slot;
+                          const slotLabel = actualSlot === 'Two Hands' ? ' (2H)' : '';
+                          return (
+                            <button key={item.id} onClick={() => { equipItem(item.id, actualSlot); setPickingSlot(null); }} style={{ width: '100%', padding: '0.375rem 0.75rem', border: 'none', borderBottom: '1px solid var(--border)', backgroundColor: 'transparent', cursor: 'pointer', textAlign: 'left', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.8rem', color: 'var(--text)', flex: 1 }}>{item.name}{slotLabel}</span>
+                              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>{item.category}</span>
+                            </button>
+                          );
+                        })
+                      }
+                    </div>
                   )}
                 </div>
               );
@@ -739,52 +871,60 @@ export default function CharacterSheetPage({ id, professions, origins, professio
           </span>
         </div>
 
-        {/* Inventory table */}
+        {/* Inventory list */}
         {inventory.length > 0 && (
-          <div style={{ overflowX: 'auto', marginBottom: '0.75rem' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                  {['Name', 'Cat.', 'Slot', 'Qty', 'Wt', 'Eq.', '', ''].map((h) => (
-                    <th key={h} style={{ padding: '0.3rem 0.4rem', textAlign: 'left', fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {inventory.map((item) => (
-                  <React.Fragment key={item.id}>
-                  <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: item.equipped ? 'var(--primary-light)' : 'transparent' }}>
-                    <td style={{ padding: '0.3rem 0.4rem', color: 'var(--text)', fontWeight: 600 }}>{item.name}</td>
-                    <td style={{ padding: '0.3rem 0.4rem' }}>
-                      <span style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem', borderRadius: '9999px', backgroundColor: 'var(--bg-nav)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontFamily: 'var(--font-heading)', fontWeight: 600, whiteSpace: 'nowrap' }}>{item.category}</span>
-                    </td>
-                    <td style={{ padding: '0.3rem 0.4rem', color: 'var(--text-muted)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>{item.slot ?? '—'}</td>
-                    <td style={{ padding: '0.3rem 0.25rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                        <button onClick={() => updateItem(item.id, { quantity: Math.max(1, item.quantity - 1) })} style={{ width: '18px', height: '18px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-                        <span style={{ minWidth: '18px', textAlign: 'center', fontWeight: 700, color: 'var(--text)', fontSize: '0.8rem' }}>{item.quantity}</span>
-                        <button onClick={() => updateItem(item.id, { quantity: item.quantity + 1 })} style={{ width: '18px', height: '18px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.75rem' }}>
+            {inventory.map((item) => {
+              const isEditing = editingItemId === item.id;
+              const equipOpts = getEquipOptions(item);
+              return (
+                <div key={item.id}>
+                  {/* Main row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', padding: '0.4rem 0.625rem', backgroundColor: item.equipped ? 'var(--primary-light)' : 'var(--bg-nav)', border: `1px solid ${item.equipped ? 'var(--primary)' : 'var(--border)'}`, borderRadius: isEditing ? '0.375rem 0.375rem 0 0' : '0.375rem' }}>
+                    {/* Name + weapon stats inline */}
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: '80px' }}>
+                      <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--text)' }}>{item.name}</span>
+                      {(() => { const ws = weaponStats(item); return ws ? <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)' }}>{ws.toHit} · {ws.damage} <span style={{ opacity: 0.7 }}>({ws.modStat})</span></span> : null; })()}
+                      {item.category === 'Armor' && (item.armorBonus ?? 0) > 0 && <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)' }}>+{item.armorBonus} Armor Def{item.armorCategory ? ` · ${item.armorCategory}` : ''}</span>}
+                      {item.category === 'Shield' && (item.armorBonus ?? 0) > 0 && <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)' }}>+{item.armorBonus} Shield Def</span>}
+                    </div>
+                    {/* Category badge */}
+                    <span style={{ fontSize: '0.6rem', padding: '0.1rem 0.3rem', borderRadius: '9999px', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontFamily: 'var(--font-heading)', fontWeight: 600, whiteSpace: 'nowrap' }}>{item.category}</span>
+                    {/* Qty stepper — hidden for non-stackable weapons (melee, bows, etc.) */}
+                    {(() => {
+                      const isNonStackWeapon = item.category === 'Weapon'
+                        && !/\b(throwing|javelin|dart|shuriken|sling)\b/i.test(item.name);
+                      if (isNonStackWeapon) return null;
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
+                          <button onClick={() => updateItem(item.id, { quantity: Math.max(1, item.quantity - 1) })} style={{ width: '16px', height: '16px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                          <span style={{ minWidth: '20px', textAlign: 'center', fontWeight: 700, color: 'var(--text)', fontSize: '0.75rem' }}>×{item.quantity}</span>
+                          <button onClick={() => updateItem(item.id, { quantity: item.quantity + 1 })} style={{ width: '16px', height: '16px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                        </div>
+                      );
+                    })()}
+                    {/* Weight */}
+                    {item.weight > 0 && <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{item.weight}wt</span>}
+                    {/* Equip slot pills */}
+                    {equipOpts.length > 0 && (
+                      <div style={{ display: 'flex', gap: '0.2rem' }}>
+                        {equipOpts.map(({ label, slot: targetSlot }) => {
+                          const active = item.equipped && item.slot === targetSlot;
+                          return (
+                            <button key={targetSlot} onClick={() => active ? updateItem(item.id, { equipped: false }) : equipItem(item.id, targetSlot)} style={{ padding: '0.15rem 0.45rem', fontSize: '0.65rem', fontFamily: 'var(--font-heading)', fontWeight: 700, borderRadius: '0.25rem', border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`, backgroundColor: active ? 'var(--primary)' : 'transparent', color: active ? '#fff' : 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                              {label}{active ? ' ✓' : ''}
+                            </button>
+                          );
+                        })}
                       </div>
-                    </td>
-                    <td style={{ padding: '0.3rem 0.4rem', color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.78rem' }}>{item.weight > 0 ? item.weight : '—'}</td>
-                    <td style={{ padding: '0.3rem 0.25rem', textAlign: 'center' }}>
-                      {item.equippable ? (
-                        <button
-                          onClick={() => item.equipped ? updateItem(item.id, { equipped: false }) : equipItem(item.id, item.slot)}
-                          style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', border: `1px solid ${item.equipped ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '0.25rem', backgroundColor: item.equipped ? 'var(--primary)' : 'transparent', color: item.equipped ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontFamily: 'var(--font-heading)', fontWeight: 600 }}
-                        >{item.equipped ? 'ON' : 'OFF'}</button>
-                      ) : <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>—</span>}
-                    </td>
-                    <td style={{ padding: '0.3rem 0.15rem' }}>
-                      <button onClick={() => { setEditingItemId(editingItemId === item.id ? null : item.id); setEditFields({ ...item }); }} style={{ padding: '0.15rem 0.3rem', border: '1px solid var(--border)', borderRadius: '0.25rem', backgroundColor: editingItemId === item.id ? 'var(--primary-light)' : 'transparent', cursor: 'pointer', color: editingItemId === item.id ? 'var(--primary)' : 'var(--text-muted)', fontSize: '0.7rem' }}>✎</button>
-                    </td>
-                    <td style={{ padding: '0.3rem 0.25rem' }}>
-                      <button onClick={() => removeItem(item.id)} style={{ padding: '0.15rem 0.3rem', border: '1px solid var(--border)', borderRadius: '0.25rem', backgroundColor: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.7rem' }}>✕</button>
-                    </td>
-                  </tr>
-                  {editingItemId === item.id && (
-                    <tr style={{ backgroundColor: 'var(--bg-nav)' }}>
-                      <td colSpan={8} style={{ padding: '0.75rem', borderBottom: '1px solid var(--border)' }}>
+                    )}
+                    {/* Edit + delete */}
+                    <button onClick={() => { setEditingItemId(isEditing ? null : item.id); setEditFields({ ...item }); }} style={{ padding: '0.15rem 0.3rem', border: '1px solid var(--border)', borderRadius: '0.25rem', backgroundColor: isEditing ? 'var(--primary-light)' : 'transparent', cursor: 'pointer', color: isEditing ? 'var(--primary)' : 'var(--text-muted)', fontSize: '0.7rem' }}>✎</button>
+                    <button onClick={() => removeItem(item.id)} style={{ padding: '0.15rem 0.3rem', border: '1px solid var(--border)', borderRadius: '0.25rem', backgroundColor: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.7rem' }}>✕</button>
+                  </div>
+                  {/* Edit form */}
+                  {isEditing && (
+                    <div style={{ padding: '0.75rem', border: '1px solid var(--primary)', borderTop: 'none', borderRadius: '0 0 0.375rem 0.375rem', backgroundColor: 'var(--bg-nav)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', gap: '0.5rem', alignItems: 'end' }}>
                             <div>
@@ -922,13 +1062,11 @@ export default function CharacterSheetPage({ id, professions, origins, professio
                             <button onClick={() => setEditingItemId(null)} style={{ padding: '0.3rem 0.75rem', backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>
                           </div>
                         </div>
-                      </td>
-                    </tr>
+                    </div>
                   )}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -1248,8 +1386,13 @@ export default function CharacterSheetPage({ id, professions, origins, professio
               <button onClick={() => persist({ currentReservoir: Math.min(maxReservoir, currentReservoir + 1) })} style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
             </div>
           </div>
-          <StatCard label="Spell DC" value={spellDC ?? '—'} />
+          <StatCard label="Spell DC" value={spellDC ?? '—'} sub={`Spell Tier ${spellTier}`} />
           <StatCard label="Modifier" value={fmtAttr(modVal)} sub={modKey} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+          <StatCard label="Spell Threshold" value={spellThreshold} sub={`${c.featsPurchased ?? 0} feats bought`} />
+          <StatCard label="Known Spells" value={knownSpellsMax} sub={`${mySpells.length} known`} />
+          <StatCard label="Prepared" value={preparedSpellsMax} sub="Mod + Tier" />
         </div>
 
         {/* Known Spells button */}
@@ -1390,7 +1533,7 @@ export default function CharacterSheetPage({ id, professions, origins, professio
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--text)', margin: 0 }}>{c.name || 'Unnamed Adventurer'}</h1>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, fontFamily: 'var(--font-heading)', padding: '0.2rem 0.625rem', borderRadius: '9999px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', border: '1px solid var(--primary)' }}>Tier {c.tier}</span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, fontFamily: 'var(--font-heading)', padding: '0.2rem 0.625rem', borderRadius: '9999px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', border: '1px solid var(--primary)' }}>Tier {effectiveTier}</span>
             <button onClick={handleDelete} style={{ padding: '0.25rem 0.5rem', border: '1px solid var(--border)', borderRadius: '0.375rem', backgroundColor: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'var(--font-heading)' }}>Delete</button>
           </div>
         </div>
@@ -1437,7 +1580,7 @@ export default function CharacterSheetPage({ id, professions, origins, professio
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <StatCard label="Armor Def" value={armorDefense} sub={hasAgile && !equippedShield && (!equippedBody || equippedBody.armorCategory === 'Light' || !equippedBody.armorCategory) ? 'Agile' : equippedBody ? `${equippedBody.name} +${equippedBody.armorBonus}` : 'Base'} />
+          <StatCard label="Armor Def" value={armorDefense} sub={hasUnarmoredDefense && !equippedBody ? 'Unarmored Def' : hasAgile && !equippedShield && (!equippedBody || equippedBody.armorCategory === 'Light' || !equippedBody.armorCategory) ? 'Agile' : equippedBody ? `${equippedBody.name} +${equippedBody.armorBonus}` : 'Base'} />
           <StatCard label="Body Def" value={bodyDef} />
           <StatCard label="Mind Def" value={mindDef} />
           <StatCard label="Will Def" value={willDef} />
@@ -1447,6 +1590,64 @@ export default function CharacterSheetPage({ id, professions, origins, professio
           {isCaster && <StatCard label="Max Reservoir" value={maxReservoir} sub={casterInfo?.casterSource ?? ''} />}
           {isCaster && <StatCard label="Spell DC" value={spellDC ?? '—'} />}
         </div>
+        {/* Profession-specific resources */}
+        {(() => {
+          const isDuelist = c.professionName === 'Duelist';
+          const isFighter = c.professionName === 'Fighter';
+          const isEidolon = c.professionName === 'Eidolon';
+          const isVescent = c.professionName === 'Vescent';
+          if (!isDuelist && !isFighter && !isEidolon && !isVescent) return null;
+          const maxAdrenaline = attrs.body + effectiveTier;
+          const maxSoulTokens = 3;
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
+              {isDuelist && (
+                <div style={{ textAlign: 'center', padding: '0.625rem 0.5rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Cadence</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                    <button onClick={() => persist({ currentCadence: Math.max(0, (c.currentCadence ?? effectiveTier) - 1) })} style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                    <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--primary)' }}>{c.currentCadence ?? effectiveTier}</span>
+                    <button onClick={() => persist({ currentCadence: (c.currentCadence ?? effectiveTier) + 1 })} style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                  </div>
+                  <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Starting: Tier</div>
+                </div>
+              )}
+              {isFighter && (
+                <div style={{ textAlign: 'center', padding: '0.625rem 0.5rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Adrenaline</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                    <button onClick={() => persist({ currentAdrenaline: Math.max(0, (c.currentAdrenaline ?? maxAdrenaline) - 1) })} style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                    <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--primary)' }}>{c.currentAdrenaline ?? maxAdrenaline}<span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>/{maxAdrenaline}</span></span>
+                    <button onClick={() => persist({ currentAdrenaline: Math.min(maxAdrenaline, (c.currentAdrenaline ?? maxAdrenaline) + 1) })} style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                  </div>
+                  <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Max: Body + Tier</div>
+                </div>
+              )}
+              {isEidolon && (
+                <div style={{ textAlign: 'center', padding: '0.625rem 0.5rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Resonance</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                    <button onClick={() => persist({ currentResonance: Math.max(0, (c.currentResonance ?? spellThreshold) - 1) })} style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                    <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--primary)' }}>{c.currentResonance ?? spellThreshold}</span>
+                    <button onClick={() => persist({ currentResonance: (c.currentResonance ?? spellThreshold) + 1 })} style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                  </div>
+                  <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Starting: Spell Threshold</div>
+                </div>
+              )}
+              {isVescent && (
+                <div style={{ textAlign: 'center', padding: '0.625rem 0.5rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Soul Tokens</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                    <button onClick={() => persist({ currentSoulTokens: Math.max(0, (c.currentSoulTokens ?? 1) - 1) })} style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                    <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--primary)' }}>{c.currentSoulTokens ?? 1}<span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>/{maxSoulTokens}</span></span>
+                    <button onClick={() => persist({ currentSoulTokens: Math.min(maxSoulTokens, (c.currentSoulTokens ?? 1) + 1) })} style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                  </div>
+                  <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Max: 3</div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
         {(primaryWeaponStats || offWeaponStats) && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
             {primaryWeaponStats && primaryWeapon && (

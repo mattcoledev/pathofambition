@@ -8,12 +8,14 @@ import {
   calcStartingVitality, calcBodyDefense, calcMindDefense, calcWillDefense,
   calcMaxWounds, calcCarryWeight, calcReservoir, calcSpellDC,
   FEAT_ALLOWANCE, calcFeatVitalityBonus, calcAmbition,
+  calcSpellcastingThreshold, calcSpellcastingTier,
 } from '@/lib/characterCalc';
 import type {
   BuilderProfession, BuilderOrigin, BuilderFeat, BuilderSpell,
   Character, AttributeKey, CharacterAttributes, BuilderVocationCaster,
   ChoiceFeature,
 } from '@/lib/characterTypes';
+import type { CatalogItem } from '@/lib/builderData';
 import { getFeatStatus, parseRequired } from '@/lib/featLogic';
 import type { FeatStatus } from '@/lib/featLogic';
 
@@ -135,11 +137,12 @@ interface Props {
   originFeats: BuilderFeat[];
   spells: BuilderSpell[];
   choiceFeatures: ChoiceFeature[];
+  catalog: CatalogItem[];
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function CharacterBuilder({ professions, origins, professionFeats, originFeats, spells, choiceFeatures }: Props) {
+export default function CharacterBuilder({ professions, origins, professionFeats, originFeats, spells, choiceFeatures, catalog }: Props) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -160,6 +163,13 @@ export default function CharacterBuilder({ professions, origins, professionFeats
   const [choiceQueueIdx, setChoiceQueueIdx] = useState(0);
   const [pendingStep, setPendingStep] = useState<number | null>(null);
   const [currentSelections, setCurrentSelections] = useState<string[]>([]);
+
+  // Starting-pack choices: "X or Y" toggles, "Pick N" multi-selects, "of choice" catalog picks
+  const [packChoices, setPackChoices] = useState<Record<string, string>>({});
+  const [packPickChoices, setPackPickChoices] = useState<Record<string, string[]>>({});
+  // packFreeChoices: key → array of chosen catalog item IDs (one per "of choice" slot)
+  const [packFreeChoices, setPackFreeChoices] = useState<Record<string, string[]>>({});
+  const [packFreeSearch, setPackFreeSearch] = useState<Record<string, string>>({});
 
   function update(partial: Partial<Draft>) {
     setDraft((d) => ({ ...d, ...partial }));
@@ -335,22 +345,153 @@ export default function CharacterBuilder({ professions, origins, professionFeats
     function makeItem(name: string, category: import('@/lib/characterTypes').InventoryCategory, slot: import('@/lib/characterTypes').InventorySlot = null): import('@/lib/characterTypes').InventoryItem {
       return { id: `item_${Date.now()}_${itemIdCounter++}`, name, category, quantity: 1, weight: 0, notes: '', source: 'creation', slot, equipped: false, traits: [], catalogItemId: null, armorBonus: 0, armorCategory: null, armamentTags: [], modifierStat: null, isRanged: false, damageDiceCount: 0, damageDiceSize: 6, damageTypeTags: [], equipSlots: [], masterworkBonus: 0, equippable: slot !== null };
     }
+    function makeItemFromCatalog(ci: CatalogItem): import('@/lib/characterTypes').InventoryItem {
+      return { id: `item_${Date.now()}_${itemIdCounter++}`, name: ci.name, category: ci.category as import('@/lib/characterTypes').InventoryCategory, quantity: 1, weight: ci.weight, notes: '', source: 'creation', slot: null, equipped: false, traits: ci.traits, catalogItemId: ci.id, armorBonus: ci.armorBonus ?? 0, armorCategory: (ci.armorCategory ?? null) as 'Light' | 'Medium' | 'Heavy' | null, armamentTags: ci.armamentTags, modifierStat: null, isRanged: ci.isRanged, damageDiceCount: ci.damageDiceCount, damageDiceSize: ci.damageDiceSize, damageTypeTags: ci.damageTypeTags as ('puncture' | 'slash' | 'blunt')[], equipSlots: ci.equipSlots, masterworkBonus: 0, equippable: ci.equippable || ci.equipSlots.length > 0 };
+    }
+    function inferItemCategory(name: string, defaultCat: import('@/lib/characterTypes').InventoryCategory): import('@/lib/characterTypes').InventoryCategory {
+      if (/\bshield\b/i.test(name)) return 'Shield';
+      return defaultCat;
+    }
+    function parsePickCount(label: string): number | null {
+      const m = label.match(/pick\s*(\d+)/i);
+      return m ? parseInt(m[1]) : null;
+    }
+    // Catalog lookup by name with basic singularization
+    const catalogByNameLower = new Map(catalog.map((ci) => [ci.name.toLowerCase(), ci]));
+    function findCatalogByFuzzyName(name: string): CatalogItem | null {
+      const lower = name.toLowerCase().trim();
+      if (catalogByNameLower.has(lower)) return catalogByNameLower.get(lower)!;
+      const noS = lower.replace(/s$/, '');
+      if (catalogByNameLower.has(noS)) return catalogByNameLower.get(noS)!;
+      const esE = lower.replace(/es$/, 'e');
+      if (catalogByNameLower.has(esE)) return catalogByNameLower.get(esE)!;
+      const iesY = lower.replace(/ies$/, 'y');
+      if (catalogByNameLower.has(iesY)) return catalogByNameLower.get(iesY)!;
+      // "Light armor" → "Light", "Medium armor" → "Medium", etc.
+      const noArmor = lower.replace(/\s*armor\b/i, '').trim();
+      if (noArmor && catalogByNameLower.has(noArmor)) return catalogByNameLower.get(noArmor)!;
+      return null;
+    }
+    // Parse "Two throwing axes" → { count: 2, cleanName: "throwing axes" }
+    function parsePackQuantity(name: string): { count: number; cleanName: string } {
+      const WORD_NUM: Record<string, number> = { one: 1, a: 1, an: 1, two: 2, three: 3, four: 4, five: 5 };
+      const m = name.match(/^(one|two|three|four|five|a|an|\d+)\s+(.+)/i);
+      if (!m) return { count: 1, cleanName: name };
+      const count = parseInt(m[1]) || WORD_NUM[m[1].toLowerCase()] || 1;
+      return { count, cleanName: m[2].trim() };
+    }
+    function isThrowableWeapon(name: string): boolean {
+      return /\b(throwing|javelin|dart|shuriken|sling)\b/i.test(name);
+    }
+    // Split "Light bow with quiver (20 arrows)" → [{Light bow,Weapon,1},{Arrows,Consumable,20}]
+    function splitCompoundItem(
+      name: string,
+      defaultCat: import('@/lib/characterTypes').InventoryCategory,
+    ): Array<{ n: string; c: import('@/lib/characterTypes').InventoryCategory; q: number }> | null {
+      const m1 = name.match(/^(.*?)\s+with\s+quiver\s*\((\d+)\s+(\w+)\)/i);
+      if (m1) {
+        const raw = m1[3].toLowerCase().replace(/s$/, '');
+        const ammoName = raw.charAt(0).toUpperCase() + raw.slice(1) + 's';
+        return [
+          { n: m1[1].trim(), c: inferItemCategory(m1[1].trim(), defaultCat), q: 1 },
+          { n: ammoName, c: 'Consumable', q: parseInt(m1[2]) },
+        ];
+      }
+      const m2 = name.match(/^(.*?)\s+with\s+(\d+)\s+(arrows?|bolts?|bullets?)/i);
+      if (m2) {
+        const raw = m2[3].toLowerCase().replace(/s$/, '');
+        const ammoName = raw.charAt(0).toUpperCase() + raw.slice(1) + 's';
+        return [
+          { n: m2[1].trim(), c: inferItemCategory(m2[1].trim(), defaultCat), q: 1 },
+          { n: ammoName, c: 'Consumable', q: parseInt(m2[2]) },
+        ];
+      }
+      return null;
+    }
+    // Resolves one pack entry into InventoryItems
+    function resolvePackItem(
+      name: string,
+      choiceKey: string,
+      defaultCat: import('@/lib/characterTypes').InventoryCategory,
+    ): import('@/lib/characterTypes').InventoryItem[] {
+      // Step 1: Resolve "or" choice
+      let resolved = name;
+      if (/\s+or\s+/i.test(name)) {
+        const opts = name.replace(/\s*\(.*?\)\s*$/, '').split(/\s+or\s+/i).map((s) => s.trim());
+        resolved = packChoices[choiceKey] ?? opts[0];
+      }
+      const cat = inferItemCategory(resolved, defaultCat);
+      // Step 1b: Split "X and Y" compounds when one part is a shield (e.g., "Duelist clothing and buckler")
+      if (/ and /i.test(resolved)) {
+        const parts = resolved.split(/ and /i).map((s) => s.trim());
+        if (parts.length === 2 && parts.some((p) => /\b(buckler|shield|targe)\b/i.test(p))) {
+          return parts.flatMap((part) => {
+            const pCat = inferItemCategory(part, cat);
+            const ci = findCatalogByFuzzyName(part);
+            return [ci ? makeItemFromCatalog(ci) : makeItem(part, pCat)];
+          });
+        }
+      }
+      // Step 2: "of choice" → catalog picker expansion
+      if (/\bof\s+choice\b/i.test(resolved)) {
+        const count = /\bthree|3\b/i.test(resolved) ? 3 : /\btwo|2\b/i.test(resolved) ? 2 : 1;
+        const chosenIds = packFreeChoices[choiceKey] ?? [];
+        return Array.from({ length: count }, (_, j) => {
+          const ci = catalog.find((c) => c.id === chosenIds[j]);
+          return ci ? makeItemFromCatalog(ci) : makeItem(cat === 'Weapon' ? (count > 1 ? `Weapon ${j + 1}` : 'Weapon') : 'Item', cat);
+        });
+      }
+      // Step 3: Compound split ("Light bow with quiver (20 arrows)" → two items)
+      const split = splitCompoundItem(resolved, cat);
+      if (split) {
+        return split.map(({ n, c, q }) => {
+          const ci = findCatalogByFuzzyName(n);
+          const base = ci ? makeItemFromCatalog(ci) : makeItem(n, c);
+          return { ...base, quantity: q };
+        });
+      }
+      // Step 4: Quantity prefix ("Two throwing axes" → Throwing Axe × 2 OR Dagger × 1 × N)
+      const { count, cleanName } = parsePackQuantity(resolved);
+      if (count > 1) {
+        const qCat = inferItemCategory(cleanName, cat);
+        const ci = findCatalogByFuzzyName(cleanName);
+        if (qCat === 'Weapon' && !isThrowableWeapon(cleanName)) {
+          // Non-stackable weapons: create separate items (e.g., Two daggers → Dagger + Dagger)
+          return Array.from({ length: count }, () => {
+            const base = ci ? makeItemFromCatalog(ci) : makeItem(cleanName, qCat);
+            return { ...base, quantity: 1 };
+          });
+        }
+        const base = ci ? makeItemFromCatalog(ci) : makeItem(cleanName, qCat);
+        return [{ ...base, quantity: count }];
+      }
+      return [makeItem(resolved, cat)];
+    }
+
     const startingInventory: import('@/lib/characterTypes').InventoryItem[] = [];
     const profPack = selectedProf?.startingPack;
     if (profPack) {
-      profPack.weapons.forEach((n) => startingInventory.push(makeItem(n, 'Weapon')));
-      profPack.armor.forEach((n) => startingInventory.push(makeItem(n, 'Armor')));
-      profPack.kit.forEach((n) => startingInventory.push(makeItem(n, 'Kit')));
-      profPack.inventory.forEach((n) => startingInventory.push(makeItem(n, 'Misc')));
+      profPack.weapons.forEach((n, i) => resolvePackItem(n, `prof_weapons_${i}`, 'Weapon').forEach((item) => startingInventory.push(item)));
+      profPack.armor.forEach((n, i) => resolvePackItem(n, `prof_armor_${i}`, 'Armor').forEach((item) => startingInventory.push(item)));
+      profPack.kit.forEach((n, i) => resolvePackItem(n, `prof_kit_${i}`, 'Kit').forEach((item) => startingInventory.push(item)));
+      profPack.inventory.forEach((n, i) => resolvePackItem(n, `prof_inventory_${i}`, 'Misc').forEach((item) => startingInventory.push(item)));
     }
     const originPack = selectedOrigin?.originPack;
     if (originPack) {
       originPack.categories.forEach((cat) => {
+        const lbl = cat.label.toLowerCase();
         const category: import('@/lib/characterTypes').InventoryCategory =
-          cat.label.toLowerCase().includes('weapon') ? 'Weapon' :
-          cat.label.toLowerCase().includes('armor') ? 'Armor' :
-          cat.label.toLowerCase().includes('kit') ? 'Kit' : 'Misc';
-        cat.items.forEach((n) => startingInventory.push(makeItem(n, category)));
+          lbl.includes('weapon') ? 'Weapon' :
+          lbl.includes('armor') || lbl.includes('clothing') ? 'Armor' :
+          lbl.includes('kit') ? 'Kit' : 'Misc';
+        const pickN = parsePickCount(cat.label);
+        if (pickN !== null) {
+          const catKey = `origin_pick_${cat.label}`;
+          const chosen = packPickChoices[catKey] ?? cat.items.slice(0, pickN);
+          chosen.forEach((n) => resolvePackItem(n, `origin_${cat.label}_pick`, category).forEach((item) => startingInventory.push(item)));
+        } else {
+          cat.items.forEach((n, i) => resolvePackItem(n, `origin_${cat.label}_${i}`, category).forEach((item) => startingInventory.push(item)));
+        }
       });
     }
 
@@ -359,11 +500,14 @@ export default function CharacterBuilder({ professions, origins, professionFeats
     const originCurrency = '';  // origins tracked via originPack categories
     const combinedCurrency = [profCurrency, originCurrency].filter(Boolean).join(', ');
 
-    const ambition = calcAmbition(totalAttributes.will);
+    const ambition = calcAmbition(totalAttributes.will, draft.tier);
     const startReservoir = effectiveCaster
       ? (calcReservoir(effectiveCaster.casterType, draft.tier,
           totalAttributes[(effectiveCaster.casterModifierOptions[0] ?? draft.spellcastingModifier ?? 'mind')]) ?? 0)
       : 0;
+    const startingFeatsPurchased = FEAT_ALLOWANCE[draft.tier] ?? 0;
+    const startingSpellThreshold = effectiveCaster
+      ? calcSpellcastingThreshold(startingFeatsPurchased) : 0;
 
     // Compute armament proficiency tags from profession armaments list
     const armamentProficiencyTags: string[] = [];
@@ -390,9 +534,13 @@ export default function CharacterBuilder({ professions, origins, professionFeats
       maxVitality: null,
       currentWounds: 0,
       renown: 0,
-      featsPurchased: draft.selectedFeatIds.length,
+      featsPurchased: startingFeatsPurchased,
       activeFeedSpellIds: draft.knownSpellIds,
       armamentProficiencyTags: [...new Set(armamentProficiencyTags)],
+      currentCadence: draft.professionName === 'Duelist' ? draft.tier : undefined,
+      currentAdrenaline: draft.professionName === 'Fighter' ? (totalAttributes.body + draft.tier) : undefined,
+      currentResonance: draft.professionName === 'Eidolon' ? startingSpellThreshold : undefined,
+      currentSoulTokens: draft.professionName === 'Vescent' ? 1 : undefined,
     };
     const saved = saveCharacter(charData);
     router.push(`/characters/${saved.id}`);
@@ -584,6 +732,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                 key={p.id}
                 onClick={() => {
                   update({ professionId: p.id, professionName: p.name, vitalsProficiencies: [], selectedFeatIds: [] });
+                  setPackChoices({}); setPackPickChoices({}); setPackFreeChoices({}); setPackFreeSearch({});
                   setProfDetail(p.id);
                 }}
                 style={{
@@ -668,18 +817,23 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                     const hasChoice = choiceFeatures.some(
                       (cf) => cf.feature_name === f.name && cf.entity_name === detailProf.name && cf.selection_timing === 'on_gain'
                     );
+                    const key = `${f.id}-${f.name}`;
+                    const open = expandedFeatIds.has(key);
                     return (
-                      <div key={f.id} style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-card)', border: `1px solid ${resolved ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '0.375rem', fontSize: '0.8rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.125rem' }}>
-                          <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text)' }}>{f.name}</span>
-                          {hasChoice && resolved && (
-                            <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--primary)' }}>✓ {resolved.join(', ')}</span>
-                          )}
-                          {hasChoice && !resolved && (
-                            <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-heading)', color: 'var(--accent)', fontWeight: 600 }}>Choice required</span>
-                          )}
-                        </div>
-                        <div style={{ color: 'var(--text-muted)', lineHeight: 1.5 }}>{f.descriptionMarkdown.slice(0, 160)}{f.descriptionMarkdown.length > 160 ? '…' : ''}</div>
+                      <div key={key} style={{ border: `1px solid ${resolved ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '0.375rem', overflow: 'hidden', backgroundColor: 'var(--bg-card)' }}>
+                        <button onClick={() => toggleBuilderFeat(key)} style={{ width: '100%', padding: '0.5rem 0.75rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text)', fontSize: '0.8rem' }}>{f.name}</span>
+                          <span style={{ fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                            {hasChoice && resolved && <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--primary)' }}>✓ {resolved.join(', ')}</span>}
+                            {hasChoice && !resolved && <span style={{ fontFamily: 'var(--font-heading)', color: 'var(--accent)', fontWeight: 600 }}>Choice required</span>}
+                            <span style={{ color: 'var(--text-muted)' }}>{open ? '▲' : '▼'}</span>
+                          </span>
+                        </button>
+                        {open && (
+                          <div style={{ padding: '0.5rem 0.75rem', borderTop: `1px solid ${resolved ? 'var(--primary)' : 'var(--border)'}`, fontSize: '0.8rem' }}>
+                            <MarkdownContent content={f.descriptionMarkdown} />
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -717,6 +871,7 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                   key={o.id}
                   onClick={() => {
                     update({ originId: o.id, originName: o.name, vocationId: '', vocationName: '', vocationAttributeBonus: { attribute: 'body', value: 1 }, vocationCaster: o.caster ?? null });
+                    setPackChoices({}); setPackPickChoices({}); setPackFreeChoices({}); setPackFreeSearch({});
                     setOriginDetail(o.id);
                     setVocDetail(null);
                   }}
@@ -749,12 +904,26 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                   Origin Features <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(automatically granted)</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  {detailOrigin.baseFeatures.map((f) => (
-                    <div key={f.id} style={{ padding: '0.35rem 0.625rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.375rem', fontSize: '0.78rem' }}>
-                      <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text)' }}>{f.name}</span>
-                      {f.activationRaw && <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{f.activationRaw}</span>}
-                    </div>
-                  ))}
+                  {detailOrigin.baseFeatures.map((f, i) => {
+                    const key = `${f.id}-${i}`;
+                    const open = expandedFeatIds.has(key);
+                    return (
+                      <div key={key} style={{ border: '1px solid var(--border)', borderRadius: '0.375rem', overflow: 'hidden', backgroundColor: 'var(--bg-card)' }}>
+                        <button onClick={() => toggleBuilderFeat(key)} style={{ width: '100%', padding: '0.35rem 0.625rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text)', fontSize: '0.78rem' }}>{f.name}</span>
+                          <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                            {f.activationRaw && <span>{f.activationRaw}</span>}
+                            <span>{open ? '▲' : '▼'}</span>
+                          </span>
+                        </button>
+                        {open && (
+                          <div style={{ padding: '0.5rem 0.625rem', borderTop: '1px solid var(--border)', fontSize: '0.78rem' }}>
+                            <MarkdownContent content={f.descriptionMarkdown} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -806,12 +975,26 @@ export default function CharacterBuilder({ professions, origins, professionFeats
                     <div>
                       <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', marginBottom: '0.3rem' }}>Granted Features</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                        {v.features.map((f) => (
-                          <div key={f.id} style={{ padding: '0.35rem 0.625rem', backgroundColor: 'var(--bg-nav)', border: '1px solid var(--border)', borderRadius: '0.375rem', fontSize: '0.78rem' }}>
-                            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text)' }}>{f.name}</span>
-                            {f.activationRaw && <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{f.activationRaw}</span>}
-                          </div>
-                        ))}
+                        {v.features.map((f, i) => {
+                          const key = `voc-${f.id}-${i}`;
+                          const open = expandedFeatIds.has(key);
+                          return (
+                            <div key={key} style={{ border: '1px solid var(--border)', borderRadius: '0.375rem', overflow: 'hidden', backgroundColor: 'var(--bg-nav)' }}>
+                              <button onClick={() => toggleBuilderFeat(key)} style={{ width: '100%', padding: '0.35rem 0.625rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text)', fontSize: '0.78rem' }}>{f.name}</span>
+                                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                                  {f.activationRaw && <span>{f.activationRaw}</span>}
+                                  <span>{open ? '▲' : '▼'}</span>
+                                </span>
+                              </button>
+                              {open && (
+                                <div style={{ padding: '0.5rem 0.625rem', borderTop: '1px solid var(--border)', fontSize: '0.78rem' }}>
+                                  <MarkdownContent content={f.descriptionMarkdown} />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -831,53 +1014,202 @@ export default function CharacterBuilder({ professions, origins, professionFeats
   }
 
   function renderStep4() {
-    // Starting Items — read-only aggregated view
     const profPack = selectedProf?.startingPack;
     const originPack = selectedOrigin?.originPack;
+
+    function isOrItem(name: string) { return /\s+or\s+/i.test(name); }
+    function parseOrOptions(name: string) {
+      return name.replace(/\s*\(.*?\)\s*$/, '').split(/\s+or\s+/i).map((s) => s.trim());
+    }
+    function parsePickCount(label: string): number | null {
+      const m = label.match(/pick\s*(\d+)/i);
+      return m ? parseInt(m[1]) : null;
+    }
+
+    function filterCatalogForChoice(desc: string): CatalogItem[] {
+      const lower = desc.toLowerCase();
+      const weapons = catalog.filter((ci) => ci.category === 'Weapon');
+      if (/ranged/.test(lower)) return weapons.filter((ci) => ci.isRanged);
+      if (/melee/.test(lower)) return weapons.filter((ci) => !ci.isRanged);
+      if (/finesse|light weapon/.test(lower)) return weapons.filter((ci) => ci.armamentTags.includes('finesse'));
+      if (/martial/.test(lower)) return weapons.filter((ci) => ci.armamentTags.includes('martial'));
+      if (/simple/.test(lower)) return weapons.filter((ci) => ci.armamentTags.includes('simple'));
+      return weapons;
+    }
+
+    function renderCatalogPicker(choiceKey: string, count: number, filtered: CatalogItem[]) {
+      const chosenIds = packFreeChoices[choiceKey] ?? [];
+      const searchText = packFreeSearch[choiceKey] ?? '';
+      const visible = filtered.filter((ci) =>
+        !searchText || ci.name.toLowerCase().includes(searchText.toLowerCase())
+      );
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          {/* Chosen items */}
+          {chosenIds.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+              {chosenIds.map((id, j) => {
+                const ci = catalog.find((c) => c.id === id);
+                return ci ? (
+                  <span key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', padding: '0.15rem 0.4rem', border: '1.5px solid var(--primary)', borderRadius: '0.25rem', backgroundColor: 'var(--primary-light)', fontSize: '0.75rem', fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--primary)' }}>
+                    {ci.name}
+                    <button onClick={() => setPackFreeChoices((prev) => { const a = [...(prev[choiceKey] ?? [])]; a.splice(j, 1); return { ...prev, [choiceKey]: a }; })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '0.7rem', padding: 0, lineHeight: 1 }}>✕</button>
+                  </span>
+                ) : null;
+              })}
+            </div>
+          )}
+          {/* Status / search */}
+          {chosenIds.length < count && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                Pick {count - chosenIds.length} more{count > 1 ? ` (${chosenIds.length}/${count})` : ''}
+              </div>
+              <input
+                type="text"
+                placeholder="Search weapons..."
+                value={searchText}
+                onChange={(e) => setPackFreeSearch((prev) => ({ ...prev, [choiceKey]: e.target.value }))}
+                style={{ padding: '0.3rem 0.5rem', border: '1px solid var(--border)', borderRadius: '0.25rem', backgroundColor: 'var(--bg-card)', color: 'var(--text)', fontSize: '0.78rem', outline: 'none', width: '100%', maxWidth: '200px' }}
+              />
+              <div style={{ border: '1px solid var(--border)', borderRadius: '0.25rem', backgroundColor: 'var(--bg-card)', maxHeight: '120px', overflowY: 'auto' }}>
+                {visible.slice(0, 40).map((ci) => (
+                  <button
+                    key={ci.id}
+                    onClick={() => setPackFreeChoices((prev) => { const cur = prev[choiceKey] ?? []; if (cur.length < count && !cur.includes(ci.id)) return { ...prev, [choiceKey]: [...cur, ci.id] }; return prev; })}
+                    style={{ width: '100%', padding: '0.25rem 0.5rem', border: 'none', borderBottom: '1px solid var(--border)', backgroundColor: 'transparent', cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.78rem', color: 'var(--text)' }}>{ci.name}</span>
+                    {ci.damage && <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', flexShrink: 0 }}>{ci.damage}</span>}
+                  </button>
+                ))}
+                {visible.length === 0 && <div style={{ padding: '0.4rem 0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No matches</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function renderItemCell(name: string, choiceKey: string) {
+      const hasOr = isOrItem(name);
+      const options = hasOr ? parseOrOptions(name) : null;
+      const resolved = hasOr ? (packChoices[choiceKey] ?? options![0]) : name;
+      const isFreeChoice = /\bof\s+choice\b/i.test(resolved);
+      const freeCount = /\bthree|3\b/i.test(resolved) ? 3 : /\btwo|2\b/i.test(resolved) ? 2 : 1;
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          {/* "or" toggle */}
+          {hasOr && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', alignItems: 'center' }}>
+              {options!.map((opt, oi) => (
+                <span key={opt} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  {oi > 0 && <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>or</span>}
+                  <button
+                    onClick={() => { setPackChoices((prev) => ({ ...prev, [choiceKey]: opt })); setPackFreeChoices((prev) => { const n = { ...prev }; delete n[choiceKey]; return n; }); }}
+                    style={{ padding: '0.2rem 0.5rem', borderRadius: '0.25rem', border: `1.5px solid ${resolved === opt ? 'var(--primary)' : 'var(--border)'}`, backgroundColor: resolved === opt ? 'var(--primary)' : 'transparent', color: resolved === opt ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', fontFamily: 'var(--font-heading)', fontWeight: 600 }}
+                  >{opt}</button>
+                </span>
+              ))}
+            </div>
+          )}
+          {/* Catalog picker for "of choice" */}
+          {isFreeChoice && renderCatalogPicker(choiceKey, freeCount, filterCatalogForChoice(resolved))}
+          {/* Static name */}
+          {!hasOr && !isFreeChoice && (
+            <span style={{ color: 'var(--text)', fontSize: '0.85rem' }}>{name}</span>
+          )}
+        </div>
+      );
+    }
+
+    function renderPickCategory(catLabel: string, items: string[], pickN: number) {
+      const catKey = `origin_pick_${catLabel}`;
+      const chosen = packPickChoices[catKey] ?? [];
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+            {items.map((item) => {
+              const active = chosen.includes(item);
+              const atLimit = chosen.length >= pickN && !active;
+              return (
+                <button
+                  key={item}
+                  disabled={atLimit}
+                  onClick={() => setPackPickChoices((prev) => {
+                    const cur = prev[catKey] ?? [];
+                    return { ...prev, [catKey]: active ? cur.filter((i) => i !== item) : cur.length < pickN ? [...cur, item] : cur };
+                  })}
+                  style={{ padding: '0.2rem 0.5rem', borderRadius: '0.25rem', border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`, backgroundColor: active ? 'var(--primary)' : 'transparent', color: active ? '#fff' : atLimit ? 'var(--border)' : 'var(--text-muted)', cursor: atLimit ? 'not-allowed' : 'pointer', fontSize: '0.75rem', fontFamily: 'var(--font-heading)', fontWeight: 600, opacity: atLimit ? 0.5 : 1 }}
+                >{item}</button>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: '0.68rem', color: chosen.length === pickN ? 'var(--primary)' : 'var(--text-muted)' }}>
+            {chosen.length}/{pickN} selected{chosen.length < pickN ? ` — pick ${pickN - chosen.length} more` : ' ✓'}
+          </div>
+        </div>
+      );
+    }
+
+    const labelStyle: React.CSSProperties = { fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text-muted)', minWidth: '80px', flexShrink: 0, fontSize: '0.68rem', textTransform: 'uppercase' as const, letterSpacing: '0.04em', paddingTop: '0.25rem' };
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
-          Your starting equipment from your <strong>{draft.professionName}</strong> and <strong>{draft.originName}</strong> backgrounds.
+          Choose your starting equipment. Items marked <strong>or</strong> let you pick one option.
         </p>
 
-        {/* Profession pack */}
         {profPack && (
           <div>
             <SectionLabel>{draft.professionName} Starting Pack</SectionLabel>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {[
-                { label: 'Weapons', items: profPack.weapons },
-                { label: 'Armor', items: profPack.armor },
-                { label: 'Kit', items: profPack.kit },
-                { label: 'Inventory', items: profPack.inventory },
+                { label: 'Weapons', key: 'weapons', items: profPack.weapons },
+                { label: 'Armor', key: 'armor', items: profPack.armor },
+                { label: 'Kit', key: 'kit', items: profPack.kit },
+                { label: 'Inventory', key: 'inventory', items: profPack.inventory },
               ].filter((cat) => cat.items.length > 0).map((cat) => (
-                <div key={cat.label} style={{ display: 'flex', gap: '0.75rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', borderRadius: '0.375rem', fontSize: '0.85rem' }}>
-                  <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text-muted)', minWidth: '70px', flexShrink: 0, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{cat.label}</span>
-                  <span style={{ color: 'var(--text)' }}>{cat.items.join(', ')}</span>
+                <div key={cat.label} style={{ display: 'flex', gap: '0.75rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', borderRadius: '0.375rem', alignItems: 'flex-start' }}>
+                  <span style={labelStyle}>{cat.label}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1 }}>
+                    {cat.items.map((n, i) => (
+                      <div key={i}>{renderItemCell(n, `prof_${cat.key}_${i}`)}</div>
+                    ))}
+                  </div>
                 </div>
               ))}
               {profPack.currency && (
-                <div style={{ display: 'flex', gap: '0.75rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', borderRadius: '0.375rem', fontSize: '0.85rem' }}>
-                  <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text-muted)', minWidth: '70px', flexShrink: 0, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Currency</span>
-                  <span style={{ color: 'var(--text)' }}>{profPack.currency}</span>
+                <div style={{ display: 'flex', gap: '0.75rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', borderRadius: '0.375rem', alignItems: 'center' }}>
+                  <span style={labelStyle}>Currency</span>
+                  <span style={{ color: 'var(--text)', fontSize: '0.85rem' }}>{profPack.currency}</span>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* Origin pack */}
         {originPack && (
           <div>
             <SectionLabel>{originPack.name}</SectionLabel>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {originPack.categories.map((cat) => (
-                <div key={cat.label} style={{ display: 'flex', gap: '0.75rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', borderRadius: '0.375rem', fontSize: '0.85rem' }}>
-                  <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--text-muted)', minWidth: '70px', flexShrink: 0, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{cat.label}</span>
-                  <span style={{ color: 'var(--text)' }}>{cat.items.join(', ')}</span>
-                </div>
-              ))}
+              {originPack.categories.map((cat) => {
+                const pickN = parsePickCount(cat.label);
+                return (
+                  <div key={cat.label} style={{ display: 'flex', gap: '0.75rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-nav)', borderRadius: '0.375rem', alignItems: 'flex-start' }}>
+                    <span style={labelStyle}>{cat.label}</span>
+                    <div style={{ flex: 1 }}>
+                      {pickN !== null
+                        ? renderPickCategory(cat.label, cat.items, pickN)
+                        : <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                            {cat.items.map((n, i) => <div key={i}>{renderItemCell(n, `origin_${cat.label}_${i}`)}</div>)}
+                          </div>
+                      }
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -1196,7 +1528,9 @@ export default function CharacterBuilder({ professions, origins, professionFeats
     const modKey = (effectiveCaster.casterModifierOptions.length === 1 ? effectiveCaster.casterModifierOptions[0] : draft.spellcastingModifier) ?? 'mind';
     const modVal = totalAttributes[modKey];
     const reservoir = calcReservoir(effectiveCaster.casterType, draft.tier, modVal);
-    const spellDC = calcSpellDC(draft.tier, modVal);
+    const builderThreshold = calcSpellcastingThreshold(FEAT_ALLOWANCE[draft.tier] ?? 0);
+    const builderSpellTier = calcSpellcastingTier(effectiveCaster.casterType, builderThreshold);
+    const spellDC = calcSpellDC(builderSpellTier, modVal);
     const cantrips = mySpells.filter((s) => s.isCantrip);
     const tieredSpells = mySpells.filter((s) => !s.isCantrip);
     const byTier: Record<number, BuilderSpell[]> = {};

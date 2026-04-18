@@ -87,15 +87,46 @@ function detectCasterFromFeatures(features: Array<{ description_markdown?: strin
 function extractProfessionPack(rawPack: Record<string, unknown>): BuilderStartingPack {
   function items(key: string): string[] {
     const section = rawPack[key] as { items?: string[] } | undefined;
-    return section?.items?.filter((i) => i && i.toLowerCase() !== 'none') ?? [];
+    const raw = section?.items?.filter((i) => i && i.toLowerCase() !== 'none') ?? [];
+    // Merge items that start with "or " into the previous item as an "X or Y" choice
+    const merged: string[] = [];
+    for (const item of raw) {
+      if (/^or\s+/i.test(item) && merged.length > 0) {
+        merged[merged.length - 1] = `${merged[merged.length - 1]} or ${item.replace(/^or\s+/i, '')}`;
+      } else {
+        merged.push(item);
+      }
+    }
+    return merged;
   }
-  return {
+  const result: BuilderStartingPack = {
     weapons: items('weapons'),
     armor: items('armor'),
     kit: items('kit'),
     inventory: items('inventory'),
     currency: (rawPack.starting_currency as string | null) ?? null,
   };
+  // Fallback: if all categories are empty but a raw string exists, parse and categorize it
+  const allEmpty = result.weapons.length === 0 && result.armor.length === 0
+    && result.kit.length === 0 && result.inventory.length === 0;
+  if (allEmpty) {
+    const rawStr = (rawPack.raw as string | undefined) ?? '';
+    if (rawStr) {
+      for (const entry of rawStr.split(',').map((s) => s.trim()).filter(Boolean)) {
+        const lower = entry.toLowerCase();
+        if (/\b(sword|dagger|axe|bow|crossbow|spear|mace|staff|wand|knife|blade|lance|flail|hammer|maul|rapier|sling|arrow|bolt|quiver|pistol|rifle)/.test(lower)) {
+          result.weapons.push(entry);
+        } else if (/\b(armor|armour|shield|robe|cloak|clothing|clothes|garb|vestment|outfit|attire)\b/.test(lower)) {
+          result.armor.push(entry);
+        } else if (/\b(kit|tools|tool|lockpick|grappling|rope|hook|pick)\b/.test(lower)) {
+          result.kit.push(entry);
+        } else {
+          result.inventory.push(entry);
+        }
+      }
+    }
+  }
+  return result;
 }
 
 function extractOriginPack(rawPack: Record<string, unknown> | undefined, packName: string): { name: string; categories: BuilderOriginPackCategory[] } | null {
@@ -104,7 +135,7 @@ function extractOriginPack(rawPack: Record<string, unknown> | undefined, packNam
   const categories: BuilderOriginPackCategory[] = Object.entries(parsed)
     .map(([key, val]) => ({
       label: key.charAt(0).toUpperCase() + key.slice(1),
-      items: val.items ?? [],
+      items: (val.items ?? []).filter((i) => i && i.toLowerCase() !== 'none'),
     }))
     .filter((cat) => cat.items.length > 0);
   if (categories.length === 0) return null;
@@ -321,7 +352,7 @@ export function getItemCatalog(): CatalogItem[] {
       slot: (template.slot as string) ?? (equipSlots[0] ?? null),
       traits: Array.isArray(traits) ? traits.map((t) => typeof t === 'string' ? t : (t as { name: string }).name) : [],
       damage: raw.damage as string | undefined,
-      armorBonus: (raw.armor_bonus_range as { value?: number } | undefined)?.value,
+      armorBonus: (() => { const r = raw.armor_bonus_range as { value?: number; min?: number } | undefined; const s = raw.armor_bonus as { value?: number } | undefined; return r?.value ?? r?.min ?? s?.value; })(),
       armorCategory: (raw.armor_type as string | undefined) ?? null,
       equippable: (raw.equippable as boolean) ?? false,
       armamentTags: groups.map((g) => g.toLowerCase()),

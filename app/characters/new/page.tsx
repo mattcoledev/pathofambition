@@ -5,6 +5,7 @@ import {
   getBuilderFeats,
   getBuilderSpells,
   getChoiceFeatures,
+  getItemCatalog,
 } from '@/lib/builderData';
 import type { Metadata } from 'next';
 
@@ -16,6 +17,7 @@ export default function NewCharacterPage() {
   const { professionFeats, originFeats } = getBuilderFeats();
   const spells = getBuilderSpells();
   const choiceFeatures = getChoiceFeatures();
+  const catalog = getItemCatalog();
 
   return (
     <CharacterBuilder
@@ -25,6 +27,7 @@ export default function NewCharacterPage() {
       originFeats={originFeats}
       spells={spells}
       choiceFeatures={choiceFeatures}
+      catalog={catalog}
     />
   );
 }

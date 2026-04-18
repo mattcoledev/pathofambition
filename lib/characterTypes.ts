@@ -109,6 +109,12 @@ export interface Character {
   currentWounds: number;
   renown: number;
   featsPurchased: number;
+
+  // Profession-specific resources (undefined if not applicable)
+  currentCadence?: number;      // Duelist — starting pool = Tier, no max
+  currentAdrenaline?: number;   // Fighter — starting pool = Body + Tier, max = Body + Tier
+  currentResonance?: number;    // Eidolon — starting pool = Spellcasting Threshold, no max
+  currentSoulTokens?: number;   // Vescent — starting = 1, max = 3
 }
 
 // ─── Choice feature resolution ────────────────────────────────────────────────
