@@ -1,163 +1,254 @@
-@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
 
-:root {
-  --bg: #FAFAF9;
-  --bg-card: #FFFFFF;
-  --bg-nav: #F5F5F4;
-  --text: #1C1917;
-  --text-muted: #57534E;
-  --primary: #0F766E;
-  --primary-light: #CCFBF1;
-  --accent: #B45309;
-  --accent-light: #FEF3C7;
-  --border: #E7E5E4;
-  --border-hover: #A8A29E;
+/* ── Dark mode (default) ─────────────────────────────── */
+:root,
+[data-theme="dark"] {
+    --bg-page: #202127;
+    --bg-nav: #090d1a;
+    --bg-card: #0f1525;
+    --border: #1c2a40;
+    --border-hover: #2a3d5a;
+    --primary: #c9821a;
+    --primary-light: #c9821a1a;
+    --accent: #c9821a;
+    --accent-light: #c9821a22;
+    --text: #c8d4e0;
+    --text-muted: #7188a6;
+    --text-on-primary: #0b0f1e;
+    --bg: var(--bg-page);
+    --section-offensive: #5c1f1f;
+    --section-maneuver: #1e3a52;
+    --section-utility: #0e4028;
+    --section-penalty: #0f1525;
+    --section-penalty-text: #a86010;
+    color-scheme: dark;
+}
+
+/* ── Light mode ──────────────────────────────────────── */
+[data-theme="light"] {
+    --bg-page: #f5f0e8;
+    --bg-nav: #ede7d9;
+    --bg-card: #ffffff;
+    --border: #d4c8b0;
+    --border-hover: #b8a888;
+    --primary: #a86010;
+    --primary-light: #a8601015;
+    --accent: #a86010;
+    --accent-light: #a8601018;
+    --text: #1a1410;
+    --text-muted: #857967;
+    --text-on-primary: #ffffff;
+    --bg: var(--bg-page);
+    --section-offensive: #ffbaba;
+    --section-maneuver: #91afd6;
+    --section-utility: #58ffa2;
+    --section-alert-bg: #f8f8f8;
+    --section-alert-text: #a86010;
+    color-scheme: light;
+}
+
+/* ── Respect system preference on first load ─────────── */
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+        --bg-page: #f5f0e8;
+        --bg-nav: #ede7d9;
+        --bg-card: #ffffff;
+        --border: #d4c8b0;
+        --border-hover: #b8a888;
+        --primary: #a86010;
+        --primary-light: #a8601015;
+        --accent: #a86010;
+        --accent-light: #a8601018;
+        --text: #1a1410;
+        --text-muted: #6a5a40;
+        --text-on-primary: #ffffff;
+        --bg: var(--bg-page);
+        --section-offensive: #ffbaba;
+        --section-maneuver: #91afd6;
+        --section-utility: #58ffa2;
+        color-scheme: light;
+    }
 }
 
 @theme inline {
-  --color-background: var(--bg);
-  --color-foreground: var(--text);
-  --font-heading: 'Lexend', sans-serif;
-  --font-body: 'Source Sans 3', sans-serif;
+    --color-background: var(--bg-page);
+    --color-foreground: var(--text);
+    --font-heading: "Lexend", sans-serif;
+    --font-body: "Source Sans 3", sans-serif;
 }
 
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 html {
-  scroll-behavior: smooth;
+    scroll-behavior: smooth;
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 1.65;
-  -webkit-font-smoothing: antialiased;
+    background: var(--bg-page);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading);
-  line-height: 1.25;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-heading);
+    line-height: 1.25;
 }
 
 /* Markdown rendered content */
 .prose-game h1,
 .prose-game h2,
 .prose-game h3 {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  color: var(--text);
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
 }
 
-.prose-game h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
-.prose-game h3 { font-size: 1.05rem; }
+.prose-game h2 {
+    font-size: 1.25rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.3rem;
+}
+.prose-game h3 {
+    font-size: 1.05rem;
+}
 
 .prose-game p {
-  margin-bottom: 0.875rem;
-  color: var(--text);
+    margin-bottom: 0.875rem;
+    color: var(--text);
 }
 
 .prose-game strong {
-  font-weight: 600;
-  color: var(--text);
+    font-weight: 600;
+    color: var(--text);
 }
 
 .prose-game em {
-  font-style: italic;
-  color: var(--text-muted);
+    font-style: italic;
+    color: var(--text-muted);
 }
 
-.prose-game ul, .prose-game ol {
-  margin-left: 1.25rem;
-  margin-bottom: 0.875rem;
+.prose-game ul,
+.prose-game ol {
+    margin-left: 1.25rem;
+    margin-bottom: 0.875rem;
 }
 
-.prose-game ul { list-style-type: disc; }
-.prose-game ol { list-style-type: decimal; }
+.prose-game ul {
+    list-style-type: disc;
+}
+.prose-game ol {
+    list-style-type: decimal;
+}
 
-.prose-game li { margin-bottom: 0.2rem; }
+.prose-game li {
+    margin-bottom: 0.2rem;
+}
 
 .prose-game blockquote {
-  border-left: 3px solid var(--primary);
-  padding: 0.5rem 0.75rem;
-  margin: 0.75rem 0;
-  background: var(--primary-light);
-  border-radius: 0 0.375rem 0.375rem 0;
+    border-left: 3px solid var(--primary);
+    padding: 0.5rem 0.75rem;
+    margin: 0.75rem 0;
+    background: var(--primary-light);
+    border-radius: 0 0.375rem 0.375rem 0;
 }
 
-.prose-game blockquote p { margin: 0; color: var(--text); }
+.prose-game blockquote p {
+    margin: 0;
+    color: var(--text);
+}
 
 .prose-game table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
 }
 
 .prose-game th {
-  background: var(--bg-nav);
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  border: 1px solid var(--border);
+    background: var(--bg-nav);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border: 1px solid var(--border);
 }
 
 .prose-game td {
-  padding: 0.45rem 0.75rem;
-  border: 1px solid var(--border);
-  vertical-align: top;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid var(--border);
+    vertical-align: top;
 }
 
 .prose-game tr:nth-child(even) td {
-  background: var(--bg-nav);
+    background: var(--bg-nav);
 }
 
 .prose-game code {
-  background: var(--bg-nav);
-  border: 1px solid var(--border);
-  border-radius: 0.25rem;
-  padding: 0.1rem 0.35rem;
-  font-size: 0.875em;
+    background: var(--bg-nav);
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.875em;
 }
 
 /* Hover cards */
 .hover-card {
-  transition: border-color 0.15s, box-shadow 0.15s;
-  cursor: pointer;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+    cursor: pointer;
 }
 .hover-card:hover {
-  border-color: var(--primary) !important;
-  box-shadow: 0 2px 10px rgba(15,118,110,0.1);
+    border-color: var(--primary) !important;
+    box-shadow: 0 2px 10px var(--primary-light);
 }
 .hover-card-subtle:hover {
-  border-color: var(--primary) !important;
-  box-shadow: 0 1px 6px rgba(15,118,110,0.1);
+    border-color: var(--primary) !important;
+    box-shadow: 0 1px 6px var(--primary-light);
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-nav); }
-::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-nav);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--border-hover);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
 
 /* Game icon SVG inversion for light mode */
 .game-icon {
-  filter: invert(1) sepia(1) saturate(0.5) hue-rotate(160deg) brightness(0.4);
+    filter: invert(1) sepia(1) saturate(0.5) hue-rotate(160deg) brightness(0.4);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
 }

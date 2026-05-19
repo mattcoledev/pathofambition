@@ -66,10 +66,7 @@
     "two_hands": {
       "label": "Two Hands",
       "max_items": 1,
-      "occupies": [
-        "main_hand",
-        "off_hand"
-      ]
+      "occupies": ["main_hand", "off_hand"]
     },
     "body": {
       "label": "Body",
@@ -84,9 +81,7 @@
         "slug": "baton",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple"
-        ],
+        "groups": ["Simple"],
         "damage": "1d4",
         "damage_types": [
           {
@@ -110,18 +105,10 @@
         "stack_limit_per_weight_unit": 10,
         "weight": 0.1,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -143,10 +130,7 @@
         "slug": "cestus",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple",
-          "Finesse"
-        ],
+        "groups": ["Simple", "Finesse"],
         "damage": "1d6",
         "damage_types": [
           {
@@ -173,18 +157,10 @@
         "stack_limit_per_weight_unit": 10,
         "weight": 0.1,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -206,9 +182,7 @@
         "slug": "cleaver",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Martial"
-        ],
+        "groups": ["Martial"],
         "damage": "1d10",
         "damage_types": [
           {
@@ -235,18 +209,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 2.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -268,10 +234,7 @@
         "slug": "dagger",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple",
-          "Finesse"
-        ],
+        "groups": ["Simple", "Finesse"],
         "damage": "1d4",
         "damage_types": [
           {
@@ -302,18 +265,10 @@
         "stack_limit_per_weight_unit": 10,
         "weight": 0.1,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -335,9 +290,7 @@
         "slug": "great-axe",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Martial"
-        ],
+        "groups": ["Martial"],
         "damage": "1d12",
         "damage_types": [
           {
@@ -374,17 +327,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 2.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "two_hands"
-        ],
+        "equip_slots": ["two_hands"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -406,9 +352,7 @@
         "slug": "greatclub",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple"
-        ],
+        "groups": ["Simple"],
         "damage": "1d10",
         "damage_types": [
           {
@@ -432,18 +376,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 2.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -465,9 +401,7 @@
         "slug": "greatsword",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Martial"
-        ],
+        "groups": ["Martial"],
         "damage": "1d10(2d6)",
         "damage_types": [
           {
@@ -494,18 +428,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 2.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -527,9 +453,7 @@
         "slug": "halberd",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Martial"
-        ],
+        "groups": ["Martial"],
         "damage": "1d10",
         "damage_types": [
           {
@@ -559,17 +483,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 2.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "two_hands"
-        ],
+        "equip_slots": ["two_hands"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -591,9 +508,7 @@
         "slug": "hand-axe",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple"
-        ],
+        "groups": ["Simple"],
         "damage": "1d6",
         "damage_types": [
           {
@@ -624,18 +539,10 @@
         "stack_limit_per_weight_unit": 10,
         "weight": 0.1,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -657,10 +564,7 @@
         "slug": "hand-crossbow",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Ranged",
-          "Finesse"
-        ],
+        "groups": ["Ranged", "Finesse"],
         "damage": "1d4",
         "damage_types": [
           {
@@ -690,18 +594,10 @@
         "stack_limit_per_weight_unit": 10,
         "weight": 0.1,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -723,10 +619,7 @@
         "slug": "heavy-crossbow",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Ranged",
-          "Martial"
-        ],
+        "groups": ["Ranged", "Martial"],
         "damage": "1d8",
         "damage_types": [
           {
@@ -759,17 +652,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "two_hands"
-        ],
+        "equip_slots": ["two_hands"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -791,10 +677,7 @@
         "slug": "javelin",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple",
-          "Ranged"
-        ],
+        "groups": ["Simple", "Ranged"],
         "damage": "1d6",
         "damage_types": [
           {
@@ -818,18 +701,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -851,9 +726,7 @@
         "slug": "light-bow",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Ranged"
-        ],
+        "groups": ["Ranged"],
         "damage": "1d6",
         "damage_types": [
           {
@@ -880,17 +753,10 @@
         "stack_limit_per_weight_unit": 10,
         "weight": 0.1,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "two_hands"
-        ],
+        "equip_slots": ["two_hands"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -912,10 +778,7 @@
         "slug": "light-crossbow",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Ranged",
-          "Finesse"
-        ],
+        "groups": ["Ranged", "Finesse"],
         "damage": "1d6",
         "damage_types": [
           {
@@ -945,17 +808,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "two_hands"
-        ],
+        "equip_slots": ["two_hands"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -977,10 +833,7 @@
         "slug": "longbow",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Ranged",
-          "Martial"
-        ],
+        "groups": ["Ranged", "Martial"],
         "damage": "1d10",
         "damage_types": [
           {
@@ -1007,17 +860,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "two_hands"
-        ],
+        "equip_slots": ["two_hands"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1039,9 +885,7 @@
         "slug": "longsword",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Martial"
-        ],
+        "groups": ["Martial"],
         "damage": "1d8(d10)",
         "damage_types": [
           {
@@ -1065,18 +909,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1098,9 +934,7 @@
         "slug": "lucerne",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Martial"
-        ],
+        "groups": ["Martial"],
         "damage": "1d12",
         "damage_types": [
           {
@@ -1130,17 +964,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 2.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "two_hands"
-        ],
+        "equip_slots": ["two_hands"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1162,9 +989,7 @@
         "slug": "mace",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Martial"
-        ],
+        "groups": ["Martial"],
         "damage": "1d8",
         "damage_types": [
           {
@@ -1188,18 +1013,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1221,9 +1038,7 @@
         "slug": "morningstar",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Martial"
-        ],
+        "groups": ["Martial"],
         "damage": "1d6",
         "damage_types": [
           {
@@ -1251,18 +1066,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1284,10 +1091,7 @@
         "slug": "net",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple",
-          "Ranged"
-        ],
+        "groups": ["Simple", "Ranged"],
         "damage": null,
         "damage_types": [],
         "range_bands": [
@@ -1309,18 +1113,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1342,10 +1138,7 @@
         "slug": "pike",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple",
-          "Martial"
-        ],
+        "groups": ["Simple", "Martial"],
         "damage": "1d10",
         "damage_types": [
           {
@@ -1375,17 +1168,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 2.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "two_hands"
-        ],
+        "equip_slots": ["two_hands"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1407,9 +1193,7 @@
         "slug": "quarterstaff",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple"
-        ],
+        "groups": ["Simple"],
         "damage": "1d6(d8)",
         "damage_types": [
           {
@@ -1433,18 +1217,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1466,9 +1242,7 @@
         "slug": "rapier",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Finesse"
-        ],
+        "groups": ["Finesse"],
         "damage": "1d8",
         "damage_types": [
           {
@@ -1495,18 +1269,10 @@
         "stack_limit_per_weight_unit": 10,
         "weight": 0.1,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1528,9 +1294,7 @@
         "slug": "scimitar",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Finesse"
-        ],
+        "groups": ["Finesse"],
         "damage": "1d6",
         "damage_types": [
           {
@@ -1557,18 +1321,10 @@
         "stack_limit_per_weight_unit": 10,
         "weight": 0.1,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1590,10 +1346,7 @@
         "slug": "short-sword",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple",
-          "Finesse"
-        ],
+        "groups": ["Simple", "Finesse"],
         "damage": "1d6",
         "damage_types": [
           {
@@ -1621,18 +1374,10 @@
         "stack_limit_per_weight_unit": 10,
         "weight": 0.1,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1654,10 +1399,7 @@
         "slug": "sling",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple",
-          "Ranged"
-        ],
+        "groups": ["Simple", "Ranged"],
         "damage": "Modifier",
         "damage_types": [],
         "range_bands": [
@@ -1679,18 +1421,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1712,9 +1446,7 @@
         "slug": "spear",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple"
-        ],
+        "groups": ["Simple"],
         "damage": "1d6(8)",
         "damage_types": [
           {
@@ -1738,18 +1470,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1771,10 +1495,7 @@
         "slug": "throwing-axe",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Simple",
-          "Ranged"
-        ],
+        "groups": ["Simple", "Ranged"],
         "damage": "1d4",
         "damage_types": [
           {
@@ -1801,18 +1522,10 @@
         "stack_limit_per_weight_unit": 10,
         "weight": 0.1,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1834,10 +1547,7 @@
         "slug": "throwing-knife",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Finesse",
-          "Ranged"
-        ],
+        "groups": ["Finesse", "Ranged"],
         "damage": "2",
         "damage_types": [
           {
@@ -1867,18 +1577,10 @@
         "stack_limit_per_weight_unit": 10,
         "weight": 0.1,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1900,10 +1602,7 @@
         "slug": "war-bow",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Ranged",
-          "Finesse"
-        ],
+        "groups": ["Ranged", "Finesse"],
         "damage": "1d8",
         "damage_types": [
           {
@@ -1927,17 +1626,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "two_hands"
-        ],
+        "equip_slots": ["two_hands"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -1959,9 +1651,7 @@
         "slug": "warhammer",
         "category": "Weapon",
         "subcategory": "weapon",
-        "groups": [
-          "Martial"
-        ],
+        "groups": ["Martial"],
         "damage": "1d8(d10)",
         "damage_types": [
           {
@@ -1985,18 +1675,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "main_hand",
-          "off_hand"
-        ],
+        "equip_slots": ["main_hand", "off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2031,19 +1713,12 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 0.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "body"
-        ],
+        "equip_slots": ["body"],
         "equippable": false,
         "is_template": true,
         "notes": "Baseline armor type entry from booklet; create named armors later if needed.",
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2077,19 +1752,12 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "body"
-        ],
+        "equip_slots": ["body"],
         "equippable": true,
         "is_template": true,
         "notes": "Baseline armor type entry from booklet; create named armors later if needed.",
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2127,19 +1795,12 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 2.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "body"
-        ],
+        "equip_slots": ["body"],
         "equippable": true,
         "is_template": true,
         "notes": "Baseline armor type entry from booklet; create named armors later if needed.",
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2177,19 +1838,12 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 3.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "body"
-        ],
+        "equip_slots": ["body"],
         "equippable": true,
         "is_template": true,
         "notes": "Baseline armor type entry from booklet; create named armors later if needed.",
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2230,17 +1884,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "off_hand"
-        ],
+        "equip_slots": ["off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2275,17 +1922,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 0.1,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "off_hand"
-        ],
+        "equip_slots": ["off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2320,17 +1960,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "off_hand"
-        ],
+        "equip_slots": ["off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2369,17 +2002,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 1.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "off_hand"
-        ],
+        "equip_slots": ["off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2418,17 +2044,10 @@
         "stack_limit_per_weight_unit": 1,
         "weight": 2.0,
         "weight_unit": "slot_weight",
-        "equip_slots": [
-          "off_hand"
-        ],
+        "equip_slots": ["off_hand"],
         "equippable": true,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2452,11 +2071,7 @@
         "slug": "healer-s-kit",
         "category": "Kit",
         "subcategory": "medical",
-        "uses": [
-          "first aid",
-          "treat wounds",
-          "stabilize"
-        ],
+        "uses": ["first aid", "treat wounds", "stabilize"],
         "bonus": "+1d4 Vitality on Medical healing checks",
         "critical": "Remove persistent non-magical condition",
         "default_uses": 10,
@@ -2468,12 +2083,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2495,9 +2105,7 @@
         "slug": "injury-treatment-supplies",
         "category": "Kit",
         "subcategory": "medical",
-        "uses": [
-          "battlefield triage"
-        ],
+        "uses": ["battlefield triage"],
         "bonus": "Reduce Weakened by 1",
         "critical": "1/day reduce Wounds by 1",
         "default_uses": 10,
@@ -2509,12 +2117,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2536,9 +2139,7 @@
         "slug": "trauma-kit",
         "category": "Kit",
         "subcategory": "medical",
-        "uses": [
-          "suppress wounds on recently fallen"
-        ],
+        "uses": ["suppress wounds on recently fallen"],
         "bonus": "Suppress 1 Wound for an hour",
         "critical": "1/day reduce Wounds by 1",
         "default_uses": 10,
@@ -2550,12 +2151,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2577,9 +2173,7 @@
         "slug": "reactant-pouch",
         "category": "Kit",
         "subcategory": "alchemy",
-        "uses": [
-          "identify magical residue/materials"
-        ],
+        "uses": ["identify magical residue/materials"],
         "bonus": null,
         "critical": "Identify Sphere + Source",
         "default_uses": 10,
@@ -2591,12 +2185,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2618,11 +2207,7 @@
         "slug": "spare-parts",
         "category": "Kit",
         "subcategory": "engineering",
-        "uses": [
-          "craft",
-          "repair",
-          "modify equipment"
-        ],
+        "uses": ["craft", "repair", "modify equipment"],
         "bonus": null,
         "critical": "Crafting/repair time halved",
         "default_uses": 10,
@@ -2634,12 +2219,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2661,9 +2241,7 @@
         "slug": "repair-kit",
         "category": "Kit",
         "subcategory": "engineering",
-        "uses": [
-          "emergency repairs"
-        ],
+        "uses": ["emergency repairs"],
         "bonus": null,
         "critical": "Temporary +1 Masterwork for 8 hours",
         "default_uses": 10,
@@ -2675,12 +2253,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2702,9 +2275,7 @@
         "slug": "polishing-kit",
         "category": "Kit",
         "subcategory": "engineering",
-        "uses": [
-          "weapon upkeep"
-        ],
+        "uses": ["weapon upkeep"],
         "bonus": "First attack each turn using polished weapon gains Resolve next skirmish",
         "critical": null,
         "default_uses": 10,
@@ -2716,12 +2287,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2743,11 +2309,7 @@
         "slug": "trade-tools",
         "category": "Kit",
         "subcategory": "crafting",
-        "uses": [
-          "appraise goods",
-          "haggle",
-          "draft basic terms"
-        ],
+        "uses": ["appraise goods", "haggle", "draft basic terms"],
         "bonus": "Gain Resolve on the check",
         "critical": null,
         "default_uses": 10,
@@ -2759,12 +2321,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2802,12 +2359,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2829,10 +2381,7 @@
         "slug": "tribal-tattoo-kit",
         "category": "Kit",
         "subcategory": "unproficient",
-        "uses": [
-          "intimidate",
-          "persuade when displaying recognized markings"
-        ],
+        "uses": ["intimidate", "persuade when displaying recognized markings"],
         "bonus": null,
         "critical": null,
         "default_uses": 10,
@@ -2844,12 +2393,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2886,12 +2430,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2913,9 +2452,7 @@
         "slug": "personal-grooming-set",
         "category": "Kit",
         "subcategory": "unproficient",
-        "uses": [
-          "prepare appearance for social encounters"
-        ],
+        "uses": ["prepare appearance for social encounters"],
         "bonus": null,
         "critical": null,
         "default_uses": 10,
@@ -2927,12 +2464,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2954,9 +2486,7 @@
         "slug": "forgery-tools",
         "category": "Kit",
         "subcategory": "unproficient",
-        "uses": [
-          "create false documents/seals"
-        ],
+        "uses": ["create false documents/seals"],
         "bonus": "+1 auto on Academics/Sleight when forging",
         "critical": "Forgery passes non-magical scrutiny on critical success",
         "default_uses": 10,
@@ -2968,12 +2498,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -2995,11 +2520,7 @@
         "slug": "thieves-tools",
         "category": "Kit",
         "subcategory": "thievery",
-        "uses": [
-          "pick locks",
-          "disable traps",
-          "bypass simple mechanisms"
-        ],
+        "uses": ["pick locks", "disable traps", "bypass simple mechanisms"],
         "bonus": "Upgrade 2d6 to 2d8 on the check",
         "critical": null,
         "default_uses": 10,
@@ -3011,12 +2532,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -3038,10 +2554,7 @@
         "slug": "disguise-kit",
         "category": "Kit",
         "subcategory": "thievery",
-        "uses": [
-          "create a disguise",
-          "maintain a false identity"
-        ],
+        "uses": ["create a disguise", "maintain a false identity"],
         "bonus": "+1 automatic success to Deception",
         "critical": null,
         "default_uses": 10,
@@ -3053,12 +2566,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -3080,10 +2588,7 @@
         "slug": "survival-kit",
         "category": "Kit",
         "subcategory": "outrider",
-        "uses": [
-          "endure forced marches",
-          "resist climate/hazards"
-        ],
+        "uses": ["endure forced marches", "resist climate/hazards"],
         "bonus": "Upgrade 2d6 to 2d8 on the check",
         "critical": null,
         "default_uses": 10,
@@ -3095,12 +2600,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -3122,11 +2622,7 @@
         "slug": "wilderness-survival-kit",
         "category": "Kit",
         "subcategory": "outrider",
-        "uses": [
-          "track",
-          "forage",
-          "improvise shelter"
-        ],
+        "uses": ["track", "forage", "improvise shelter"],
         "bonus": "+1 auto on Survival (Awareness); in natural terrain, treat two dice showing 1-2 as 3",
         "critical": null,
         "default_uses": 10,
@@ -3138,12 +2634,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -3165,10 +2656,7 @@
         "slug": "animal-handling-kit",
         "category": "Kit",
         "subcategory": "outrider",
-        "uses": [
-          "calm/direct/diagnose animals",
-          "use treats"
-        ],
+        "uses": ["calm/direct/diagnose animals", "use treats"],
         "bonus": null,
         "critical": "Animals treat you friendlier or indifferent",
         "default_uses": 10,
@@ -3180,12 +2668,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -3207,10 +2690,7 @@
         "slug": "navigation-tools",
         "category": "Kit",
         "subcategory": "outrider",
-        "uses": [
-          "chart a course",
-          "use maps to avoid becoming lost"
-        ],
+        "uses": ["chart a course", "use maps to avoid becoming lost"],
         "bonus": null,
         "critical": "Travel time -50%",
         "default_uses": 10,
@@ -3222,12 +2702,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,
@@ -3249,9 +2724,7 @@
         "slug": "fishing-gear",
         "category": "Kit",
         "subcategory": "outrider",
-        "uses": [
-          "harvest aquatic food"
-        ],
+        "uses": ["harvest aquatic food"],
         "bonus": null,
         "critical": "Double quantity or choose higher quality catch",
         "default_uses": 10,
@@ -3263,12 +2736,7 @@
         "equip_slots": [],
         "equippable": false,
         "rules_reference": {
-          "source_pages": [
-            16,
-            17,
-            18,
-            19
-          ]
+          "source_pages": [16, 17, 18, 19]
         },
         "inventory_template": {
           "id": null,

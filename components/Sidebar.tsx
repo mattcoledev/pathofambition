@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { ThemeToggle } from './ThemeToggle';
 
 const NAV_ITEMS = [
   {
@@ -189,6 +190,9 @@ export default function Sidebar() {
             </ul>
           </div>
         ))}
+        <div className="pt-2">
+          <ThemeToggle />
+        </div>
       </div>
     </nav>
   );

@@ -326,7 +326,7 @@ function DeltaNumber({
             border: "none",
             borderRadius: "0.25rem",
             backgroundColor: "var(--primary)",
-            color: "#fff",
+            color: "var(--text-on-primary)",
             cursor: "pointer",
           }}
         >
@@ -350,17 +350,17 @@ function StatCard({
     <div
       style={{
         textAlign: "center",
-        padding: "0.75rem 0.5rem",
+        padding: "0.625rem 0.5rem",
         backgroundColor: "var(--bg-nav)",
         border: "1px solid var(--border)",
-        borderRadius: "0.5rem",
+        borderRadius: "8px",
       }}
     >
       <div
         style={{
           fontFamily: "var(--font-heading)",
           fontWeight: 700,
-          fontSize: "1.25rem",
+          fontSize: "1.15rem",
           color: "var(--primary)",
         }}
       >
@@ -368,12 +368,11 @@ function StatCard({
       </div>
       <div
         style={{
-          fontFamily: "var(--font-heading)",
-          fontWeight: 600,
           fontSize: "0.6rem",
           textTransform: "uppercase",
           letterSpacing: "0.06em",
           color: "var(--text-muted)",
+          marginTop: "2px",
         }}
       >
         {label}
@@ -383,7 +382,7 @@ function StatCard({
           style={{
             fontSize: "0.6rem",
             color: "var(--text-muted)",
-            marginTop: "0.1rem",
+            marginTop: "1px",
           }}
         >
           {sub}
@@ -401,22 +400,38 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section style={{ marginBottom: "2rem" }}>
-      <h2
+    <section
+      style={{
+        backgroundColor: "var(--bg-card)",
+        border: "1px solid var(--border)",
+        borderRadius: "12px",
+        overflow: "hidden",
+        marginBottom: "1rem",
+      }}
+    >
+      <div
         style={{
-          fontFamily: "var(--font-heading)",
-          fontWeight: 700,
-          fontSize: "1rem",
-          color: "var(--text)",
-          marginBottom: "0.875rem",
-          paddingBottom: "0.375rem",
-          borderBottom: "2px solid var(--primary)",
-          display: "inline-block",
+          padding: "0.625rem 1rem",
+          borderBottom: "1px solid var(--border)",
+          backgroundColor: "var(--bg-nav)",
         }}
       >
-        {title}
-      </h2>
-      <div>{children}</div>
+        <h2
+          style={{
+            fontFamily: "var(--font-heading)",
+            fontStyle: "italic",
+            fontWeight: 700,
+            fontSize: "0.7rem",
+            letterSpacing: "0.12em",
+            color: "var(--text-muted)",
+            margin: 0,
+            textTransform: "uppercase",
+          }}
+        >
+          {title}
+        </h2>
+      </div>
+      <div style={{ padding: "0.875rem 1rem" }}>{children}</div>
     </section>
   );
 }
@@ -1695,7 +1710,7 @@ export default function CharacterSheetPage({
                                     padding: "0.1rem 0.35rem",
                                     borderRadius: "9999px",
                                     backgroundColor: "var(--primary)",
-                                    color: "#fff",
+                                    color: "var(--text-on-primary)",
                                   }}
                                 >
                                   Owned
@@ -1814,7 +1829,7 @@ export default function CharacterSheetPage({
                                     blocked || !canAfford
                                       ? "var(--border)"
                                       : "var(--primary)",
-                                  color: "#fff",
+                                  color: "var(--text-on-primary)",
                                 }}
                               >
                                 {tierCost} Renown
@@ -2149,7 +2164,7 @@ export default function CharacterSheetPage({
                         backgroundColor: canConfirm
                           ? "var(--primary)"
                           : "var(--border)",
-                        color: "#fff",
+                        color: "var(--text-on-primary)",
                         cursor: canConfirm ? "pointer" : "not-allowed",
                         fontFamily: "var(--font-heading)",
                         fontWeight: 700,
@@ -2401,7 +2416,7 @@ export default function CharacterSheetPage({
                             border: "none",
                             borderRadius: "0.375rem",
                             backgroundColor: "var(--primary)",
-                            color: "#fff",
+                            color: "var(--text-on-primary)",
                             cursor: "pointer",
                             fontFamily: "var(--font-heading)",
                             fontWeight: 700,
@@ -2546,7 +2561,7 @@ export default function CharacterSheetPage({
                                     border: "none",
                                     borderRadius: "0.25rem",
                                     backgroundColor: "var(--primary)",
-                                    color: "#fff",
+                                    color: "var(--text-on-primary)",
                                     cursor: "pointer",
                                     fontFamily: "var(--font-heading)",
                                     fontWeight: 700,
@@ -2780,7 +2795,7 @@ export default function CharacterSheetPage({
                               backgroundColor: canConfirm
                                 ? "var(--primary)"
                                 : "var(--border)",
-                              color: "#fff",
+                              color: "var(--text-on-primary)",
                               cursor: canConfirm ? "pointer" : "not-allowed",
                               fontFamily: "var(--font-heading)",
                               fontWeight: 700,
@@ -3060,7 +3075,7 @@ export default function CharacterSheetPage({
             style={{
               marginBottom: "0.75rem",
               padding: "0.5rem 0.875rem",
-              backgroundColor: "#fff0f0",
+              backgroundColor: "var(--section-alert-bg)",
               border: "1px solid #ff7979",
               borderRadius: "0.5rem",
               fontSize: "0.82rem",
@@ -3069,8 +3084,8 @@ export default function CharacterSheetPage({
               fontWeight: 700,
             }}
           >
-            ⚠ Non-Proficient Armor ({equippedBody.armorCategory}) — All Actions
-            cost −1 AP · Skill dice reduced one step (min d4)
+            ⚠ Non-Proficient Armor ({equippedBody.armorCategory}) — Total
+            available AP reduced by 1 · Skill dice reduced one step (min d4)
           </div>
         )}
         {/* Equipped gear */}
@@ -3126,7 +3141,7 @@ export default function CharacterSheetPage({
                     style={{
                       padding: "0.625rem 0.75rem",
                       backgroundColor: slotAlert
-                        ? "#fff0f0"
+                        ? "var(--section-alert-bg)"
                         : displayItem
                           ? "var(--primary-light)"
                           : "var(--bg-nav)",
@@ -4535,7 +4550,7 @@ export default function CharacterSheetPage({
                                   border: "none",
                                   borderRadius: "0.25rem",
                                   backgroundColor: "var(--primary)",
-                                  color: "#fff",
+                                  color: "var(--text-on-primary)",
                                   cursor: "pointer",
                                   fontFamily: "var(--font-heading)",
                                   fontWeight: 600,
@@ -4578,7 +4593,7 @@ export default function CharacterSheetPage({
                             style={{
                               padding: "0.3rem 0.75rem",
                               backgroundColor: "var(--primary)",
-                              color: "#fff",
+                              color: "var(--text-on-primary)",
                               border: "none",
                               borderRadius: "0.25rem",
                               cursor: "pointer",
@@ -5259,7 +5274,7 @@ export default function CharacterSheetPage({
                   backgroundColor: newName.trim()
                     ? "var(--primary)"
                     : "var(--border)",
-                  color: "#fff",
+                  color: "var(--text-on-primary)",
                   border: "none",
                   borderRadius: "0.375rem",
                   cursor: newName.trim() ? "pointer" : "not-allowed",
@@ -5645,7 +5660,7 @@ export default function CharacterSheetPage({
                         backgroundColor: canCast
                           ? "var(--primary)"
                           : "var(--border)",
-                        color: "#fff",
+                        color: "var(--text-on-primary)",
                         cursor: canCast ? "pointer" : "not-allowed",
                         fontFamily: "var(--font-heading)",
                         fontWeight: 700,
@@ -6186,7 +6201,7 @@ export default function CharacterSheetPage({
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                color: "#fff",
+                                color: "var(--text-on-primary)",
                                 fontSize: "0.65rem",
                               }}
                             >
@@ -6408,7 +6423,7 @@ export default function CharacterSheetPage({
                                   backgroundColor: blocked
                                     ? "var(--border)"
                                     : "var(--primary)",
-                                  color: "#fff",
+                                  color: "var(--text-on-primary)",
                                   cursor: blocked ? "not-allowed" : "pointer",
                                   fontFamily: "var(--font-heading)",
                                   fontWeight: 600,
@@ -6462,7 +6477,7 @@ export default function CharacterSheetPage({
             marginTop: "0.5rem",
             padding: "0.375rem 0.875rem",
             backgroundColor: "var(--primary)",
-            color: "#fff",
+            color: "var(--text-on-primary)",
             border: "none",
             borderRadius: "0.375rem",
             cursor: "pointer",
@@ -6510,7 +6525,7 @@ export default function CharacterSheetPage({
   const REF_SECTIONS = [
     {
       name: "Offensive",
-      color: "#FEE2E2",
+      color: "var(--section-offensive)",
       subs: [
         {
           name: "Weapon",
@@ -6551,7 +6566,7 @@ export default function CharacterSheetPage({
     },
     {
       name: "Maneuver",
-      color: "#DBEAFE",
+      color: "var(--section-maneuver)",
       subs: [
         {
           name: "Movement",
@@ -6594,7 +6609,7 @@ export default function CharacterSheetPage({
     },
     {
       name: "Utility",
-      color: "#D1FAE5",
+      color: "var(--section-utility)",
       subs: [
         {
           name: "Preservation",
@@ -6666,7 +6681,7 @@ export default function CharacterSheetPage({
   ];
 
   return (
-    <div style={{ maxWidth: "800px" }}>
+    <div style={{ maxWidth: "860px" }}>
       {/* FEATURE-01: Fixed Ref button */}
       <button
         onClick={() => setShowRefSidebar((v) => !v)}
@@ -6925,153 +6940,332 @@ export default function CharacterSheetPage({
         </div>
       )}
 
-      {/* Header */}
+      {/* ──── HEADER ──── */}
       <div
         style={{
-          marginBottom: "2rem",
-          padding: "1.25rem 1.5rem",
-          backgroundColor: "var(--bg-card)",
+          backgroundColor: "var(--bg-nav)",
           border: "1px solid var(--border)",
-          borderRadius: "0.75rem",
+          borderRadius: "12px",
+          padding: "1rem 1.25rem",
+          marginBottom: "1rem",
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "0.75rem",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: "1rem",
-            flexWrap: "wrap",
-            marginBottom: "0.5rem",
-          }}
-        >
+        <div>
           <h1
             style={{
               fontFamily: "var(--font-heading)",
-              fontWeight: 800,
+              fontStyle: "italic",
               fontSize: "1.5rem",
+              fontWeight: 700,
               color: "var(--text)",
               margin: 0,
+              letterSpacing: "0.02em",
             }}
           >
             {c.name || "Unnamed Adventurer"}
           </h1>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            <span
-              style={{
-                fontSize: "0.72rem",
-                fontWeight: 700,
-                fontFamily: "var(--font-heading)",
-                padding: "0.2rem 0.625rem",
-                borderRadius: "9999px",
-                backgroundColor: "var(--primary-light)",
-                color: "var(--primary)",
-                border: "1px solid var(--primary)",
-              }}
-            >
-              Tier {effectiveTier}
-            </span>
-            <button
-              onClick={handleDelete}
-              style={{
-                padding: "0.25rem 0.5rem",
-                border: "1px solid var(--border)",
-                borderRadius: "0.375rem",
-                backgroundColor: "transparent",
-                cursor: "pointer",
-                color: "var(--text-muted)",
-                fontSize: "0.75rem",
-                fontFamily: "var(--font-heading)",
-              }}
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-        <div style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>
-          {[
-            c.professionName,
-            c.originName &&
-              `${c.originName}${c.vocationName ? ` (${c.vocationName})` : ""}`,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </div>
-        {c.ambition && (
           <div
             style={{
-              marginTop: "0.5rem",
-              fontSize: "0.82rem",
-              color: "var(--text-muted)",
+              fontSize: "0.7rem",
+              color: "var(--primary)",
+              letterSpacing: "0.08em",
+              marginTop: "0.2rem",
+              fontFamily: "var(--font-heading)",
               fontStyle: "italic",
             }}
           >
-            Ambition: {c.ambition}
+            {[
+              c.professionName,
+              c.originName &&
+                `${c.originName}${c.vocationName ? ` (${c.vocationName})` : ""}`,
+              `Tier ${effectiveTier}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </div>
-        )}
-        <div style={{ marginTop: "0.625rem" }}>
-          <Link
-            href="/characters"
+          {c.ambition && (
+            <div
+              style={{
+                marginTop: "0.25rem",
+                fontSize: "0.75rem",
+                color: "var(--text-muted)",
+                fontStyle: "italic",
+              }}
+            >
+              {c.ambition}
+            </div>
+          )}
+          <div style={{ marginTop: "0.375rem" }}>
+            <Link
+              href="/characters"
+              style={{
+                fontSize: "0.72rem",
+                color: "var(--text-muted)",
+                textDecoration: "none",
+                fontFamily: "var(--font-heading)",
+                fontWeight: 600,
+              }}
+            >
+              ← All Characters
+            </Link>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.875rem" }}>
+          <div style={{ textAlign: "right" }}>
+            <div
+              style={{
+                fontSize: "0.6rem",
+                color: "var(--text-muted)",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}
+            >
+              Renown
+            </div>
+            <div
+              style={{
+                fontSize: "1.35rem",
+                color: "var(--primary)",
+                fontWeight: 700,
+                fontFamily: "var(--font-heading)",
+                lineHeight: 1,
+              }}
+            >
+              {c.renown ?? 0}
+            </div>
+          </div>
+          <button
+            onClick={handleDelete}
             style={{
-              fontSize: "0.78rem",
-              color: "var(--primary)",
-              textDecoration: "none",
+              padding: "0.25rem 0.5rem",
+              border: "1px solid var(--border)",
+              borderRadius: "0.375rem",
+              backgroundColor: "transparent",
+              cursor: "pointer",
+              color: "var(--text-muted)",
+              fontSize: "0.75rem",
               fontFamily: "var(--font-heading)",
-              fontWeight: 600,
             }}
           >
-            ← All Characters
-          </Link>
+            Delete
+          </button>
         </div>
       </div>
 
-      {/* Combat Stats */}
-      <Section title="Combat Stats">
-        {(() => {
-          const tempHp = c.tempHp ?? 0;
-          // BUG-11: Use derived max vitality (reactive to tier/attrs/feats/profession)
-          const effectiveMax = derivedMaxVitality + tempHp;
-          return (
+      {/* ──── VITALITY BAR ──── */}
+      {(() => {
+        const tempHp = c.tempHp ?? 0;
+        const effectiveMax = derivedMaxVitality + tempHp;
+        const vitPct =
+          effectiveMax > 0
+            ? Math.min(
+                100,
+                Math.round(((c.currentVitality ?? 0) / effectiveMax) * 100),
+              )
+            : 0;
+        return (
+          <div
+            style={{
+              backgroundColor: "var(--bg-card)",
+              border: "1px solid var(--border)",
+              borderRadius: "12px",
+              padding: "0.875rem 1.25rem",
+              marginBottom: "1rem",
+            }}
+          >
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
-                gap: "0.75rem",
-                marginBottom: "0.75rem",
-                alignItems: "center",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                marginBottom: "0.4rem",
               }}
             >
-              {/* Vitality — DeltaNumber + temp counter stacked */}
+              <span
+                style={{
+                  fontSize: "0.65rem",
+                  letterSpacing: "0.12em",
+                  color: "var(--text-muted)",
+                  fontFamily: "var(--font-heading)",
+                  fontStyle: "italic",
+                  textTransform: "uppercase",
+                }}
+              >
+                Vitality
+              </span>
               <div
                 style={{
                   display: "flex",
-                  flexDirection: "column",
-                  gap: "0.35rem",
+                  alignItems: "baseline",
+                  gap: "0.25rem",
                 }}
               >
-                <DeltaNumber
-                  label={`Vitality / ${derivedMaxVitality}${tempHp !== 0 ? (tempHp > 0 ? ` +${tempHp}` : ` ${tempHp}`) : ""}`}
-                  value={c.currentVitality ?? 0}
-                  min={0}
-                  max={effectiveMax || undefined}
-                  onChange={(v) => persist({ currentVitality: v })}
-                />
-                {/* Temp HP strip */}
-                <div
+                <span
                   style={{
-                    textAlign: "center",
-                    padding: "0.3rem 0.5rem",
-                    backgroundColor: "var(--bg-nav)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "0.375rem",
+                    fontSize: "1.25rem",
+                    fontWeight: 700,
+                    color: "var(--primary)",
+                    fontFamily: "var(--font-heading)",
                   }}
                 >
+                  {c.currentVitality ?? 0}
+                </span>
+                <span
+                  style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}
+                >
+                  / {effectiveMax}
+                </span>
+              </div>
+            </div>
+            <div
+              style={{
+                backgroundColor: "var(--border)",
+                borderRadius: "6px",
+                height: "8px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: "var(--primary)",
+                  height: "100%",
+                  width: `${vitPct}%`,
+                  borderRadius: "6px",
+                  transition: "width 0.2s ease",
+                }}
+              />
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: "1.25rem",
+                marginTop: "0.5rem",
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                Wounds{" "}
+                <span style={{ color: "var(--text)", fontWeight: 700 }}>
+                  {c.currentWounds ?? 0}/{maxWounds}
+                </span>
+              </span>
+              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                Carry{" "}
+                <span style={{ color: "var(--text)", fontWeight: 700 }}>
+                  {totalCarried}/{carryWeight} lb
+                </span>
+              </span>
+              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                Respites{" "}
+                <span style={{ color: "var(--text)", fontWeight: 700 }}>
+                  {currentRespites}/3
+                </span>
+              </span>
+              {tempHp !== 0 && (
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "var(--primary)",
+                    fontWeight: 700,
+                  }}
+                >
+                  {tempHp > 0 ? `+${tempHp}` : tempHp} Temp HP
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ──── VITALITY & DAMAGE MANAGEMENT (unified) ──── */}
+      <div
+        style={{
+          backgroundColor: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: "12px",
+          overflow: "hidden",
+          marginBottom: "1rem",
+        }}
+      >
+        {/* Unified header */}
+        <div
+          style={{
+            padding: "0.625rem 1rem",
+            borderBottom: "1px solid var(--border)",
+            backgroundColor: "var(--bg-nav)",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.65rem",
+              fontFamily: "var(--font-heading)",
+              fontStyle: "italic",
+              letterSpacing: "0.12em",
+              color: "var(--text-muted)",
+              textTransform: "uppercase",
+            }}
+          >
+            Vitality & Damage
+          </span>
+        </div>
+        {/* Inner 2-col layout */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          }}
+        >
+          {/* Left: HP + Wounds + Temp HP */}
+          <div
+            style={{
+              padding: "0.875rem 1rem",
+              borderBottom: "1px solid var(--border)",
+            }}
+          >
+            {(() => {
+              const tempHp = c.tempHp ?? 0;
+              const effectiveMax = derivedMaxVitality + tempHp;
+              return (
+                <>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "0.625rem",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    <DeltaNumber
+                      label={`HP / ${derivedMaxVitality}${tempHp !== 0 ? (tempHp > 0 ? ` +${tempHp}` : ` ${tempHp}`) : ""}`}
+                      value={c.currentVitality ?? 0}
+                      min={0}
+                      max={effectiveMax || undefined}
+                      onChange={(v) => persist({ currentVitality: v })}
+                    />
+                    <EditableNumber
+                      label={`Wounds / ${maxWounds}`}
+                      value={c.currentWounds ?? 0}
+                      min={0}
+                      max={maxWounds}
+                      onChange={(v) => persist({ currentWounds: v })}
+                    />
+                  </div>
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: "0.3rem",
+                      gap: "0.375rem",
+                      padding: "0.25rem 0.5rem",
+                      backgroundColor: "var(--bg-nav)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "0.375rem",
                     }}
                   >
                     <span
@@ -7082,7 +7276,7 @@ export default function CharacterSheetPage({
                         fontWeight: 600,
                       }}
                     >
-                      Temp
+                      Temp HP
                     </span>
                     <button
                       onClick={() => {
@@ -7144,10 +7338,12 @@ export default function CharacterSheetPage({
                     {tempHp !== 0 && (
                       <button
                         onClick={() => {
-                          const newMax = derivedMaxVitality;
                           const patch: Partial<typeof c> = { tempHp: 0 };
-                          if ((c.currentVitality ?? 0) > newMax)
-                            patch.currentVitality = Math.max(0, newMax);
+                          if ((c.currentVitality ?? 0) > derivedMaxVitality)
+                            patch.currentVitality = Math.max(
+                              0,
+                              derivedMaxVitality,
+                            );
                           persist(patch);
                         }}
                         style={{
@@ -7163,103 +7359,94 @@ export default function CharacterSheetPage({
                       </button>
                     )}
                   </div>
-                </div>
-              </div>
-              {/* Wounds — moved here from the 3-col row below */}
-              <EditableNumber
-                label={`Wounds / ${maxWounds}`}
-                value={c.currentWounds ?? 0}
-                min={0}
-                max={maxWounds}
-                onChange={(v) => persist({ currentWounds: v })}
-              />
-            </div>
-          );
-        })()}
+                </>
+              );
+            })()}
+          </div>
 
-        {/* FEATURE-02: Apply Damage pipeline + Reduction Pool tracker */}
-        {(() => {
-          const spellPool = c.spellReductionPool ?? 0;
-          const featPool = c.featReductionPool ?? 0;
-          const shieldPool = equippedShield?.reductionPoolCurrent ?? null;
-          const shieldPoolMax = equippedShield?.reductionPoolMax ?? null;
-          const hasAnyPool =
-            spellPool > 0 || featPool > 0 || shieldPool != null;
-          return (
-            <div style={{ marginBottom: "0.75rem" }}>
-              {/* Apply Damage row */}
+          {/* Right: Apply Damage + pool tracker */}
+          {(() => {
+            const spellPool = c.spellReductionPool ?? 0;
+            const featPool = c.featReductionPool ?? 0;
+            const shieldPool = equippedShield?.reductionPoolCurrent ?? null;
+            const shieldPoolMax = equippedShield?.reductionPoolMax ?? null;
+            const hasAnyPool =
+              spellPool > 0 || featPool > 0 || shieldPool != null;
+            return (
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  marginBottom: hasAnyPool ? "0.375rem" : 0,
+                  padding: "0.875rem 1rem",
                 }}
               >
                 <span
                   style={{
-                    fontSize: "0.6rem",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
+                    fontSize: "1rem",
                     color: "var(--text-muted)",
-                    fontFamily: "var(--font-heading)",
-                    whiteSpace: "nowrap",
                   }}
                 >
-                  Apply Dmg
+                  Reduction Pool
                 </span>
-                <input
-                  type="number"
-                  min={1}
-                  value={damageInput}
-                  onChange={(e) => setDamageInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  <input
+                    type="number"
+                    min={1}
+                    value={damageInput}
+                    onChange={(e) => setDamageInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const n = parseInt(damageInput);
+                        if (n > 0) {
+                          applyDamage(n);
+                          setDamageInput("");
+                        }
+                      }
+                    }}
+                    placeholder="0"
+                    style={{
+                      ...inputStyle,
+                      width: "60px",
+                      textAlign: "center",
+                    }}
+                  />
+                  <button
+                    onClick={() => {
                       const n = parseInt(damageInput);
                       if (n > 0) {
                         applyDamage(n);
                         setDamageInput("");
                       }
-                    }
-                  }}
-                  placeholder="0"
-                  style={{ ...inputStyle, width: "60px", textAlign: "center" }}
-                />
-                <button
-                  onClick={() => {
-                    const n = parseInt(damageInput);
-                    if (n > 0) {
-                      applyDamage(n);
-                      setDamageInput("");
-                    }
-                  }}
-                  style={{
-                    padding: "0.25rem 0.625rem",
-                    border: "none",
-                    borderRadius: "0.25rem",
-                    backgroundColor: "#EF4444",
-                    color: "#fff",
-                    cursor: "pointer",
-                    fontFamily: "var(--font-heading)",
-                    fontWeight: 700,
-                    fontSize: "0.75rem",
-                  }}
-                >
-                  Hit
-                </button>
-                <span
-                  style={{
-                    fontSize: "0.62rem",
-                    color: "var(--text-muted)",
-                    fontStyle: "italic",
-                  }}
-                >
-                  Spell → Feat → Shield → Vitality
-                </span>
-              </div>
-              {/* Pool tracker */}
-              {hasAnyPool && (
+                    }}
+                    style={{
+                      padding: "0.3rem 0.75rem",
+                      border: "none",
+                      borderRadius: "0.375rem",
+                      backgroundColor: "#EF4444",
+                      color: "#fff",
+                      cursor: "pointer",
+                      fontFamily: "var(--font-heading)",
+                      fontWeight: 700,
+                      fontSize: "0.8rem",
+                    }}
+                  >
+                    Hit
+                  </button>
+                  <span
+                    style={{
+                      fontSize: "0.6rem",
+                      color: "var(--text-muted)",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Spell → Feat → Shield → HP
+                  </span>
+                </div>
                 <div
                   style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}
                 >
@@ -7279,7 +7466,7 @@ export default function CharacterSheetPage({
                         fontWeight: 700,
                       }}
                     >
-                      ✦ Spell Pool: {spellPool}
+                      ✦ Spell: {spellPool}
                       <button
                         onClick={() =>
                           persist({
@@ -7287,7 +7474,6 @@ export default function CharacterSheetPage({
                           })
                         }
                         style={{
-                          marginLeft: "0.15rem",
                           background: "none",
                           border: "none",
                           cursor: "pointer",
@@ -7336,7 +7522,7 @@ export default function CharacterSheetPage({
                         gap: "0.25rem",
                         padding: "0.2rem 0.5rem",
                         backgroundColor: "var(--accent-light)",
-                        border: "1px solid #FCD34D",
+                        border: "1px solid var(--accent)",
                         borderRadius: "9999px",
                         fontSize: "0.62rem",
                         fontFamily: "var(--font-heading)",
@@ -7344,7 +7530,7 @@ export default function CharacterSheetPage({
                         fontWeight: 700,
                       }}
                     >
-                      ✦ Feat Pool: {featPool}
+                      ✦ Feat: {featPool}
                       <button
                         onClick={() =>
                           persist({
@@ -7352,7 +7538,6 @@ export default function CharacterSheetPage({
                           })
                         }
                         style={{
-                          marginLeft: "0.15rem",
                           background: "none",
                           border: "none",
                           cursor: "pointer",
@@ -7401,7 +7586,9 @@ export default function CharacterSheetPage({
                         gap: "0.25rem",
                         padding: "0.2rem 0.5rem",
                         backgroundColor:
-                          shieldPool === 0 ? "#fff0f0" : "var(--bg-nav)",
+                          shieldPool === 0
+                            ? "var(--section-alert-bg)"
+                            : "var(--bg-nav)",
                         border: `1px solid ${shieldPool === 0 ? "#ff7979" : "var(--border)"}`,
                         borderRadius: "9999px",
                         fontSize: "0.62rem",
@@ -7411,22 +7598,12 @@ export default function CharacterSheetPage({
                         fontWeight: 700,
                       }}
                     >
-                      🛡 Shield: {shieldPool} / {shieldPoolMax}
-                      {shieldPool === 0 && (
-                        <span style={{ marginLeft: "0.2rem", opacity: 0.8 }}>
-                          (broken)
-                        </span>
-                      )}
+                      🛡 {shieldPool}/{shieldPoolMax}
+                      {shieldPool === 0 && " (broken)"}
                     </div>
                   )}
-                  {spellPool === 0 && featPool === 0 && (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.375rem",
-                      }}
-                    >
+                  {!hasAnyPool && (
+                    <div style={{ display: "flex", gap: "0.375rem" }}>
                       <button
                         onClick={() => persist({ spellReductionPool: 1 })}
                         style={{
@@ -7460,77 +7637,600 @@ export default function CharacterSheetPage({
                     </div>
                   )}
                 </div>
-              )}
-              {!hasAnyPool && (
-                <div style={{ display: "flex", gap: "0.375rem" }}>
-                  <button
-                    onClick={() => persist({ spellReductionPool: 1 })}
-                    style={{
-                      fontSize: "0.6rem",
-                      padding: "0.15rem 0.4rem",
-                      border: "1px dashed var(--border)",
-                      borderRadius: "9999px",
-                      backgroundColor: "transparent",
-                      cursor: "pointer",
-                      color: "var(--text-muted)",
-                      fontFamily: "var(--font-heading)",
-                    }}
-                  >
-                    + Spell Pool
-                  </button>
-                  <button
-                    onClick={() => persist({ featReductionPool: 1 })}
-                    style={{
-                      fontSize: "0.6rem",
-                      padding: "0.15rem 0.4rem",
-                      border: "1px dashed var(--border)",
-                      borderRadius: "9999px",
-                      backgroundColor: "transparent",
-                      cursor: "pointer",
-                      color: "var(--text-muted)",
-                      fontFamily: "var(--font-heading)",
-                    }}
-                  >
-                    + Feat Pool
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })()}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
 
+      {/* ──── ATTRS | DEFENCE TWO-COLUMN ──── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: "1rem",
+          marginBottom: "1rem",
+        }}
+      >
+        {/* Left: Attributes bar display */}
+        <div
+          style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: "12px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              padding: "0.5rem 1rem",
+              borderBottom: "1px solid var(--border)",
+              backgroundColor: "var(--bg-nav)",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.65rem",
+                fontFamily: "var(--font-heading)",
+                fontStyle: "italic",
+                letterSpacing: "0.12em",
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
+              }}
+            >
+              Attributes
+            </span>
+          </div>
+          <div
+            style={{
+              padding: "0.875rem 1rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.875rem",
+            }}
+          >
+            {(() => {
+              const totalAvailableBase = Math.min(
+                12,
+                4 + (c.featsPurchased ?? 0),
+              );
+              const currentTotalBase =
+                c.baseAttributes.body +
+                c.baseAttributes.mind +
+                c.baseAttributes.will;
+              const dynamicUnspent = totalAvailableBase - currentTotalBase;
+
+              return (
+                <>
+                  {dynamicUnspent > 0 && (
+                    <div
+                      style={{
+                        padding: "0.375rem 0.625rem",
+                        backgroundColor: "var(--accent-light)",
+                        border: "1px solid var(--accent)",
+                        borderRadius: "0.375rem",
+                        fontSize: "0.75rem",
+                        color: "var(--text)",
+                        fontFamily: "var(--font-heading)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      ⚠ {dynamicUnspent} unspent attr pt
+                      {dynamicUnspent !== 1 ? "s" : ""}
+                      <span style={{ fontWeight: 400, marginLeft: "0.35rem" }}>
+                        ({currentTotalBase} / {totalAvailableBase})
+                      </span>
+                    </div>
+                  )}
+                  {(["body", "mind", "will"] as const).map((key) => {
+                    const val = attrs[key];
+                    const base = c.baseAttributes[key];
+                    const voc =
+                      c.vocationAttributeBonus.attribute === key
+                        ? c.vocationAttributeBonus.value
+                        : 0;
+                    const isHighest =
+                      val === Math.max(attrs.body, attrs.mind, attrs.will);
+                    const barPct = Math.min(
+                      100,
+                      Math.max(0, Math.round((Math.max(0, val) / 12) * 100)),
+                    );
+                    const canIncrease = dynamicUnspent > 0;
+                    const canDecrease = base > 0;
+                    function adjustAttr(delta: number) {
+                      const newBase = base + delta;
+                      if (newBase < 0) return;
+                      if (delta > 0 && !canIncrease) return;
+                      persist({
+                        baseAttributes: {
+                          ...c.baseAttributes,
+                          [key]: newBase,
+                        },
+                        unspentAttributePoints: Math.max(
+                          0,
+                          dynamicUnspent - delta,
+                        ),
+                      });
+                    }
+                    return (
+                      <div key={key}>
+                        {/* Label + total value */}
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "3px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "0.75rem",
+                              color: isHighest
+                                ? "var(--primary)"
+                                : "var(--text-muted)",
+                              letterSpacing: "0.04em",
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {key}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "1.15rem",
+                              fontWeight: 700,
+                              color: "var(--primary)",
+                              fontFamily: "var(--font-heading)",
+                              lineHeight: 1,
+                            }}
+                          >
+                            {fmtAttr(val)}
+                          </span>
+                        </div>
+                        {/* Bar */}
+                        <div
+                          style={{
+                            backgroundColor: "var(--border)",
+                            borderRadius: "4px",
+                            height: "4px",
+                            overflow: "hidden",
+                            marginBottom: "0.4rem",
+                          }}
+                        >
+                          <div
+                            style={{
+                              backgroundColor: "var(--primary)",
+                              height: "100%",
+                              width: `${barPct}%`,
+                              opacity: isHighest ? 1 : 0.5,
+                              borderRadius: "4px",
+                            }}
+                          />
+                        </div>
+                        {/* Allocator controls */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.4rem",
+                          }}
+                        >
+                          <button
+                            onClick={() => adjustAttr(-1)}
+                            disabled={!canDecrease}
+                            style={{
+                              width: "20px",
+                              height: "20px",
+                              borderRadius: "50%",
+                              border: "1px solid var(--border)",
+                              backgroundColor: "var(--bg-card)",
+                              cursor: canDecrease ? "pointer" : "not-allowed",
+                              fontWeight: 700,
+                              color: "var(--text-muted)",
+                              fontSize: "0.85rem",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            −
+                          </button>
+                          <span
+                            style={{
+                              fontFamily: "var(--font-heading)",
+                              fontSize: "0.78rem",
+                              fontWeight: 600,
+                              color: "var(--text-muted)",
+                              minWidth: "20px",
+                              textAlign: "center",
+                            }}
+                          >
+                            {fmtAttr(base)}
+                          </span>
+                          <button
+                            onClick={() => adjustAttr(1)}
+                            disabled={!canIncrease}
+                            style={{
+                              width: "20px",
+                              height: "20px",
+                              borderRadius: "50%",
+                              border: "1px solid var(--border)",
+                              backgroundColor: "var(--bg-card)",
+                              cursor: canIncrease ? "pointer" : "not-allowed",
+                              fontWeight: 700,
+                              color: "var(--text-muted)",
+                              fontSize: "0.85rem",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            +
+                          </button>
+                          <span
+                            style={{
+                              fontSize: "0.62rem",
+                              color: "var(--text-muted)",
+                              marginLeft: "0.15rem",
+                            }}
+                          >
+                            base{voc > 0 ? ` + ${voc} (${c.vocationName})` : ""}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* Right: Defence 2×2 grid */}
+        <div
+          style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: "12px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              padding: "0.5rem 1rem",
+              borderBottom: "1px solid var(--border)",
+              backgroundColor: "var(--bg-nav)",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.65rem",
+                fontFamily: "var(--font-heading)",
+                fontStyle: "italic",
+                letterSpacing: "0.12em",
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
+              }}
+            >
+              Defence
+            </span>
+          </div>
+          <div
+            style={{
+              padding: "0.875rem 1rem",
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: "0.5rem",
+            }}
+          >
+            {(() => {
+              const tempAD = c.tempArmorDef ?? 0;
+              const totalAD = armorDefense + tempAD;
+              const spellArmorOn = !!(c.spellArmorActive && isCaster);
+              const subLabel = spellArmorOn
+                ? `Spell (11+${modKey})`
+                : hasUnarmoredDefense && !equippedBody
+                  ? "Unarmored"
+                  : hasAgile &&
+                      !equippedShield &&
+                      (!equippedBody ||
+                        equippedBody.armorCategory === "Light" ||
+                        !equippedBody.armorCategory)
+                    ? "Agile"
+                    : equippedBody
+                      ? `${equippedBody.name} +${equippedBody.armorBonus}`
+                      : "Base";
+              return (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "0.5rem 0.35rem",
+                    backgroundColor: spellArmorOn
+                      ? "var(--primary-light)"
+                      : "var(--bg-nav)",
+                    border: `1px solid ${spellArmorOn ? "var(--primary)" : "var(--border)"}`,
+                    borderRadius: "8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.6rem",
+                      letterSpacing: "0.07em",
+                      color: "var(--text-muted)",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    Armor Def
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "var(--font-heading)",
+                      fontWeight: 700,
+                      fontSize: "1.25rem",
+                      color: "var(--primary)",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {totalAD}
+                    {tempAD !== 0 && (
+                      <span
+                        style={{
+                          fontSize: "0.7rem",
+                          color:
+                            tempAD > 0 ? "var(--primary)" : "var(--text-muted)",
+                          marginLeft: "0.1rem",
+                        }}
+                      >
+                        {tempAD > 0 ? `+${tempAD}` : tempAD}
+                      </span>
+                    )}
+                  </div>
+                  {subLabel && (
+                    <div
+                      style={{
+                        fontSize: "0.52rem",
+                        color: spellArmorOn
+                          ? "var(--primary)"
+                          : "var(--text-muted)",
+                        marginTop: "0.1rem",
+                        marginBottom: "0.15rem",
+                      }}
+                    >
+                      {subLabel}
+                    </div>
+                  )}
+                  {isCaster && (
+                    <button
+                      onClick={() =>
+                        persist({ spellArmorActive: !c.spellArmorActive })
+                      }
+                      style={{
+                        fontSize: "0.5rem",
+                        fontFamily: "var(--font-heading)",
+                        fontWeight: 700,
+                        padding: "0.1rem 0.3rem",
+                        borderRadius: "0.25rem",
+                        border: `1px solid ${spellArmorOn ? "var(--primary)" : "var(--border)"}`,
+                        backgroundColor: spellArmorOn
+                          ? "var(--primary)"
+                          : "var(--bg-card)",
+                        color: spellArmorOn ? "#fff" : "var(--text-muted)",
+                        cursor: "pointer",
+                        marginBottom: "0.15rem",
+                      }}
+                    >
+                      {spellArmorOn ? "Spell Armor ON" : "Spell Armor"}
+                    </button>
+                  )}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.2rem",
+                    }}
+                  >
+                    <button
+                      onClick={() => persist({ tempArmorDef: tempAD - 1 })}
+                      style={{
+                        width: "16px",
+                        height: "16px",
+                        borderRadius: "50%",
+                        border: "1px solid var(--border)",
+                        backgroundColor: "var(--bg-card)",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        fontSize: "0.7rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      −
+                    </button>
+                    <span
+                      style={{
+                        fontSize: "0.6rem",
+                        color: "var(--text-muted)",
+                        fontFamily: "var(--font-heading)",
+                        minWidth: "14px",
+                        textAlign: "center",
+                      }}
+                    >
+                      {tempAD === 0 ? "tmp" : tempAD}
+                    </span>
+                    <button
+                      onClick={() => persist({ tempArmorDef: tempAD + 1 })}
+                      style={{
+                        width: "16px",
+                        height: "16px",
+                        borderRadius: "50%",
+                        border: "1px solid var(--border)",
+                        backgroundColor: "var(--bg-card)",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        fontSize: "0.7rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      +
+                    </button>
+                    {tempAD !== 0 && (
+                      <button
+                        onClick={() => persist({ tempArmorDef: 0 })}
+                        style={{
+                          fontSize: "0.55rem",
+                          color: "var(--text-muted)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+            <StatCard label="Body Def" value={bodyDef} />
+            <StatCard label="Mind Def" value={mindDef} />
+            <StatCard label="Will Def" value={willDef} />
+          </div>
+        </div>
+      </div>
+
+      {/* ──── RESOURCES STRIP ──── */}
+      <div
+        style={{
+          backgroundColor: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: "12px",
+          padding: "0.875rem 1.25rem",
+          marginBottom: "1rem",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "0.65rem",
+            letterSpacing: "0.12em",
+            color: "var(--text-muted)",
+            fontFamily: "var(--font-heading)",
+            fontStyle: "italic",
+            textTransform: "uppercase",
+            marginBottom: "0.625rem",
+          }}
+        >
+          Resources
+        </div>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: "0.75rem",
-            marginBottom: "0.75rem",
+            gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))",
+            gap: "0.5rem",
           }}
         >
-          <EditableNumber
-            label="Renown"
-            value={c.renown ?? 0}
-            min={0}
-            onChange={(v) => persist({ renown: v })}
-          />
+          {/* Renown */}
           <div
             style={{
               textAlign: "center",
-              padding: "0.625rem 0.5rem",
               backgroundColor: "var(--bg-nav)",
               border: "1px solid var(--border)",
-              borderRadius: "0.5rem",
+              borderRadius: "8px",
+              padding: "0.4rem 0.25rem",
             }}
           >
             <div
               style={{
-                fontFamily: "var(--font-heading)",
-                fontWeight: 700,
                 fontSize: "0.6rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
                 color: "var(--text-muted)",
-                marginBottom: "0.2rem",
+                letterSpacing: "0.06em",
+                marginBottom: "2px",
+              }}
+            >
+              Renown
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.25rem",
+              }}
+            >
+              <button
+                onClick={() =>
+                  persist({ renown: Math.max(0, (c.renown ?? 0) - 1) })
+                }
+                style={{
+                  width: "18px",
+                  height: "18px",
+                  borderRadius: "50%",
+                  border: "1px solid var(--border)",
+                  backgroundColor: "var(--bg-card)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  color: "var(--text-muted)",
+                  fontSize: "0.75rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                −
+              </button>
+              <span
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  fontWeight: 700,
+                  fontSize: "1.1rem",
+                  color: "var(--primary)",
+                }}
+              >
+                {c.renown ?? 0}
+              </span>
+              <button
+                onClick={() => persist({ renown: (c.renown ?? 0) + 1 })}
+                style={{
+                  width: "18px",
+                  height: "18px",
+                  borderRadius: "50%",
+                  border: "1px solid var(--border)",
+                  backgroundColor: "var(--bg-card)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  color: "var(--text-muted)",
+                  fontSize: "0.75rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Ambition */}
+          <div
+            style={{
+              textAlign: "center",
+              backgroundColor: "var(--bg-nav)",
+              border: "1px solid var(--border)",
+              borderRadius: "8px",
+              padding: "0.4rem 0.25rem",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.6rem",
+                color: "var(--text-muted)",
+                letterSpacing: "0.06em",
+                marginBottom: "2px",
               }}
             >
               Ambition
@@ -7540,7 +8240,7 @@ export default function CharacterSheetPage({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: "0.4rem",
+                gap: "0.25rem",
               }}
             >
               <button
@@ -7550,15 +8250,15 @@ export default function CharacterSheetPage({
                   })
                 }
                 style={{
-                  width: "22px",
-                  height: "22px",
+                  width: "18px",
+                  height: "18px",
                   borderRadius: "50%",
                   border: "1px solid var(--border)",
                   backgroundColor: "var(--bg-card)",
                   cursor: "pointer",
                   fontWeight: 700,
                   color: "var(--text-muted)",
-                  fontSize: "0.85rem",
+                  fontSize: "0.75rem",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -7591,15 +8291,15 @@ export default function CharacterSheetPage({
                   })
                 }
                 style={{
-                  width: "22px",
-                  height: "22px",
+                  width: "18px",
+                  height: "18px",
                   borderRadius: "50%",
                   border: "1px solid var(--border)",
                   backgroundColor: "var(--bg-card)",
                   cursor: "pointer",
                   fontWeight: 700,
                   color: "var(--text-muted)",
-                  fontSize: "0.85rem",
+                  fontSize: "0.75rem",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -7610,263 +8310,266 @@ export default function CharacterSheetPage({
             </div>
             <div
               style={{
-                fontSize: "0.58rem",
+                fontSize: "0.55rem",
                 color: "var(--text-muted)",
-                marginTop: "0.15rem",
+                marginTop: "1px",
               }}
             >
               {ambitionDice}
             </div>
           </div>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "0.5rem",
-            marginBottom: "0.75rem",
-          }}
-        >
-          {(() => {
-            const tempAD = c.tempArmorDef ?? 0;
-            const totalAD = armorDefense + tempAD;
-            const spellArmorOn = !!(c.spellArmorActive && isCaster);
-            const subLabel = spellArmorOn
-              ? `Spell Armor (11+${modKey})`
-              : hasUnarmoredDefense && !equippedBody
-                ? "Unarmored Def"
-                : hasAgile &&
-                    !equippedShield &&
-                    (!equippedBody ||
-                      equippedBody.armorCategory === "Light" ||
-                      !equippedBody.armorCategory)
-                  ? "Agile"
-                  : equippedBody
-                    ? `${equippedBody.name} +${equippedBody.armorBonus}`
-                    : "Base";
-            return (
+
+          {/* Respites dots */}
+          <div
+            style={{
+              textAlign: "center",
+              backgroundColor: "var(--bg-nav)",
+              border: "1px solid var(--border)",
+              borderRadius: "8px",
+              padding: "0.4rem 0.25rem",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.6rem",
+                color: "var(--text-muted)",
+                letterSpacing: "0.06em",
+                marginBottom: "4px",
+              }}
+            >
+              Respites
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: "0.25rem",
+              }}
+            >
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  onClick={() =>
+                    persist({
+                      currentRespites: i < currentRespites ? i : i + 1,
+                    })
+                  }
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    borderRadius: "50%",
+                    border: `2px solid ${i < currentRespites ? "var(--primary)" : "var(--border)"}`,
+                    backgroundColor:
+                      i < currentRespites ? "var(--primary)" : "transparent",
+                    cursor: "pointer",
+                  }}
+                />
+              ))}
+            </div>
+            <div
+              style={{
+                fontSize: "0.55rem",
+                color: "var(--text-muted)",
+                marginTop: "2px",
+              }}
+            >
+              {currentRespites}/3
+            </div>
+          </div>
+
+          {/* Carry */}
+          <StatCard
+            label="Carry"
+            value={`${totalCarried}/${carryWeight}`}
+            sub="lb"
+          />
+
+          {/* Caster stats */}
+          {isCaster && (
+            <div
+              style={{
+                textAlign: "center",
+                backgroundColor: "var(--bg-nav)",
+                border: "1px solid var(--border)",
+                borderRadius: "8px",
+                padding: "0.4rem 0.25rem",
+              }}
+            >
               <div
                 style={{
-                  textAlign: "center",
-                  padding: "0.5rem 0.35rem",
-                  backgroundColor: spellArmorOn
-                    ? "var(--primary-light)"
-                    : "var(--bg-nav)",
-                  border: `1px solid ${spellArmorOn ? "var(--primary)" : "var(--border)"}`,
-                  borderRadius: "0.5rem",
+                  fontSize: "0.6rem",
+                  color: "var(--text-muted)",
+                  letterSpacing: "0.06em",
+                  marginBottom: "2px",
                 }}
               >
-                <div
+                Reservoir
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.25rem",
+                }}
+              >
+                <button
+                  onClick={() =>
+                    persist({
+                      currentReservoir: Math.max(0, currentReservoir - 1),
+                    })
+                  }
                   style={{
-                    fontFamily: "var(--font-heading)",
+                    width: "18px",
+                    height: "18px",
+                    borderRadius: "50%",
+                    border: "1px solid var(--border)",
+                    backgroundColor: "var(--bg-card)",
+                    cursor: "pointer",
                     fontWeight: 700,
-                    fontSize: "0.55rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
                     color: "var(--text-muted)",
-                    marginBottom: "0.15rem",
-                  }}
-                >
-                  Armor Def
-                </div>
-                <div
-                  style={{
-                    fontFamily: "var(--font-heading)",
-                    fontWeight: 700,
-                    fontSize: "1.25rem",
-                    color: "var(--primary)",
-                    lineHeight: 1,
-                  }}
-                >
-                  {totalAD}
-                  {tempAD !== 0 && (
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        color:
-                          tempAD > 0 ? "var(--primary)" : "var(--text-muted)",
-                        marginLeft: "0.15rem",
-                      }}
-                    >
-                      {tempAD > 0 ? `+${tempAD}` : tempAD}
-                    </span>
-                  )}
-                </div>
-                {subLabel && (
-                  <div
-                    style={{
-                      fontSize: "0.55rem",
-                      color: spellArmorOn
-                        ? "var(--primary)"
-                        : "var(--text-muted)",
-                      marginTop: "0.1rem",
-                      marginBottom: "0.2rem",
-                    }}
-                  >
-                    {subLabel}
-                  </div>
-                )}
-                {/* BUG-09: Spell Armor toggle (casters only) */}
-                {isCaster && (
-                  <button
-                    onClick={() =>
-                      persist({ spellArmorActive: !c.spellArmorActive })
-                    }
-                    style={{
-                      fontSize: "0.5rem",
-                      fontFamily: "var(--font-heading)",
-                      fontWeight: 700,
-                      padding: "0.1rem 0.3rem",
-                      borderRadius: "0.25rem",
-                      border: `1px solid ${spellArmorOn ? "var(--primary)" : "var(--border)"}`,
-                      backgroundColor: spellArmorOn
-                        ? "var(--primary)"
-                        : "var(--bg-card)",
-                      color: spellArmorOn ? "#fff" : "var(--text-muted)",
-                      cursor: "pointer",
-                      marginBottom: "0.2rem",
-                    }}
-                  >
-                    {spellArmorOn ? "Spell Armor ON" : "Spell Armor"}
-                  </button>
-                )}
-                <div
-                  style={{
+                    fontSize: "0.75rem",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: "0.2rem",
                   }}
                 >
-                  <button
-                    onClick={() => persist({ tempArmorDef: tempAD - 1 })}
-                    style={{
-                      width: "16px",
-                      height: "16px",
-                      borderRadius: "50%",
-                      border: "1px solid var(--border)",
-                      backgroundColor: "var(--bg-card)",
-                      cursor: "pointer",
-                      fontWeight: 700,
-                      color: "var(--text-muted)",
-                      fontSize: "0.7rem",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    −
-                  </button>
+                  −
+                </button>
+                <span
+                  style={{
+                    fontFamily: "var(--font-heading)",
+                    fontWeight: 700,
+                    fontSize: "1.1rem",
+                    color: "var(--primary)",
+                  }}
+                >
+                  {currentReservoir}
                   <span
-                    style={{
-                      fontSize: "0.6rem",
-                      color: "var(--text-muted)",
-                      fontFamily: "var(--font-heading)",
-                      minWidth: "14px",
-                      textAlign: "center",
-                    }}
+                    style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
                   >
-                    {tempAD === 0 ? "tmp" : tempAD}
+                    /{maxReservoir}
                   </span>
-                  <button
-                    onClick={() => persist({ tempArmorDef: tempAD + 1 })}
-                    style={{
-                      width: "16px",
-                      height: "16px",
-                      borderRadius: "50%",
-                      border: "1px solid var(--border)",
-                      backgroundColor: "var(--bg-card)",
-                      cursor: "pointer",
-                      fontWeight: 700,
-                      color: "var(--text-muted)",
-                      fontSize: "0.7rem",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    +
-                  </button>
-                  {tempAD !== 0 && (
-                    <button
-                      onClick={() => persist({ tempArmorDef: 0 })}
-                      style={{
-                        fontSize: "0.55rem",
-                        color: "var(--text-muted)",
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
+                </span>
+                <button
+                  onClick={() =>
+                    persist({
+                      currentReservoir: Math.min(
+                        maxReservoir,
+                        currentReservoir + 1,
+                      ),
+                    })
+                  }
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    borderRadius: "50%",
+                    border: "1px solid var(--border)",
+                    backgroundColor: "var(--bg-card)",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    color: "var(--text-muted)",
+                    fontSize: "0.75rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  +
+                </button>
               </div>
-            );
-          })()}
-          <StatCard label="Body Def" value={bodyDef} />
-          <StatCard label="Mind Def" value={mindDef} />
-          <StatCard label="Will Def" value={willDef} />
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${isCaster ? 3 : 1}, 1fr)`,
-            gap: "0.5rem",
-          }}
-        >
-          <StatCard
-            label="Carry Weight"
-            value={carryWeight}
-            sub="5 + Body + Tier"
-          />
-          {isCaster && (
-            <StatCard
-              label="Max Reservoir"
-              value={maxReservoir}
-              sub={casterInfo?.casterSource ?? ""}
-            />
+              {casterInfo?.casterSource && (
+                <div
+                  style={{
+                    fontSize: "0.52rem",
+                    color: "var(--text-muted)",
+                    marginTop: "1px",
+                  }}
+                >
+                  {casterInfo.casterSource}
+                </div>
+              )}
+            </div>
           )}
           {isCaster && <StatCard label="Spell DC" value={spellDC ?? "—"} />}
+          {isCaster && (
+            <StatCard
+              label="Known"
+              value={`${c.knownSpellIds.length}/${knownSpellsMax}`}
+            />
+          )}
+          {isCaster && <StatCard label="Prepared" value={preparedSpellsMax} />}
         </div>
-        {/* Profession-specific resources */}
-        {(() => {
-          const isDuelist = c.professionName === "Duelist";
-          const isFighter = c.professionName === "Fighter";
-          const isEidolon = c.professionName === "Eidolon";
-          const isStygian = c.professionName === "Stygian";
-          if (!isDuelist && !isFighter && !isEidolon && !isStygian) return null;
-          const maxAdrenaline = attrs.body + effectiveTier;
-          const maxSoulTokens = 3;
-          return (
+      </div>
+
+      {/* ──── PROFESSION CLASS RESOURCE ──── */}
+      {(() => {
+        const isDuelist = c.professionName === "Duelist";
+        const isFighter = c.professionName === "Fighter";
+        const isEidolon = c.professionName === "Eidolon";
+        const isStygian = c.professionName === "Stygian";
+        if (!isDuelist && !isFighter && !isEidolon && !isStygian) return null;
+        const maxAdrenaline = attrs.body + effectiveTier;
+        const maxSoulTokens = 3;
+        const btnStyle: React.CSSProperties = {
+          width: "18px",
+          height: "18px",
+          borderRadius: "50%",
+          border: "1px solid var(--border)",
+          backgroundColor: "var(--bg-card)",
+          cursor: "pointer",
+          fontWeight: 700,
+          color: "var(--text-muted)",
+          fontSize: "0.75rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        };
+        const cellStyle: React.CSSProperties = {
+          textAlign: "center",
+          backgroundColor: "var(--bg-nav)",
+          border: "1px solid var(--border)",
+          borderRadius: "8px",
+          padding: "0.4rem 0.25rem",
+        };
+        return (
+          <div
+            style={{
+              backgroundColor: "var(--bg-card)",
+              border: "1px solid var(--border)",
+              borderRadius: "12px",
+              padding: "0.875rem 1.25rem",
+              marginBottom: "1rem",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.65rem",
+                letterSpacing: "0.12em",
+                color: "var(--text-muted)",
+                fontFamily: "var(--font-heading)",
+                fontStyle: "italic",
+                textTransform: "uppercase",
+                marginBottom: "0.625rem",
+              }}
+            >
+              Class Resource
+            </div>
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
+                gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))",
                 gap: "0.5rem",
-                marginTop: "0.5rem",
               }}
             >
               {isDuelist && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "0.625rem 0.5rem",
-                    backgroundColor: "var(--bg-nav)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "0.5rem",
-                  }}
-                >
+                <div style={cellStyle}>
                   <div
                     style={{
-                      fontFamily: "var(--font-heading)",
-                      fontWeight: 700,
                       fontSize: "0.6rem",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
                       color: "var(--text-muted)",
-                      marginBottom: "0.2rem",
+                      letterSpacing: "0.06em",
+                      marginBottom: "2px",
                     }}
                   >
                     Cadence
@@ -7876,7 +8579,7 @@ export default function CharacterSheetPage({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: "0.4rem",
+                      gap: "0.25rem",
                     }}
                   >
                     <button
@@ -7888,20 +8591,7 @@ export default function CharacterSheetPage({
                           ),
                         })
                       }
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        fontSize: "0.85rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                      style={btnStyle}
                     >
                       −
                     </button>
@@ -7922,29 +8612,16 @@ export default function CharacterSheetPage({
                             (c.currentCadence ?? effectiveTier) + 1,
                         })
                       }
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        fontSize: "0.85rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                      style={btnStyle}
                     >
                       +
                     </button>
                   </div>
                   <div
                     style={{
-                      fontSize: "0.58rem",
+                      fontSize: "0.52rem",
                       color: "var(--text-muted)",
-                      marginTop: "0.15rem",
+                      marginTop: "1px",
                     }}
                   >
                     Starting: Tier
@@ -7952,24 +8629,13 @@ export default function CharacterSheetPage({
                 </div>
               )}
               {isFighter && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "0.625rem 0.5rem",
-                    backgroundColor: "var(--bg-nav)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "0.5rem",
-                  }}
-                >
+                <div style={cellStyle}>
                   <div
                     style={{
-                      fontFamily: "var(--font-heading)",
-                      fontWeight: 700,
                       fontSize: "0.6rem",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
                       color: "var(--text-muted)",
-                      marginBottom: "0.2rem",
+                      letterSpacing: "0.06em",
+                      marginBottom: "2px",
                     }}
                   >
                     Adrenaline
@@ -7979,7 +8645,7 @@ export default function CharacterSheetPage({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: "0.4rem",
+                      gap: "0.25rem",
                     }}
                   >
                     <button
@@ -7991,20 +8657,7 @@ export default function CharacterSheetPage({
                           ),
                         })
                       }
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        fontSize: "0.85rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                      style={btnStyle}
                     >
                       −
                     </button>
@@ -8035,29 +8688,16 @@ export default function CharacterSheetPage({
                           ),
                         })
                       }
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        fontSize: "0.85rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                      style={btnStyle}
                     >
                       +
                     </button>
                   </div>
                   <div
                     style={{
-                      fontSize: "0.58rem",
+                      fontSize: "0.52rem",
                       color: "var(--text-muted)",
-                      marginTop: "0.15rem",
+                      marginTop: "1px",
                     }}
                   >
                     Max: Body + Tier
@@ -8065,24 +8705,13 @@ export default function CharacterSheetPage({
                 </div>
               )}
               {isEidolon && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "0.625rem 0.5rem",
-                    backgroundColor: "var(--bg-nav)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "0.5rem",
-                  }}
-                >
+                <div style={cellStyle}>
                   <div
                     style={{
-                      fontFamily: "var(--font-heading)",
-                      fontWeight: 700,
                       fontSize: "0.6rem",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
                       color: "var(--text-muted)",
-                      marginBottom: "0.2rem",
+                      letterSpacing: "0.06em",
+                      marginBottom: "2px",
                     }}
                   >
                     Resonance
@@ -8092,7 +8721,7 @@ export default function CharacterSheetPage({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: "0.4rem",
+                      gap: "0.25rem",
                     }}
                   >
                     <button
@@ -8104,20 +8733,7 @@ export default function CharacterSheetPage({
                           ),
                         })
                       }
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        fontSize: "0.85rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                      style={btnStyle}
                     >
                       −
                     </button>
@@ -8138,54 +8754,30 @@ export default function CharacterSheetPage({
                             (c.currentResonance ?? spellThreshold) + 1,
                         })
                       }
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        fontSize: "0.85rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                      style={btnStyle}
                     >
                       +
                     </button>
                   </div>
                   <div
                     style={{
-                      fontSize: "0.58rem",
+                      fontSize: "0.52rem",
                       color: "var(--text-muted)",
-                      marginTop: "0.15rem",
+                      marginTop: "1px",
                     }}
                   >
-                    Starting: Spell Threshold
+                    Spell Threshold
                   </div>
                 </div>
               )}
               {isStygian && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "0.625rem 0.5rem",
-                    backgroundColor: "var(--bg-nav)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "0.5rem",
-                  }}
-                >
+                <div style={cellStyle}>
                   <div
                     style={{
-                      fontFamily: "var(--font-heading)",
-                      fontWeight: 700,
                       fontSize: "0.6rem",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
                       color: "var(--text-muted)",
-                      marginBottom: "0.2rem",
+                      letterSpacing: "0.06em",
+                      marginBottom: "2px",
                     }}
                   >
                     Soul Tokens
@@ -8195,7 +8787,7 @@ export default function CharacterSheetPage({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: "0.4rem",
+                      gap: "0.25rem",
                     }}
                   >
                     <button
@@ -8207,20 +8799,7 @@ export default function CharacterSheetPage({
                           ),
                         })
                       }
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        fontSize: "0.85rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                      style={btnStyle}
                     >
                       −
                     </button>
@@ -8251,29 +8830,16 @@ export default function CharacterSheetPage({
                           ),
                         })
                       }
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        fontSize: "0.85rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                      style={btnStyle}
                     >
                       +
                     </button>
                   </div>
                   <div
                     style={{
-                      fontSize: "0.58rem",
+                      fontSize: "0.52rem",
                       color: "var(--text-muted)",
-                      marginTop: "0.15rem",
+                      marginTop: "1px",
                     }}
                   >
                     Max: 3
@@ -8281,54 +8847,32 @@ export default function CharacterSheetPage({
                 </div>
               )}
             </div>
-          );
-        })()}
-      </Section>
+          </div>
+        );
+      })()}
 
-      {/* Rest Tracker (Issue 5) */}
-      <Section title="Rest">
+      {/* ──── REST ACTIONS ──── */}
+      <div
+        style={{
+          backgroundColor: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: "12px",
+          padding: "0.875rem 1.25rem",
+          marginBottom: "1rem",
+        }}
+      >
         <div
           style={{
-            display: "flex",
-            gap: "0.75rem",
-            flexWrap: "wrap",
-            marginBottom: "0.75rem",
+            fontSize: "0.65rem",
+            letterSpacing: "0.12em",
+            color: "var(--text-muted)",
+            fontFamily: "var(--font-heading)",
+            fontStyle: "italic",
+            textTransform: "uppercase",
+            marginBottom: "0.625rem",
           }}
         >
-          <div
-            style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}
-          >
-            <span
-              style={{
-                fontFamily: "var(--font-heading)",
-                fontWeight: 700,
-                fontSize: "0.8rem",
-                color: "var(--text)",
-              }}
-            >
-              Respites:
-            </span>
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                style={{
-                  width: "22px",
-                  height: "22px",
-                  borderRadius: "50%",
-                  border: `2px solid ${i < currentRespites ? "var(--primary)" : "var(--border)"}`,
-                  backgroundColor:
-                    i < currentRespites ? "var(--primary)" : "transparent",
-                  cursor: "pointer",
-                }}
-                onClick={() =>
-                  persist({ currentRespites: i < currentRespites ? i : i + 1 })
-                }
-              />
-            ))}
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-              {currentRespites}/3
-            </span>
-          </div>
+          Rest
         </div>
         <div style={{ display: "flex", gap: "0.625rem", flexWrap: "wrap" }}>
           <button
@@ -8340,7 +8884,7 @@ export default function CharacterSheetPage({
               borderRadius: "0.5rem",
               backgroundColor:
                 currentRespites > 0 ? "var(--primary)" : "var(--border)",
-              color: "#fff",
+              color: "var(--text-on-primary)",
               cursor: currentRespites > 0 ? "pointer" : "not-allowed",
               fontFamily: "var(--font-heading)",
               fontWeight: 700,
@@ -8391,235 +8935,64 @@ export default function CharacterSheetPage({
             </span>
           </button>
         </div>
-      </Section>
+      </div>
 
-      {/* Attributes */}
-      <Section title="Attributes">
-        {(() => {
-          const totalAvailableBase = Math.min(12, 4 + (c.featsPurchased ?? 0));
-          const currentTotalBase =
-            c.baseAttributes.body +
-            c.baseAttributes.mind +
-            c.baseAttributes.will;
-          const dynamicUnspent = totalAvailableBase - currentTotalBase;
-          return dynamicUnspent > 0 ? (
-            <div
-              style={{
-                marginBottom: "0.75rem",
-                padding: "0.5rem 0.875rem",
-                backgroundColor: "var(--accent-light)",
-                border: "1px solid #FCD34D",
-                borderRadius: "0.5rem",
-                fontSize: "0.82rem",
-                color: "#92400E",
-                fontFamily: "var(--font-heading)",
-                fontWeight: 700,
-              }}
-            >
-              ⚠ {dynamicUnspent} unspent Attribute point
-              {dynamicUnspent !== 1 ? "s" : ""} — allocate below
-              <span style={{ fontWeight: 400, marginLeft: "0.5rem" }}>
-                ({currentTotalBase} / {totalAvailableBase} spent)
-              </span>
-            </div>
-          ) : null;
-        })()}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "0.75rem",
-          }}
-        >
-          {(["body", "mind", "will"] as const).map((attr) => {
-            const base = c.baseAttributes[attr];
-            const voc =
-              c.vocationAttributeBonus.attribute === attr
-                ? c.vocationAttributeBonus.value
-                : 0;
-            const totalAvailableBase = Math.min(
-              12,
-              4 + (c.featsPurchased ?? 0),
-            );
-            const currentTotalBase =
-              c.baseAttributes.body +
-              c.baseAttributes.mind +
-              c.baseAttributes.will;
-            const dynamicUnspent = totalAvailableBase - currentTotalBase;
-            const canIncrease = dynamicUnspent > 0;
-            const canDecrease = base > 0;
-            function adjustAttr(delta: number) {
-              const newBase = base + delta;
-              if (newBase < 0) return;
-              if (delta > 0 && !canIncrease) return;
-              persist({
-                baseAttributes: { ...c.baseAttributes, [attr]: newBase },
-                unspentAttributePoints: Math.max(0, dynamicUnspent - delta),
-              });
-            }
-            return (
-              <div
-                key={attr}
-                style={{
-                  padding: "0.875rem",
-                  backgroundColor: "var(--bg-nav)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "0.5rem",
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "var(--font-heading)",
-                    fontWeight: 700,
-                    fontSize: "0.7rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    color: "var(--text-muted)",
-                    marginBottom: "0.375rem",
-                  }}
-                >
-                  {attr.charAt(0).toUpperCase() + attr.slice(1)}
-                </div>
-                <div
-                  style={{
-                    fontFamily: "var(--font-heading)",
-                    fontWeight: 800,
-                    fontSize: "2rem",
-                    color: "var(--primary)",
-                    lineHeight: 1,
-                    marginBottom: "0.375rem",
-                  }}
-                >
-                  {fmtAttr(attrs[attr])}
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.5rem",
-                    marginBottom: "0.35rem",
-                  }}
-                >
-                  <button
-                    onClick={() => adjustAttr(-1)}
-                    disabled={!canDecrease}
-                    style={{
-                      width: "24px",
-                      height: "24px",
-                      borderRadius: "50%",
-                      border: "1px solid var(--border)",
-                      backgroundColor: "var(--bg-card)",
-                      cursor: canDecrease ? "pointer" : "not-allowed",
-                      fontWeight: 700,
-                      color: "var(--text-muted)",
-                      fontSize: "0.9rem",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    −
-                  </button>
-                  <span
-                    style={{
-                      fontFamily: "var(--font-heading)",
-                      fontSize: "0.85rem",
-                      fontWeight: 600,
-                      minWidth: "24px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {fmtAttr(base)}
-                  </span>
-                  <button
-                    onClick={() => adjustAttr(1)}
-                    disabled={!canIncrease}
-                    style={{
-                      width: "24px",
-                      height: "24px",
-                      borderRadius: "50%",
-                      border: "1px solid var(--border)",
-                      backgroundColor: "var(--bg-card)",
-                      cursor: canIncrease ? "pointer" : "not-allowed",
-                      fontWeight: 700,
-                      color: "var(--text-muted)",
-                      fontSize: "0.9rem",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    +
-                  </button>
-                </div>
-                <div
-                  style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
-                >
-                  {fmtAttr(base)} base
-                  {voc > 0 ? ` + ${voc} (${c.vocationName})` : ""}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Section>
-
-      {/* Proficiencies */}
+      {/* ──── PROFICIENCIES (skills with badge design + armaments) ──── */}
       <Section title="Proficiencies">
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
-          <div>
-            {!isArmorProficient && (
+          {/* Armor penalty warning */}
+          {!isArmorProficient && (
+            <div
+              style={{
+                padding: "0.4rem 0.75rem",
+                backgroundColor: "var(--section-alert-bg)",
+                border: "1px solid #ff7979",
+                borderRadius: "0.375rem",
+                fontSize: "0.78rem",
+                color: "#cc2222",
+                fontFamily: "var(--font-heading)",
+                fontWeight: 700,
+              }}
+            >
+              ⚠ Armor Penalty active — all skill dice reduced one step (min d4)
+            </div>
+          )}
+
+          {/* Unspent skill points notice */}
+          {(() => {
+            const totalAvailableSkill =
+              4 + 2 * Math.floor((c.featsPurchased ?? 0) / 2);
+            const totalSpentSkill = Object.values(c.skillPoints ?? {}).reduce(
+              (s, v) => s + v,
+              0,
+            );
+            const dynUnspentSkill = totalAvailableSkill - totalSpentSkill;
+            return dynUnspentSkill > 0 ? (
               <div
                 style={{
-                  marginBottom: "0.625rem",
                   padding: "0.4rem 0.75rem",
-                  backgroundColor: "#fff0f0",
-                  border: "1px solid #ff7979",
+                  backgroundColor: "var(--accent-light)",
+                  border: "1px solid #FCD34D",
                   borderRadius: "0.375rem",
-                  fontSize: "0.78rem",
-                  color: "#cc2222",
+                  fontSize: "0.8rem",
+                  color: "#92400E",
                   fontFamily: "var(--font-heading)",
                   fontWeight: 700,
                 }}
               >
-                ⚠ Armor Penalty active — all skill dice reduced one step (min
-                d4)
+                ⚡ {dynUnspentSkill} unspent Skill Point
+                {dynUnspentSkill !== 1 ? "s" : ""} — allocate below
+                <span style={{ fontWeight: 400, marginLeft: "0.5rem" }}>
+                  ({totalSpentSkill} / {totalAvailableSkill} spent)
+                </span>
               </div>
-            )}
-            {(() => {
-              const totalAvailableSkill =
-                4 + 2 * Math.floor((c.featsPurchased ?? 0) / 2);
-              const totalSpentSkill = Object.values(c.skillPoints ?? {}).reduce(
-                (s, v) => s + v,
-                0,
-              );
-              const dynUnspentSkill = totalAvailableSkill - totalSpentSkill;
-              return dynUnspentSkill > 0 ? (
-                <div
-                  style={{
-                    marginBottom: "0.625rem",
-                    padding: "0.4rem 0.75rem",
-                    backgroundColor: "var(--accent-light)",
-                    border: "1px solid #FCD34D",
-                    borderRadius: "0.375rem",
-                    fontSize: "0.8rem",
-                    color: "#92400E",
-                    fontFamily: "var(--font-heading)",
-                    fontWeight: 700,
-                  }}
-                >
-                  ⚡ {dynUnspentSkill} unspent Skill Point
-                  {dynUnspentSkill !== 1 ? "s" : ""} — allocate below
-                  <span style={{ fontWeight: 400, marginLeft: "0.5rem" }}>
-                    ({totalSpentSkill} / {totalAvailableSkill} spent)
-                  </span>
-                </div>
-              ) : null;
-            })()}
+            ) : null;
+          })()}
+
+          {/* V.I.T.A.L.S. skills — 2-col badge grid */}
+          <div>
             <div
               style={{
                 fontSize: "0.65rem",
@@ -8635,9 +9008,9 @@ export default function CharacterSheetPage({
             </div>
             <div
               style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: "0.3rem",
               }}
             >
               {[
@@ -8670,7 +9043,6 @@ export default function CharacterSheetPage({
                   Expert: "var(--accent)",
                   Mastery: "#7C3AED",
                 };
-                // AMEND-05: armor penalty — step down all die sizes by one (min d4)
                 const DIE_STEP = [4, 6, 8, 10, 12] as const;
                 function stepDown(faces: number): number {
                   const i = DIE_STEP.indexOf(
@@ -8682,96 +9054,134 @@ export default function CharacterSheetPage({
                   if (pool.profDieFaces !== null) {
                     return `${pool.baseDiceCount + pool.skillDiceCount}d${stepDown(pool.profDieFaces)}`;
                   }
-                  const parts = [`${pool.baseDiceCount}d4`];
-                  if (pool.skillDiceCount > 0)
-                    parts.push(`${pool.skillDiceCount}d4`);
-                  return parts.join(" + ");
+                  const baseFaces = calcBaseDiceFromAttr(
+                    calcSkillAttrValue(skill, attrs),
+                  );
+                  return `${pool.baseDiceCount + pool.skillDiceCount}d${stepDown(baseFaces)}`;
                 })();
+
+                // Badge color by die size
+                const dieFaces =
+                  pool.profDieFaces ??
+                  calcBaseDiceFromAttr(calcSkillAttrValue(skill, attrs));
+                const badgeStyle: React.CSSProperties =
+                  dieFaces >= 10
+                    ? {
+                        backgroundColor: "var(--primary)",
+                        color: "var(--text-on-primary)",
+                      }
+                    : dieFaces === 8
+                      ? {
+                          backgroundColor: "var(--primary-light)",
+                          color: "var(--primary)",
+                          border: "1px solid var(--primary)",
+                        }
+                      : dieFaces === 6
+                        ? {
+                            backgroundColor: "var(--bg-nav)",
+                            color: "var(--text-muted)",
+                            border: "1px solid var(--border)",
+                          }
+                        : {
+                            backgroundColor: "var(--bg-nav)",
+                            color: "var(--border)",
+                            border: "1px solid var(--border)",
+                          };
+
                 return (
                   <div
                     key={skill}
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.625rem",
-                      padding: "0.5rem 0.75rem",
+                      gap: "0.5rem",
                       backgroundColor: "var(--bg-nav)",
                       border: "1px solid var(--border)",
-                      borderRadius: "0.375rem",
+                      borderRadius: "8px",
+                      padding: "0.375rem 0.625rem",
                     }}
                   >
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Skill name */}
+                    <span
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--text)",
+                        flex: 1,
+                        letterSpacing: "0.01em",
+                      }}
+                    >
+                      {skill}
+                    </span>
+                    {/* Rank badge (non-untrained only) */}
+                    {pool.rank !== "Untrained" && (
+                      <span
+                        style={{
+                          fontSize: "0.6rem",
+                          fontWeight: 700,
+                          fontFamily: "var(--font-heading)",
+                          padding: "0.1rem 0.35rem",
+                          borderRadius: "9999px",
+                          border: `1px solid ${RANK_COLORS[pool.rank]}`,
+                          color: RANK_COLORS[pool.rank],
+                        }}
+                      >
+                        {pool.rank}
+                      </span>
+                    )}
+                    {/* Die badge */}
+                    {isArmorProficient ? (
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          fontFamily: "var(--font-heading)",
+                          padding: "1px 7px",
+                          borderRadius: "5px",
+                          ...badgeStyle,
+                        }}
+                      >
+                        {pool.display}
+                      </span>
+                    ) : (
                       <div
                         style={{
                           display: "flex",
+                          gap: "0.2rem",
                           alignItems: "center",
-                          gap: "0.4rem",
-                          flexWrap: "wrap",
                         }}
                       >
                         <span
                           style={{
+                            fontSize: "0.72rem",
                             fontFamily: "var(--font-heading)",
-                            fontWeight: 700,
-                            fontSize: "0.85rem",
-                            color: "var(--text)",
-                          }}
-                        >
-                          {skill}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "0.6rem",
-                            fontWeight: 700,
-                            fontFamily: "var(--font-heading)",
-                            padding: "0.1rem 0.35rem",
-                            borderRadius: "9999px",
-                            border: `1px solid ${RANK_COLORS[pool.rank]}`,
-                            color: RANK_COLORS[pool.rank],
-                          }}
-                        >
-                          {pool.rank}
-                        </span>
-                      </div>
-                      {isArmorProficient ? (
-                        <div
-                          style={{
-                            fontSize: "0.78rem",
-                            fontFamily: "var(--font-heading)",
-                            color: "var(--primary)",
-                            marginTop: "0.1rem",
+                            color: "var(--text-muted)",
+                            textDecoration: "line-through",
                           }}
                         >
                           {pool.display}
-                        </div>
-                      ) : (
-                        <div
+                        </span>
+                        <span
                           style={{
-                            fontSize: "0.78rem",
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
                             fontFamily: "var(--font-heading)",
-                            marginTop: "0.1rem",
+                            padding: "1px 7px",
+                            borderRadius: "5px",
+                            backgroundColor: "var(--bg-nav)",
+                            color: "#cc2222",
+                            border: "1px solid #cc2222",
                           }}
                         >
-                          <span
-                            style={{
-                              color: "var(--text-muted)",
-                              textDecoration: "line-through",
-                              marginRight: "0.3rem",
-                            }}
-                          >
-                            {pool.display}
-                          </span>
-                          <span style={{ color: "#cc2222" }}>
-                            {penalizedDisplay}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                          {penalizedDisplay}
+                        </span>
+                      </div>
+                    )}
+                    {/* Invest +/− */}
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "0.3rem",
+                        gap: "0.2rem",
                         flexShrink: 0,
                       }}
                     >
@@ -8791,15 +9201,15 @@ export default function CharacterSheetPage({
                         }}
                         disabled={!canRemove}
                         style={{
-                          width: "22px",
-                          height: "22px",
+                          width: "18px",
+                          height: "18px",
                           borderRadius: "50%",
                           border: "1px solid var(--border)",
                           backgroundColor: "var(--bg-card)",
                           cursor: canRemove ? "pointer" : "not-allowed",
                           fontWeight: 700,
                           color: "var(--text-muted)",
-                          fontSize: "0.85rem",
+                          fontSize: "0.75rem",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -8811,8 +9221,8 @@ export default function CharacterSheetPage({
                         style={{
                           fontFamily: "var(--font-heading)",
                           fontWeight: 700,
-                          fontSize: "0.9rem",
-                          minWidth: "18px",
+                          fontSize: "0.75rem",
+                          minWidth: "14px",
                           textAlign: "center",
                           color: "var(--primary)",
                         }}
@@ -8835,15 +9245,15 @@ export default function CharacterSheetPage({
                         }}
                         disabled={!canAdd}
                         style={{
-                          width: "22px",
-                          height: "22px",
+                          width: "18px",
+                          height: "18px",
                           borderRadius: "50%",
                           border: "1px solid var(--border)",
                           backgroundColor: "var(--bg-card)",
                           cursor: canAdd ? "pointer" : "not-allowed",
                           fontWeight: 700,
                           color: "var(--text-muted)",
-                          fontSize: "0.85rem",
+                          fontSize: "0.75rem",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -8857,6 +9267,8 @@ export default function CharacterSheetPage({
               })}
             </div>
           </div>
+
+          {/* Armaments / Protection / Tool Kits */}
           {[
             { label: "Armaments", items: prof?.armaments ?? [] },
             { label: "Protection", items: prof?.protection ?? [] },
@@ -8933,49 +9345,56 @@ export default function CharacterSheetPage({
         </div>
       </Section>
 
-      {/* Tabbed Section */}
+      {/* ──── TABBED SECTION ──── */}
       <div>
+        <div style={{ marginBottom: "4rem" }}>
+          {activeTab === "feats" && renderFeatsTab()}
+          {activeTab === "inventory" && renderInventoryTab()}
+          {activeTab === "spellcasting" && renderSpellcastingTab()}
+          {activeTab === "notes" && renderNotesTab()}
+        </div>
+        {/* Bottom sticky tab bar */}
         <div
           style={{
-            display: "flex",
-            borderBottom: "2px solid var(--border)",
-            marginBottom: "1.5rem",
+            position: "sticky",
+            bottom: 0,
+            backgroundColor: "var(--bg-nav)",
+            borderTop: "1px solid var(--border)",
+            display: "grid",
+            gridTemplateColumns: `repeat(${tabs.filter((t) => !t.hidden).length}, 1fr)`,
+            zIndex: 10,
           }}
         >
           {tabs
             .filter((t) => !t.hidden)
-            .map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  padding: "0.5rem 1.125rem",
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "var(--font-heading)",
-                  fontWeight: 700,
-                  fontSize: "0.85rem",
-                  backgroundColor: "transparent",
-                  color:
-                    activeTab === tab.id
-                      ? "var(--primary)"
-                      : "var(--text-muted)",
-                  borderBottom:
-                    activeTab === tab.id
+            .map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    padding: "0.625rem 0.5rem",
+                    border: "none",
+                    cursor: "pointer",
+                    backgroundColor: "transparent",
+                    fontFamily: "var(--font-heading)",
+                    fontStyle: "italic",
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    letterSpacing: "0.05em",
+                    color: active ? "var(--primary)" : "var(--text-muted)",
+                    borderTop: active
                       ? "2px solid var(--primary)"
                       : "2px solid transparent",
-                  marginBottom: "-2px",
-                  transition: "color 0.12s",
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
+                    transition: "color 0.12s",
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
         </div>
-        {activeTab === "feats" && renderFeatsTab()}
-        {activeTab === "inventory" && renderInventoryTab()}
-        {activeTab === "spellcasting" && renderSpellcastingTab()}
-        {activeTab === "notes" && renderNotesTab()}
       </div>
     </div>
   );

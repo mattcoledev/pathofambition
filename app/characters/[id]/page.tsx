@@ -1,4 +1,4 @@
-import CharacterSheetPage from '@/components/CharacterSheet';
+import CharacterSheetPage from "@/components/CharacterSheet";
 import {
   getBuilderProfessions,
   getBuilderOrigins,
@@ -6,9 +6,13 @@ import {
   getBuilderSpells,
   getItemCatalog,
   getChoiceFeatures,
-} from '@/lib/builderData';
+} from "@/lib/builderData";
 
-export default async function CharacterPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CharacterPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const professions = getBuilderProfessions();
   const origins = getBuilderOrigins();
