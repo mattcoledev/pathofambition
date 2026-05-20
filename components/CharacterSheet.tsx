@@ -32,6 +32,9 @@ import {
   calcBaseDiceFromAttr,
   BASE_SKILL_DIE_FACES,
   calcFullMaxVitality,
+  computeExpertiseBumps,
+  clearFeatChoices,
+  VITALS_SET,
 } from "@/lib/characterCalc";
 import type { SkillPoolInfo, ProficiencyRank } from "@/lib/characterCalc";
 import type {
@@ -1484,6 +1487,20 @@ export default function CharacterSheetPage({
       (f) => f.ownerId === "universal" || f.ownerName === "Universal",
     );
 
+    function recomputeExpertise(
+      selectedFeatIds: string[],
+      choiceSelections: Record<string, string[]>,
+    ): { vitalsExpertiseBumps: Record<string, number> } {
+      return {
+        vitalsExpertiseBumps: computeExpertiseBumps(
+          selectedFeatIds,
+          shopAllFeats,
+          choiceFeatures,
+          choiceSelections,
+        ),
+      };
+    }
+
     function purchaseFeat(feat: BuilderFeat) {
       const renown = c.renown ?? 0;
       if (renown < tierCost) return;
@@ -1499,6 +1516,11 @@ export default function CharacterSheetPage({
       const newUnspentSkill =
         (c.unspentSkillPoints ?? 0) + (isEvenFeat ? 2 : 0);
 
+      const expertise = recomputeExpertise(
+        newSelected,
+        c.choiceSelections ?? {},
+      );
+
       persist({
         selectedFeatIds: newSelected,
         renown: renown - tierCost,
@@ -1506,6 +1528,7 @@ export default function CharacterSheetPage({
         tier: newTier,
         unspentAttributePoints: newUnspentAttr,
         unspentSkillPoints: newUnspentSkill,
+        ...expertise,
       });
 
       const onGainChoices = choiceFeatures.filter(
@@ -1526,13 +1549,55 @@ export default function CharacterSheetPage({
       const current = shopChoiceQueue[shopChoiceIdx];
       if (!current) return;
       const key = `${current.entity_name}__${current.feature_name}`;
-      const updatedSelections = {
-        ...(c.choiceSelections ?? {}),
-        [key]: shopCurrentSels,
-      };
-      persist({ choiceSelections: updatedSelections });
-      if (shopChoiceIdx + 1 < shopChoiceQueue.length) {
-        setShopChoiceIdx((i) => i + 1);
+      // Clear any stale synthetic follow-up keys before writing new primary selection
+      const clearedSelections = clearFeatChoices(
+        c.choiceSelections ?? {},
+        current.entity_name,
+        current.feature_name,
+      );
+      const updatedSelections = { ...clearedSelections, [key]: shopCurrentSels };
+      const expertise = recomputeExpertise(c.selectedFeatIds, updatedSelections);
+      persist({ choiceSelections: updatedSelections, ...expertise });
+
+      // Build follow-up synthetic skill picks for options with expertise_skill_count
+      const VITALS_SKILLS = [...VITALS_SET];
+      const extraQueue: ChoiceFeature[] = [];
+      for (const optionName of shopCurrentSels) {
+        const opt = current.options.find((o) => o.name === optionName);
+        if (!opt?.expertise_skill_count) continue;
+        const skillCount = opt.expertise_skill_count;
+        const bumpCount = opt.expertise_bump_count ?? 1;
+        const syntheticName = `${current.feature_name} Expertise ×${bumpCount}`;
+        const syntheticKey = `${current.entity_name}__${syntheticName}`;
+        if (!updatedSelections[syntheticKey]) {
+          extraQueue.push({
+            entity_type: current.entity_type,
+            entity_name: current.entity_name,
+            source_kind: current.source_kind,
+            feature_name: syntheticName,
+            tier: current.tier,
+            path: current.path,
+            choice_type: "permanent_choice",
+            selection_rule: skillCount === 1 ? "single" : "fixed_count",
+            min_choices: skillCount,
+            max_choices: skillCount,
+            selection_timing: "on_gain",
+            branches_from_feature: current.feature_name,
+            notes: `Choose ${skillCount} VITALS skill(s) to gain Expertise in.`,
+            grants_expertise: true,
+            options: VITALS_SKILLS.map((s) => ({
+              name: s,
+              effect_text: `Gain Expertise in ${s}.`,
+            })),
+          });
+        }
+      }
+
+      const remainingQueue = shopChoiceQueue.slice(shopChoiceIdx + 1);
+      const newQueue = [...extraQueue, ...remainingQueue];
+      if (newQueue.length > 0) {
+        setShopChoiceQueue(newQueue);
+        setShopChoiceIdx(0);
         setShopCurrentSels([]);
       } else {
         setShopChoiceQueue([]);
@@ -1549,18 +1614,22 @@ export default function CharacterSheetPage({
       const newSelected = c.selectedFeatIds.map((id) =>
         id === swapSourceFeatId ? newFeat.id : id,
       );
-      // Clear old feat's choice selections
-      const oldKey = `${oldFeat.ownerName}__${oldFeat.name}`;
-      const updatedSelections = { ...(c.choiceSelections ?? {}) };
-      delete updatedSelections[oldKey];
+      // Clear old feat's choice selections (primary + synthetic follow-ups)
+      const updatedSelections = clearFeatChoices(
+        c.choiceSelections ?? {},
+        oldFeat.ownerName,
+        oldFeat.name,
+      );
       // Post-swap checks: +1 attr point; +2 skill if even-numbered slot
       const slotIdx = c.selectedFeatIds.indexOf(swapSourceFeatId);
       const isEvenSlot = slotIdx >= 0 && (slotIdx + 1) % 2 === 0;
+      const expertise = recomputeExpertise(newSelected, updatedSelections);
       persist({
         selectedFeatIds: newSelected,
         choiceSelections: updatedSelections,
         unspentAttributePoints: (c.unspentAttributePoints ?? 0) + 1,
         unspentSkillPoints: (c.unspentSkillPoints ?? 0) + (isEvenSlot ? 2 : 0),
+        ...expertise,
       });
       setSwapSourceFeatId(null);
       setSwapSearch("");
@@ -1586,14 +1655,54 @@ export default function CharacterSheetPage({
       const feat = shopAllFeats.find((f) => f.id === editChoiceFeatId);
       if (!feat) return;
       const key = `${feat.ownerName}__${feat.name}`;
-      persist({
-        choiceSelections: {
-          ...(c.choiceSelections ?? {}),
-          [key]: editChoiceSels,
-        },
-      });
+      // Clear stale synthetic follow-up keys before writing new selection
+      const clearedSelections = clearFeatChoices(c.choiceSelections ?? {}, feat.ownerName, feat.name);
+      const updatedSelections = { ...clearedSelections, [key]: editChoiceSels };
+      const expertise = recomputeExpertise(c.selectedFeatIds, updatedSelections);
+      persist({ choiceSelections: updatedSelections, ...expertise });
       setEditChoiceFeatId(null);
       setEditChoiceSels([]);
+
+      // Find the choice feature for this feat
+      const cf = choiceFeatures.find(
+        (f) => f.feature_name === feat.name && f.entity_name === feat.ownerName,
+      );
+      if (!cf) return;
+      // Build follow-up queue if selected option has expertise_skill_count
+      const VITALS_SKILLS = [...VITALS_SET];
+      const extraQueue: ChoiceFeature[] = [];
+      for (const optionName of editChoiceSels) {
+        const opt = cf.options.find((o) => o.name === optionName);
+        if (!opt?.expertise_skill_count) continue;
+        const skillCount = opt.expertise_skill_count;
+        const bumpCount = opt.expertise_bump_count ?? 1;
+        const syntheticName = `${cf.feature_name} Expertise ×${bumpCount}`;
+        extraQueue.push({
+          entity_type: cf.entity_type,
+          entity_name: cf.entity_name,
+          source_kind: cf.source_kind,
+          feature_name: syntheticName,
+          tier: cf.tier,
+          path: cf.path,
+          choice_type: "permanent_choice",
+          selection_rule: skillCount === 1 ? "single" : "fixed_count",
+          min_choices: skillCount,
+          max_choices: skillCount,
+          selection_timing: "on_gain",
+          branches_from_feature: cf.feature_name,
+          notes: `Choose ${skillCount} VITALS skill(s) to gain Expertise in.`,
+          grants_expertise: true,
+          options: VITALS_SKILLS.map((s) => ({
+            name: s,
+            effect_text: `Gain Expertise in ${s}.`,
+          })),
+        });
+      }
+      if (extraQueue.length > 0) {
+        setShopChoiceQueue(extraQueue);
+        setShopChoiceIdx(0);
+        setShopCurrentSels([]);
+      }
     }
 
     function renderShopFeatGroup(feats: BuilderFeat[], title: string) {
@@ -8977,12 +9086,12 @@ export default function CharacterSheetPage({
                   border: "1px solid #FCD34D",
                   borderRadius: "0.375rem",
                   fontSize: "0.8rem",
-                  color: "#92400E",
+                  color: "(#92400E)",
                   fontFamily: "var(--font-heading)",
                   fontWeight: 700,
                 }}
               >
-                ⚡ {dynUnspentSkill} unspent Skill Point
+                ✦ {dynUnspentSkill} unspent Skill Point
                 {dynUnspentSkill !== 1 ? "s" : ""} — allocate below
                 <span style={{ fontWeight: 400, marginLeft: "0.5rem" }}>
                   ({totalSpentSkill} / {totalAvailableSkill} spent)
@@ -9041,7 +9150,7 @@ export default function CharacterSheetPage({
                   Untrained: "var(--text-muted)",
                   Trained: "var(--primary)",
                   Expert: "var(--accent)",
-                  Mastery: "#7C3AED",
+                  Master: "#7C3AED",
                 };
                 const DIE_STEP = [4, 6, 8, 10, 12] as const;
                 function stepDown(faces: number): number {
@@ -9084,7 +9193,7 @@ export default function CharacterSheetPage({
                           }
                         : {
                             backgroundColor: "var(--bg-nav)",
-                            color: "var(--border)",
+                            color: "var(--text-muted)",
                             border: "1px solid var(--border)",
                           };
 

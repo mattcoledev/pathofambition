@@ -1,110 +1,196 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useState } from 'react';
-import { ThemeToggle } from './ThemeToggle';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 
 const NAV_ITEMS = [
   {
-    label: 'Reference',
+    label: "Reference",
     items: [
-      { href: '/professions', label: 'Professions', icon: 'sword' },
-      { href: '/origins', label: 'Origins', icon: 'origin' },
-      { href: '/spells', label: 'Spells', icon: 'spell' },
-      { href: '/feats', label: 'Feats', icon: 'feat' },
-      { href: '/actions', label: 'Actions', icon: 'action' },
-      { href: '/equipment', label: 'Equipment', icon: 'equipment' },
+      { href: "/professions", label: "Professions", icon: "sword" },
+      { href: "/origins", label: "Origins", icon: "origin" },
+      { href: "/spells", label: "Spells", icon: "spell" },
+      { href: "/feats", label: "Feats", icon: "feat" },
+      { href: "/actions", label: "Actions", icon: "action" },
+      { href: "/equipment", label: "Equipment", icon: "equipment" },
     ],
   },
   {
-    label: 'Rules',
+    label: "Rules",
+    items: [{ href: "/rules", label: "Rules Reference", icon: "rules" }],
+  },
+  {
+    label: "Characters",
     items: [
-      { href: '/rules', label: 'Rules Reference', icon: 'rules' },
+      { href: "/characters", label: "My Characters", icon: "character" },
+      {
+        href: "/characters/new",
+        label: "New Character",
+        icon: "new-character",
+      },
     ],
   },
   {
-    label: 'Characters',
-    items: [
-      { href: '/characters', label: 'My Characters', icon: 'character' },
-      { href: '/characters/new', label: 'New Character', icon: 'new-character' },
-    ],
-  },
-  {
-    label: 'Site',
-    items: [
-      { href: '/search', label: 'Search', icon: 'search' },
-    ],
+    label: "Site",
+    items: [{ href: "/search", label: "Search", icon: "search" }],
   },
 ];
 
 function CategoryIcon({ type }: { type: string }) {
-  const cls = 'w-4 h-4 shrink-0';
+  const cls = "w-4 h-4 shrink-0";
   switch (type) {
-    case 'sword':
+    case "sword":
       return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-          <path d="M14.5 10.5L4 21M20 4l-5.5 5.5M9 9l6 6M15 4h5v5" strokeLinecap="round" strokeLinejoin="round" />
+        <svg
+          className={cls}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
+          <path
+            d="M14.5 10.5L4 21M20 4l-5.5 5.5M9 9l6 6M15 4h5v5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
-    case 'origin':
+    case "origin":
       return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <svg
+          className={cls}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
           <circle cx="12" cy="8" r="4" />
           <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" strokeLinecap="round" />
         </svg>
       );
-    case 'spell':
+    case "spell":
       return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-          <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" strokeLinejoin="round" />
+        <svg
+          className={cls}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
+          <path
+            d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"
+            strokeLinejoin="round"
+          />
         </svg>
       );
-    case 'feat':
+    case "feat":
       return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinejoin="round" />
+        <svg
+          className={cls}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
+          <path
+            d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+            strokeLinejoin="round"
+          />
         </svg>
       );
-    case 'action':
+    case "action":
       return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <svg
+          className={cls}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
           <polygon points="5,3 19,12 5,21" strokeLinejoin="round" />
         </svg>
       );
-    case 'equipment':
+    case "equipment":
       return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <svg
+          className={cls}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
           <rect x="2" y="7" width="20" height="14" rx="2" />
-          <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" strokeLinecap="round" />
+          <path
+            d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"
+            strokeLinecap="round"
+          />
         </svg>
       );
-    case 'rules':
+    case "rules":
       return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <svg
+          className={cls}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
           <path d="M4 19.5A2.5 2.5 0 016.5 17H20" strokeLinecap="round" />
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" strokeLinejoin="round" />
+          <path
+            d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"
+            strokeLinejoin="round"
+          />
           <path d="M8 7h8M8 11h6" strokeLinecap="round" />
         </svg>
       );
-    case 'search':
+    case "search":
       return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <svg
+          className={cls}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
           <circle cx="11" cy="11" r="8" />
           <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
         </svg>
       );
-    case 'character':
+    case "character":
       return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <svg
+          className={cls}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
           <circle cx="12" cy="8" r="4" />
           <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" strokeLinecap="round" />
           <path d="M16 3.5c1.5.5 2.5 2 2 3.5" strokeLinecap="round" />
         </svg>
       );
-    case 'new-character':
+    case "new-character":
       return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <svg
+          className={cls}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
           <circle cx="10" cy="8" r="4" />
           <path d="M2 20c0-4 3.6-7 8-7" strokeLinecap="round" />
           <path d="M17 13v6M14 16h6" strokeLinecap="round" />
@@ -120,17 +206,35 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/');
+    href === "/"
+      ? pathname === "/"
+      : pathname === href || pathname.startsWith(href + "/");
 
   const navContent = (
     <nav aria-label="Site navigation">
       {/* Logo */}
-      <div className="px-4 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
+      <div
+        className="px-4 py-5 border-b"
+        style={{ borderColor: "var(--border)" }}
+      >
         <Link href="/" className="block" onClick={() => setMobileOpen(false)}>
-          <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--primary)' }}>
+          <div
+            style={{
+              fontFamily: "var(--font-heading)",
+              fontWeight: 700,
+              fontSize: "1.1rem",
+              color: "var(--primary)",
+            }}
+          >
             Path of Ambition
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px' }}>
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--text-muted)",
+              marginTop: "1px",
+            }}
+          >
             Player Reference
           </div>
         </Link>
@@ -140,15 +244,17 @@ export default function Sidebar() {
       <div className="px-3 py-4 space-y-5">
         {NAV_ITEMS.map((section) => (
           <div key={section.label}>
-            <p style={{
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: 'var(--text-muted)',
-              paddingLeft: '0.5rem',
-              marginBottom: '0.375rem',
-            }}>
+            <p
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--text-muted)",
+                paddingLeft: "0.5rem",
+                marginBottom: "0.375rem",
+              }}
+            >
               {section.label}
             </p>
             <ul className="space-y-0.5">
@@ -161,25 +267,34 @@ export default function Sidebar() {
                       onClick={() => setMobileOpen(false)}
                       className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors duration-150 cursor-pointer"
                       style={{
-                        fontFamily: 'var(--font-heading)',
+                        fontFamily: "var(--font-heading)",
                         fontWeight: active ? 600 : 400,
-                        fontSize: '0.9rem',
-                        color: active ? 'var(--primary)' : 'var(--text)',
-                        backgroundColor: active ? 'var(--primary-light)' : 'transparent',
-                        textDecoration: 'none',
+                        fontSize: "0.9rem",
+                        color: active ? "var(--primary)" : "var(--text)",
+                        backgroundColor: active
+                          ? "var(--primary-light)"
+                          : "transparent",
+                        textDecoration: "none",
                       }}
                       onMouseEnter={(e) => {
                         if (!active) {
-                          e.currentTarget.style.backgroundColor = 'var(--bg-nav)';
+                          e.currentTarget.style.backgroundColor =
+                            "var(--bg-nav)";
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (!active) {
-                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.backgroundColor = "transparent";
                         }
                       }}
                     >
-                      <span style={{ color: active ? 'var(--primary)' : 'var(--text-muted)' }}>
+                      <span
+                        style={{
+                          color: active
+                            ? "var(--primary)"
+                            : "var(--text-muted)",
+                        }}
+                      >
                         <CategoryIcon type={item.icon} />
                       </span>
                       {item.label}
@@ -202,11 +317,21 @@ export default function Sidebar() {
       {/* Mobile toggle */}
       <button
         className="fixed top-3 left-3 z-50 p-2 rounded-lg shadow-md lg:hidden cursor-pointer"
-        style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}
+        style={{
+          backgroundColor: "var(--bg-card)",
+          border: "1px solid var(--border)",
+        }}
         onClick={() => setMobileOpen(!mobileOpen)}
-        aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+        aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
       >
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <svg
+          className="w-5 h-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
           {mobileOpen ? (
             <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
           ) : (
@@ -219,7 +344,7 @@ export default function Sidebar() {
       {mobileOpen && (
         <div
           className="fixed inset-0 z-40 lg:hidden"
-          style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+          style={{ backgroundColor: "rgba(0,0,0,0.3)" }}
           onClick={() => setMobileOpen(false)}
           aria-hidden="true"
         />
@@ -229,9 +354,9 @@ export default function Sidebar() {
       <aside
         className="fixed top-0 left-0 h-full z-40 w-60 overflow-y-auto lg:hidden transition-transform duration-200"
         style={{
-          backgroundColor: 'var(--bg-nav)',
-          borderRight: '1px solid var(--border)',
-          transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+          backgroundColor: "var(--bg-nav)",
+          borderRight: "1px solid var(--border)",
+          transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
         }}
       >
         {navContent}
@@ -241,8 +366,8 @@ export default function Sidebar() {
       <aside
         className="hidden lg:flex flex-col w-56 shrink-0 sticky top-0 h-screen overflow-y-auto"
         style={{
-          backgroundColor: 'var(--bg-nav)',
-          borderRight: '1px solid var(--border)',
+          backgroundColor: "var(--bg-nav)",
+          borderRight: "1px solid var(--border)",
         }}
       >
         {navContent}

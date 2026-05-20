@@ -4,7 +4,78 @@ import type {
   AttributeKey,
   BuilderProfession,
   BuilderFeat,
+  ChoiceFeature,
 } from "./characterTypes";
+
+export const FIXED_EXPERTISE_BY_FEAT: Record<string, string[]> = {
+  "No Pain No Gain": ["Vigor"],
+  "Vessel of Nature": ["Lore"],
+  "Primal Instinct": ["Vigor"],
+  "Known Reputation": ["Social"],
+  "Crafted Stories": ["Social"],
+  "Arbiter's Insight": ["Lore"],
+};
+
+export const VITALS_SET = new Set([
+  "Vigor",
+  "Intuition",
+  "Talent",
+  "Awareness",
+  "Lore",
+  "Social",
+]);
+
+export function computeExpertiseBumps(
+  selectedFeatIds: string[],
+  allFeats: BuilderFeat[],
+  choiceFeatures: ChoiceFeature[],
+  choiceSelections: Record<string, string[]>,
+): Record<string, number> {
+  const bumps: Record<string, number> = {};
+
+  for (const id of selectedFeatIds) {
+    const feat = allFeats.find((f) => f.id === id);
+    if (!feat) continue;
+    for (const skill of FIXED_EXPERTISE_BY_FEAT[feat.name] ?? []) {
+      bumps[skill] = (bumps[skill] ?? 0) + 1;
+    }
+  }
+
+  for (const [key, selections] of Object.entries(choiceSelections)) {
+    const matchedCf = choiceFeatures.find(
+      (cf) =>
+        cf.grants_expertise && `${cf.entity_name}__${cf.feature_name}` === key,
+    );
+    if (matchedCf) {
+      for (const skill of selections) {
+        if (VITALS_SET.has(skill)) bumps[skill] = (bumps[skill] ?? 0) + 1;
+      }
+      continue;
+    }
+    const syntheticMatch = key.match(/Expertise ×(\d+)$/);
+    if (syntheticMatch) {
+      const bumpCount = parseInt(syntheticMatch[1], 10);
+      for (const skill of selections) {
+        if (VITALS_SET.has(skill))
+          bumps[skill] = (bumps[skill] ?? 0) + bumpCount;
+      }
+    }
+  }
+
+  return bumps;
+}
+
+/** Remove primary and all synthetic follow-up keys for a feat from choiceSelections. */
+export function clearFeatChoices(
+  selections: Record<string, string[]>,
+  ownerName: string,
+  featName: string,
+): Record<string, string[]> {
+  const prefix = `${ownerName}__${featName}`;
+  return Object.fromEntries(
+    Object.entries(selections).filter(([k]) => !k.startsWith(prefix)),
+  );
+}
 
 export function getTotalAttributes(char: Character): CharacterAttributes {
   const b = char.vocationAttributeBonus;
@@ -199,7 +270,7 @@ export function calcPreparedSpells(
 
 export const BASE_SKILL_DIE_FACES = 6;
 
-export type ProficiencyRank = "Untrained" | "Trained" | "Expert" | "Mastery";
+export type ProficiencyRank = "Untrained" | "Trained" | "Expert" | "Master";
 
 export function calcBaseDiceFromAttr(attrValue: number): number {
   if (attrValue >= 12) return 4;
@@ -235,11 +306,13 @@ export function calcSkillRank(
   vitalsProficiencies: string[],
   vitalsExpertiseBumps: Record<string, number>,
 ): ProficiencyRank {
-  if (!vitalsProficiencies.includes(skill)) return "Untrained";
   const bumps = vitalsExpertiseBumps?.[skill] ?? 0;
-  if (bumps >= 2) return "Mastery";
-  if (bumps >= 1) return "Expert";
-  return "Trained";
+  const baseRank = vitalsProficiencies.includes(skill) ? 1 : 0;
+  const total = baseRank + bumps;
+  if (total >= 3) return "Master";
+  if (total >= 2) return "Expert";
+  if (total >= 1) return "Trained";
+  return "Untrained";
 }
 
 export function calcProficiencyDieSize(rank: ProficiencyRank): number | null {
@@ -291,12 +364,15 @@ export function parseAvgDiceExpr(formula: string): number {
   if (!m) return 0;
   const count = parseInt(m[1], 10);
   const faces = parseInt(m[2], 10);
-  const flat = m[3] ? parseInt(m[3].replace(/\s/g, ''), 10) : 0;
-  return Math.round(count * (faces + 1) / 2 + flat);
+  const flat = m[3] ? parseInt(m[3].replace(/\s/g, ""), 10) : 0;
+  return Math.round((count * (faces + 1)) / 2 + flat);
 }
 
 /** Parse "XdY per N Attr" → average bonus given attr value. Attr key auto-detected from string. */
-export function parseBodyModifierBonusValue(formula: string, attrs: CharacterAttributes): number {
+export function parseBodyModifierBonusValue(
+  formula: string,
+  attrs: CharacterAttributes,
+): number {
   const m = formula.match(/(\d+)d(\d+)\s+per\s+(\d+)\s+(Body|Mind|Will)/i);
   if (!m) return 0;
   const count = parseInt(m[1], 10);
@@ -304,12 +380,16 @@ export function parseBodyModifierBonusValue(formula: string, attrs: CharacterAtt
   const perN = parseInt(m[3], 10);
   const attr = m[4].toLowerCase() as keyof CharacterAttributes;
   const groups = Math.floor((attrs[attr] ?? 0) / perN);
-  return Math.round(count * (faces + 1) / 2 * groups);
+  return Math.round(((count * (faces + 1)) / 2) * groups);
 }
 
 /** Full max vitality: Tier 1 base + per-tier gains + body modifier bonus + feat bonus. */
 export function calcFullMaxVitality(
-  prof: { startingVitality: string; vitalityPerTier: string; bodyModifierBonus: string },
+  prof: {
+    startingVitality: string;
+    vitalityPerTier: string;
+    bodyModifierBonus: string;
+  },
   attrs: CharacterAttributes,
   tier: number,
   selectedFeatIds: string[],

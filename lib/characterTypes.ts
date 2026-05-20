@@ -153,6 +153,8 @@ export interface Character {
 export interface ChoiceFeatureOption {
   name: string;
   effect_text: string;
+  expertise_skill_count?: number;
+  expertise_bump_count?: number;
 }
 
 export interface ChoiceFeature {
@@ -169,6 +171,7 @@ export interface ChoiceFeature {
   selection_timing: "on_gain" | "on_rest" | "on_use" | "on_activation";
   branches_from_feature: string | null;
   notes: string | null;
+  grants_expertise?: boolean;
   options: ChoiceFeatureOption[];
 }
 

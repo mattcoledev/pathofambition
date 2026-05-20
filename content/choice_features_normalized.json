@@ -21,7 +21,7 @@
         },
         {
           "name": "Pained Spirit",
-          "effect_text": "The spirit moves to a chosen ally; that ally’s attacks deal +1d4 arcane."
+          "effect_text": "The spirit moves to a chosen ally; that ally\u2019s attacks deal +1d4 arcane."
         }
       ]
     },
@@ -41,7 +41,7 @@
       "notes": "Grants Primeval Skin, access to Augmentation, and choice of 2 Conduit cantrips.",
       "options": [
         {
-          "name": "Hunter’s Stride",
+          "name": "Hunter\u2019s Stride",
           "effect_text": "Target gains +2 stealth and cannot become crippled for 1 minute."
         },
         {
@@ -106,7 +106,7 @@
           "effect_text": "Hit deals 1d6 puncture + 2d4 chosen elemental."
         },
         {
-          "name": "Spirit’s Burden",
+          "name": "Spirit\u2019s Burden",
           "effect_text": "Hit deals 2d4 slash; critical hit prevents Dash until your next turn."
         },
         {
@@ -173,7 +173,7 @@
         },
         {
           "name": "Frost",
-          "effect_text": "Gain temporary vitality equal to Tier × 2 + spellcasting modifier; when broken, deal 2d6 frost in Burst (Touch)."
+          "effect_text": "Gain temporary vitality equal to Tier \u00d7 2 + spellcasting modifier; when broken, deal 2d6 frost in Burst (Touch)."
         },
         {
           "name": "Land",
@@ -367,7 +367,7 @@
       "options": [
         {
           "name": "Dueling",
-          "effect_text": "Enemies not engaged or compelled by you suffer −2 to hit you."
+          "effect_text": "Enemies not engaged or compelled by you suffer \u22122 to hit you."
         },
         {
           "name": "Hand-to-Hand",
@@ -383,7 +383,7 @@
       "entity_type": "profession",
       "entity_name": "Duelist",
       "source_kind": "tier_feat",
-      "feature_name": "Warmonger’s Stance",
+      "feature_name": "Warmonger\u2019s Stance",
       "tier": 1,
       "path": "Marauder",
       "choice_type": "permanent_choice",
@@ -420,8 +420,8 @@
       "min_choices": 1,
       "max_choices": 1,
       "selection_timing": "derived",
-      "branches_from_feature": "Warmonger’s Stance",
-      "notes": "Uses your chosen Warmonger’s Stance.",
+      "branches_from_feature": "Warmonger\u2019s Stance",
+      "notes": "Uses your chosen Warmonger\u2019s Stance.",
       "options": [
         {
           "name": "Dual Wielding",
@@ -478,7 +478,7 @@
       "min_choices": 1,
       "max_choices": 1,
       "selection_timing": "derived",
-      "branches_from_feature": "Warmonger’s Stance",
+      "branches_from_feature": "Warmonger\u2019s Stance",
       "notes": "Uses your Marauder style.",
       "options": [
         {
@@ -487,11 +487,11 @@
         },
         {
           "name": "Snapshot",
-          "effect_text": "Dash can move two zones; each time you start in or enter a new zone, make two ranged attacks at −3; hit targets gain Strain on attacks until end of their turn."
+          "effect_text": "Dash can move two zones; each time you start in or enter a new zone, make two ranged attacks at \u22123; hit targets gain Strain on attacks until end of their turn."
         },
         {
           "name": "Lancer",
-          "effect_text": "Make attacks against each enemy along movement or reach at −3; each hit adds an extra weapon die; you remain unengaged until a miss or no valid targets remain."
+          "effect_text": "Make attacks against each enemy along movement or reach at \u22123; each hit adds an extra weapon die; you remain unengaged until a miss or no valid targets remain."
         }
       ]
     },
@@ -545,7 +545,7 @@
         },
         {
           "name": "Occult",
-          "effect_text": "When a spell critically hits, gain temporary vitality equal to 2 × spell tier; defensive boon +1 Mind."
+          "effect_text": "When a spell critically hits, gain temporary vitality equal to 2 \u00d7 spell tier; defensive boon +1 Mind."
         },
         {
           "name": "Primordial",
@@ -780,7 +780,7 @@
         },
         {
           "name": "Wyrm",
-          "effect_text": "Gain a reduction pool equal to 2 × Reservoir/Resonance spent."
+          "effect_text": "Gain a reduction pool equal to 2 \u00d7 Reservoir/Resonance spent."
         }
       ]
     },
@@ -952,7 +952,7 @@
           "effect_text": "After a hit, the next attack vs a different target in the same engagement gains +2 to hit and Ambition to damage."
         },
         {
-          "name": "Dragon’s Pursuit",
+          "name": "Dragon\u2019s Pursuit",
           "effect_text": "Add Ambition to attack and damage; on a critical hit vs a prone target, inflict maimed."
         },
         {
@@ -986,7 +986,7 @@
         },
         {
           "name": "Dueler",
-          "effect_text": "Once per turn on hit, the target gets −2 to its next attack."
+          "effect_text": "Once per turn on hit, the target gets \u22122 to its next attack."
         },
         {
           "name": "Enforcer",
@@ -1002,7 +1002,7 @@
         },
         {
           "name": "Slayer",
-          "effect_text": "Once per turn on hit, the target has −1 Armor until your next turn."
+          "effect_text": "Once per turn on hit, the target has \u22121 Armor until your next turn."
         }
       ]
     },
@@ -1048,7 +1048,7 @@
       "max_choices": 1,
       "selection_timing": "on_gain",
       "branches_from_feature": null,
-      "notes": "This record captures the additional signature armament weapon-type choice granted by Weapon Mastery, along with that weapon type’s critical effect.",
+      "notes": "This record captures the additional signature armament weapon-type choice granted by Weapon Mastery, along with that weapon type\u2019s critical effect.",
       "options": [
         {
           "name": "Accurate Wound",
@@ -1063,7 +1063,7 @@
           "effect_text": "After a hit, the next attack vs a different target in the same engagement gains +2 to hit and Ambition to damage."
         },
         {
-          "name": "Dragon’s Pursuit",
+          "name": "Dragon\u2019s Pursuit",
           "effect_text": "Add Ambition to attack and damage; on a critical hit vs a prone target, inflict maimed."
         },
         {
@@ -1089,7 +1089,7 @@
       "max_choices": 1,
       "selection_timing": "on_gain",
       "branches_from_feature": null,
-      "notes": "This record captures the additional signature armament weapon-type choice granted by Weapon Mastery, along with that weapon type’s critical effect.",
+      "notes": "This record captures the additional signature armament weapon-type choice granted by Weapon Mastery, along with that weapon type\u2019s critical effect.",
       "options": [
         {
           "name": "Axes",
@@ -1220,7 +1220,7 @@
       "options": [
         {
           "name": "Arcane / Reenergize",
-          "effect_text": "Summon critical hit restores mana equal to 3 × its tier (minimum 3)."
+          "effect_text": "Summon critical hit restores mana equal to 3 \u00d7 its tier (minimum 3)."
         },
         {
           "name": "Forbidden / Siphoned",
@@ -1265,7 +1265,7 @@
         },
         {
           "name": "Conjuration",
-          "effect_text": "Gain temporary vitality equal to highest known spell tier × 2."
+          "effect_text": "Gain temporary vitality equal to highest known spell tier \u00d7 2."
         },
         {
           "name": "Decimation",
@@ -1281,7 +1281,7 @@
         },
         {
           "name": "Reclamation",
-          "effect_text": "1 AP to gain +3 armor and −2 attacks."
+          "effect_text": "1 AP to gain +3 armor and \u22122 attacks."
         }
       ]
     },
@@ -1405,7 +1405,7 @@
       "max_choices": 1,
       "selection_timing": "daily_preparation",
       "branches_from_feature": null,
-      "notes": "Choose a known spell of spell tier equal to half your Tier; options are dynamic and depend on the character’s current known-spell list.",
+      "notes": "Choose a known spell of spell tier equal to half your Tier; options are dynamic and depend on the character\u2019s current known-spell list.",
       "options": []
     },
     {
@@ -1927,7 +1927,7 @@
       "entity_type": "profession",
       "entity_name": "Oathbound",
       "source_kind": "tier_feat",
-      "feature_name": "Covenant’s Herald",
+      "feature_name": "Covenant\u2019s Herald",
       "tier": 1,
       "path": "Herald",
       "choice_type": "derived_branch",
@@ -1972,7 +1972,7 @@
         },
         {
           "name": "Paradox",
-          "effect_text": "Once per turn, reduce an ally’s critical hit to a normal hit and gain Resolve on your next attack."
+          "effect_text": "Once per turn, reduce an ally\u2019s critical hit to a normal hit and gain Resolve on your next attack."
         }
       ]
     },
@@ -2100,7 +2100,7 @@
       "max_choices": 1,
       "selection_timing": "on_gain",
       "branches_from_feature": "Ascendant Boons",
-      "notes": "Gain another Ascendant Boon from another Creed. You do not gain the other Creed’s full benefits, only its Ascendant Boon.",
+      "notes": "Gain another Ascendant Boon from another Creed. You do not gain the other Creed\u2019s full benefits, only its Ascendant Boon.",
       "options": [
         {
           "name": "Honor",
@@ -2145,11 +2145,12 @@
         },
         {
           "name": "Inquisition",
-          "effect_text": "Gain 1 additional Tool proficiency and 1 additional V.I.T.A.L.S proficiency; gain Resolve on Scan and Intuition/Awareness checks involving Mortals."
+          "effect_text": "You gain *Expertise* in **1 Tool Kit** and **1 Skill of Choice; gain Resolve on Scan and Intuition/Awareness checks involving Mortals.",
+          "expertise_skill_count": 1
         },
         {
           "name": "Severance",
-          "effect_text": "Gain +Tier to attack and damage vs Magical targets; on a critical hit, the target’s next Cast a Spell has Strain."
+          "effect_text": "Gain +Tier to attack and damage vs Magical targets; on a critical hit, the target\u2019s next Cast a Spell has Strain."
         },
         {
           "name": "Thorns",
@@ -2210,7 +2211,7 @@
       "entity_type": "profession",
       "entity_name": "Warden",
       "source_kind": "tier_feat",
-      "feature_name": "Watcher’s Gaze",
+      "feature_name": "Watcher\u2019s Gaze",
       "tier": 1,
       "path": "Watcher",
       "choice_type": "activation_menu",
@@ -2223,19 +2224,19 @@
       "options": [
         {
           "name": "Resistance",
-          "effect_text": "Learn the target’s resistance."
+          "effect_text": "Learn the target\u2019s resistance."
         },
         {
           "name": "Immunity",
-          "effect_text": "Learn the target’s immunity."
+          "effect_text": "Learn the target\u2019s immunity."
         },
         {
           "name": "Weakness",
-          "effect_text": "Learn the target’s weakness."
+          "effect_text": "Learn the target\u2019s weakness."
         },
         {
           "name": "Weakest Defense",
-          "effect_text": "Learn the target’s weakest defense."
+          "effect_text": "Learn the target\u2019s weakest defense."
         }
       ]
     },
@@ -2264,7 +2265,7 @@
         },
         {
           "name": "Bludgeoning",
-          "effect_text": "May target Will; a critical hit applies an attack-roll penalty equal to Tier until end of the target’s turn."
+          "effect_text": "May target Will; a critical hit applies an attack-roll penalty equal to Tier until end of the target\u2019s turn."
         }
       ]
     },
@@ -2375,7 +2376,7 @@
       "entity_type": "origin",
       "entity_name": "Farmhand",
       "source_kind": "tier_feat",
-      "feature_name": "Nature’s Companion",
+      "feature_name": "Nature\u2019s Companion",
       "tier": 1,
       "path": null,
       "choice_type": "permanent_choice",
@@ -2433,7 +2434,7 @@
       "entity_type": "origin",
       "entity_name": "Nomad",
       "source_kind": "tier_feat",
-      "feature_name": "Nature’s Companion",
+      "feature_name": "Nature\u2019s Companion",
       "tier": 1,
       "path": null,
       "choice_type": "permanent_choice",
@@ -2607,6 +2608,77 @@
         {
           "name": "Insight Aura",
           "effect_text": "Gain Resolve on Intuition and Social checks."
+        }
+      ]
+    },
+    {
+      "entity_type": "profession",
+      "entity_name": "Agent",
+      "source_kind": "tier_feat",
+      "feature_name": "Skill Expert",
+      "tier": 1,
+      "path": "Agent",
+      "choice_type": "permanent_choice",
+      "selection_rule": "fixed_count",
+      "min_choices": 2,
+      "max_choices": 2,
+      "selection_timing": "on_gain",
+      "branches_from_feature": null,
+      "notes": "Choose 2 VITALS skills to gain Expertise in.",
+      "grants_expertise": true,
+      "options": [
+        {
+          "name": "Vigor",
+          "effect_text": "Gain Expertise in Vigor."
+        },
+        {
+          "name": "Intuition",
+          "effect_text": "Gain Expertise in Intuition."
+        },
+        {
+          "name": "Talent",
+          "effect_text": "Gain Expertise in Talent."
+        },
+        {
+          "name": "Awareness",
+          "effect_text": "Gain Expertise in Awareness."
+        },
+        {
+          "name": "Lore",
+          "effect_text": "Gain Expertise in Lore."
+        },
+        {
+          "name": "Social",
+          "effect_text": "Gain Expertise in Social."
+        }
+      ]
+    },
+    {
+      "entity_type": "profession",
+      "entity_name": "Agent",
+      "source_kind": "tier_feat",
+      "feature_name": "Masterful Skill",
+      "tier": 3,
+      "path": "Agent",
+      "choice_type": "permanent_choice",
+      "selection_rule": "single",
+      "min_choices": 1,
+      "max_choices": 1,
+      "selection_timing": "on_gain",
+      "branches_from_feature": null,
+      "notes": "Pick mode first; follow-up picks the skill(s).",
+      "options": [
+        {
+          "name": "Double Rank (1 skill)",
+          "effect_text": "Choose 1 VITALS skill and gain 2 Expertise ranks in it.",
+          "expertise_skill_count": 1,
+          "expertise_bump_count": 2
+        },
+        {
+          "name": "Split Rank (2 skills)",
+          "effect_text": "Choose 2 VITALS skills and gain 1 Expertise rank in each.",
+          "expertise_skill_count": 2,
+          "expertise_bump_count": 1
         }
       ]
     }

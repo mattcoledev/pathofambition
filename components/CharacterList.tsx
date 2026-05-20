@@ -2,10 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { loadCharacters, deleteCharacter } from '@/lib/characterStorage';
+import { loadCharacters, deleteCharacter, saveCharacter } from '@/lib/characterStorage';
 import type { Character } from '@/lib/characterTypes';
+import ExportButton from './ExportButton';
+import ImportButton from './ImportButton';
 
-export default function CharacterList() {
+interface Props {
+  professions: Array<{ id: string; name: string }>;
+}
+
+export default function CharacterList({ professions }: Props) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [mounted, setMounted] = useState(false);
 
@@ -13,6 +19,13 @@ export default function CharacterList() {
     setCharacters(loadCharacters());
     setMounted(true);
   }, []);
+
+  function handleImport(char: Character) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, createdAt, updatedAt, ...rest } = char;
+    saveCharacter(rest);
+    setCharacters(loadCharacters());
+  }
 
   function handleDelete(id: string, name: string) {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
@@ -24,7 +37,7 @@ export default function CharacterList() {
 
   return (
     <div>
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '0.625rem', flexWrap: 'wrap' }}>
         <Link
           href="/characters/new"
           style={{
@@ -39,6 +52,7 @@ export default function CharacterList() {
           </svg>
           New Character
         </Link>
+        <ImportButton professions={professions} onImport={handleImport} />
       </div>
 
       {characters.length === 0 ? (
@@ -99,6 +113,7 @@ export default function CharacterList() {
                 >
                   Open
                 </Link>
+                <ExportButton character={char} professions={professions} />
                 <button
                   onClick={() => handleDelete(char.id, char.name)}
                   style={{

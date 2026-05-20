@@ -67,8 +67,8 @@
             "properties": {},
             "notes": []
           },
-          "description_markdown": "While **hidden**, hit a target who is **unaware** of you, or have **Resolve** on your attack rolls, you add an additional weapon die based on your tier.\n\n| Tier | Die                          |\n| ---- | ---------------------------- |\n| 1-2  | One additional weapon die    |\n| 3-4  | Two additional weapon dice   |\n| 5    | Three additional weapon dice |",
-          "raw_markdown": "**Trait** Trigger | **Cost** -\nWhile **hidden**, hit a target who is **unaware** of you, or have **Resolve** on your attack rolls, you add an additional weapon die based on your tier.\n\n| Tier | Die                          |\n| ---- | ---------------------------- |\n| 1-2  | One additional weapon die    |\n| 3-4  | Two additional weapon dice   |\n| 5    | Three additional weapon dice |"
+          "description_markdown": "While **Hidden**, **Obscured**, or have an ally in your **Engagement**, while using a weapon with the *Light* trait, add an additional weapon die based on your tier.\n\n| Tier | Die                          |\n| ---- | ---------------------------- |\n| 1-2  | One additional weapon die    |\n| 3-4  | Two additional weapon dice   |\n| 5    | Three additional weapon dice |",
+          "raw_markdown": "**Trait** Trigger | **Cost** -\nWhile **Hidden**, **Obscured**, or have an ally in your **Engagement**, while using a weapon with the *Light* trait, add an additional weapon die based on your tier.\n\n| Tier | Die                          |\n| ---- | ---------------------------- |\n| 1-2  | One additional weapon die    |\n| 3-4  | Two additional weapon dice   |\n| 5    | Three additional weapon dice |"
         },
         {
           "id": "professions-agent-base-agile",
@@ -1795,6 +1795,59 @@
           },
           "description_markdown": "During **daily preparation**, you may bind one weapon to your arcane will. The bound weapon gains:\n- Use your **Spellcasting Modifier** for **attack** and **damage** with this weapon.\n- Gains the **spell catalyst** trait.\n- You are considered **proficient** with this weapon while it is bound.\n- Only **one** weapon may be bound at a time. Binding another ends the previous binding.",
           "raw_markdown": "**Trait** Passive | **Cost** -\nDuring **daily preparation**, you may bind one weapon to your arcane will. The bound weapon gains:\n- Use your **Spellcasting Modifier** for **attack** and **damage** with this weapon.\n- Gains the **spell catalyst** trait.\n- You are considered **proficient** with this weapon while it is bound.\n- Only **one** weapon may be bound at a time. Binding another ends the previous binding."
+        },
+        {
+          "id": "professions-warden-base-warden-order",
+          "name": "Warden Order",
+          "slug": "warden-order",
+          "owner_type": "profession",
+          "owner_id": "warden",
+          "owner_name": "Warden",
+          "tag": "Warden",
+          "trait_label": "Trait",
+          "trait_raw": "Passive",
+          "traits": ["Passive"],
+          "activation": {
+            "raw": "-",
+            "resources": {},
+            "properties": {},
+            "notes": []
+          },
+          "description_markdown": "Spread out across the realms, different Wardens gather to form ***Orders*** to help tame the wilderness in the specific need to be met. Choose a ***Warden Order*** and gain the following\n\n| Order | Boon |\n| --- | --- |\n| Aegis | When using a *Shield* add Armor Bonus to **Body** and **Mind** defense |\n| Inquisition | Gain *Expertise* in **1 Tool Kit** and **1 Skill of Choice**; roll with **Resolve** on *Scan* and **Intuition**/**Awareness** checks with **Mortals** |\n| Severance | +**Tier** to **attack/damage** vs **Magical** targets; on a **Critical Hit** the target's next *Cast a Spell* is made with **Strain** |\n| Thorns | Once per turn when a target in your **Engagement** uses **Disengage**, attack with *Bound Armament*; on hit deal damage equal to spellcasting modifier and prevent **Dash** until end of your next turn |\n| Veil | Learn *Protection from the Inhuman*; roll with **Resolve** on *Scan* and **Intuition**/**Awareness** checks with **Eidolic** or **Occult** |",
+          "raw_markdown": "**Trait** Passive | **Cost** -\nSpread out across the realms, different Wardens gather to form ***Orders*** to help tame the wilderness in the specific need to be met. Choose a ***Warden Order*** and gain the following"
+        },
+        {
+          "id": "professions-warden-base-spellcasting",
+          "name": "Spellcasting",
+          "slug": "spellcasting",
+          "owner_type": "profession",
+          "owner_id": "warden",
+          "owner_name": "Warden",
+          "tag": "Warden",
+          "trait_label": "Trait",
+          "trait_raw": "Passive",
+          "traits": ["Passive"],
+          "activation": {
+            "raw": "-",
+            "resources": {},
+            "properties": {},
+            "notes": []
+          },
+          "description_markdown": "You have enough understanding of magic to be able to wield it. Gain access to actions and spells that require spell casting. Your spellcasting features are as follows:\nGain the following features for **spellcasting**\n- You are a **Half-caster**\n- Your **source** is **Mana** \n- Your **Spellcasting Modifier** is **Mind** or **Will**\n- Your total **Reservoir** equals _(1 × Tier) + Spellcasting Modifier_.\n- Start with Three **Known Spells** at Tier 1\n- Your **prepared spells** equal your **Spellcasting Modifier**.\n- Your **Spell DC** = 10 + Spell Tier + Spellcasting Modifier.    \n- Each **Respite** restores spell points equal to your **Spellcasting Modifier** (minimum 3).\n- You gain three **Cantrips** listed with the Drifter source.\n\n> _Example:_  \n> A Tier 3 ***Warden*** with +8 Mind has (1 × 3)+8 = **11 spell points**.",
+          "raw_markdown": "**Trait** Passive | **Cost** -\nYou have enough understanding of magic to be able to wield it. Gain access to actions and spells that require spell casting. Your spellcasting features are as follows:\nGain the following features for **spellcasting**\n- You are a **Half-caster**\n- Your **source** is **Mana** \n- Your **Spellcasting Modifier** is **Mind** or **Will**\n- Your total **Reservoir** equals _(1 × Tier) + Spellcasting Modifier_.\n- Start with Three **Known Spells** at Tier 1\n- Your **prepared spells** equal your **Spellcasting Modifier**.\n- Your **Spell DC** = 10 + Spell Tier + Spellcasting Modifier.    \n- Each **Respite** restores spell points equal to your **Spellcasting Modifier** (minimum 3).\n- You gain three **Cantrips** from the Mage source",
+          "spellcasting": {
+            "caster_type": "Half-caster",
+            "source": "Mana",
+            "spellcasting_modifier": "Mind or Will",
+            "reservoir_formula": "(1 × Tier) + Spellcasting Modifier",
+            "known_spells": "Start with Three Known Spells at Tier 1",
+            "prepared_spells": "your Spellcasting Modifier",
+            "spell_dc": "10 + Spell Tier + Spellcasting Modifier.",
+            "respite_recovery": "Each Respite restores spell points equal to your Spellcasting Modifier (minimum 3).",
+            "cantrip_notes": [
+              "You gain three Cantrips listed with the Drifter source."
+            ]
+          }
         },
         {
           "id": "professions-warden-base-spell-disruption",

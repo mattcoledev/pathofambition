@@ -18,6 +18,8 @@ import {
   calcAmbition,
   calcSpellcastingThreshold,
   calcSpellcastingTier,
+  computeExpertiseBumps,
+  clearFeatChoices,
 } from "@/lib/characterCalc";
 import type {
   BuilderProfession,
@@ -401,13 +403,51 @@ export default function CharacterBuilder({
     const cf = choiceQueue[choiceQueueIdx];
     if (!cf) return;
     const key = `${cf.entity_name}__${cf.feature_name}`;
+    // Clear stale synthetic follow-up keys before writing new selection
+    const clearedSelections = clearFeatChoices(draft.choiceSelections, cf.entity_name, cf.feature_name);
     update({
-      choiceSelections: { ...draft.choiceSelections, [key]: currentSelections },
+      choiceSelections: { ...clearedSelections, [key]: currentSelections },
     });
 
-    const nextIdx = choiceQueueIdx + 1;
-    if (nextIdx < choiceQueue.length) {
-      setChoiceQueueIdx(nextIdx);
+    // Build follow-up VITALS skill picks for any option with expertise_skill_count
+    const VITALS_SKILLS = ["Vigor", "Intuition", "Talent", "Awareness", "Lore", "Social"];
+    const extraQueue: ChoiceFeature[] = [];
+    for (const optionName of currentSelections) {
+      const opt = cf.options.find((o) => o.name === optionName);
+      if (!opt?.expertise_skill_count) continue;
+      const skillCount = opt.expertise_skill_count;
+      const bumpCount = opt.expertise_bump_count ?? 1;
+      const syntheticName = `${cf.feature_name} Expertise ×${bumpCount}`;
+      const syntheticKey = `${cf.entity_name}__${syntheticName}`;
+      if (!draft.choiceSelections[syntheticKey]) {
+        extraQueue.push({
+          entity_type: cf.entity_type,
+          entity_name: cf.entity_name,
+          source_kind: cf.source_kind,
+          feature_name: syntheticName,
+          tier: cf.tier,
+          path: cf.path,
+          choice_type: "permanent_choice",
+          selection_rule: skillCount === 1 ? "single" : "fixed_count",
+          min_choices: skillCount,
+          max_choices: skillCount,
+          selection_timing: "on_gain",
+          branches_from_feature: cf.feature_name,
+          notes: `Choose ${skillCount} VITALS skill(s) to gain Expertise in.`,
+          grants_expertise: true,
+          options: VITALS_SKILLS.map((s) => ({
+            name: s,
+            effect_text: `Gain Expertise in ${s}.`,
+          })),
+        });
+      }
+    }
+
+    const remainingQueue = choiceQueue.slice(choiceQueueIdx + 1);
+    const newQueue = [...extraQueue, ...remainingQueue];
+    if (newQueue.length > 0) {
+      setChoiceQueue(newQueue);
+      setChoiceQueueIdx(0);
       setCurrentSelections([]);
     } else {
       setChoiceQueue([]);
@@ -867,7 +907,15 @@ export default function CharacterBuilder({
       unspentAttributePoints: 0,
       skillPoints: {},
       unspentSkillPoints: 3,
-      vitalsExpertiseBumps: {},
+      ...(() => {
+        const vitalsExpertiseBumps = computeExpertiseBumps(
+          draft.selectedFeatIds,
+          allFeats,
+          choiceFeatures,
+          draft.choiceSelections,
+        );
+        return { vitalsExpertiseBumps };
+      })(),
     };
     const saved = saveCharacter(charData);
     router.push(`/characters/${saved.id}`);
@@ -887,11 +935,11 @@ export default function CharacterBuilder({
         )
         .map((f) => f.id);
       const removedIds = [id, ...dependents];
-      // Also clear any choice selections for removed feats
-      const newChoiceSelections = { ...draft.choiceSelections };
+      // Also clear any choice selections (primary + synthetic follow-ups) for removed feats
+      let newChoiceSelections = { ...draft.choiceSelections };
       for (const rid of removedIds) {
         const feat = allFeats.find((f) => f.id === rid);
-        if (feat) delete newChoiceSelections[`${feat.ownerName}__${feat.name}`];
+        if (feat) newChoiceSelections = clearFeatChoices(newChoiceSelections, feat.ownerName, feat.name);
       }
       update({
         selectedFeatIds: current.filter((f) => !removedIds.includes(f)),
