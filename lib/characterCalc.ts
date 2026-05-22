@@ -282,9 +282,9 @@ export function calcSpellcastingTier(
   casterType: "full" | "half" | "limited",
   threshold: number,
 ): number {
-  if (casterType === "full") return Math.min(threshold, 6);
-  if (casterType === "half") return Math.min(Math.floor(threshold / 2), 5);
-  /* limited */ return Math.min(Math.floor(threshold / 2), 4);
+  if (casterType === "full") return Math.min(threshold + 1, 6);
+  if (casterType === "half") return Math.min(Math.floor(threshold / 2) + 1, 5);
+  /* limited */ return Math.min(Math.floor(threshold / 2) + 1, 3);
 }
 
 /** Known Spells from caster type and threshold. */
