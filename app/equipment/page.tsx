@@ -8,20 +8,21 @@ export const metadata: Metadata = { title: 'Equipment' };
 interface Weapon {
   id: string; name: string; slug: string;
   groups: string[]; damage: string;
-  damage_types: string[]; range_bands: string[];
-  traits: string[]; cost: number | null;
+  damage_types: Array<{ code: string; name: string }>;
+  range_bands: Array<{ code: string; name: string }>;
+  traits: Array<{ name: string }>; cost: number | null;
 }
 
 interface Kit {
-  id: string; name: string; slug: string; category: string;
+  id: string; name: string; slug: string; subcategory: string;
   uses: string[]; bonus: string; critical: string;
 }
 
 interface Shield {
   id: string; name: string; slug: string;
   shield_type: string | null; armor_type: string | null;
-  bonus: { raw: string | null; value: number | null };
-  reduction_pool: number; traits: string[];
+  armor_bonus: { raw: string | null; value: number | null };
+  reduction_pool: number; traits: Array<{ name: string }>;
 }
 
 interface ArmorType {
@@ -32,9 +33,6 @@ interface ArmorType {
 interface ItemTrait {
   id: string; name: string; alias: string | null; effect: string;
 }
-
-const DMG_LABELS: Record<string, string> = { B: 'Blunt', P: 'Puncture', S: 'Slash' };
-const RANGE_LABELS: Record<string, string> = { M: 'Melee', C: 'Close', N: 'Nearby', F: 'Far' };
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -72,9 +70,10 @@ function RuleCard({ title, children }: { title: string; children: React.ReactNod
 export default function EquipmentPage() {
   const eq = getEquipment() as Record<string, unknown>;
   const rules = eq.rules as Record<string, unknown>;
-  const weapons = (eq.weapons as Weapon[]) ?? [];
-  const kits = (eq.kits as Kit[]) ?? [];
-  const shields = (eq.shields as Shield[]) ?? [];
+  const catalog = (eq.catalog ?? {}) as Record<string, unknown[]>;
+  const weapons = (catalog.weapons as Weapon[]) ?? [];
+  const kits = (catalog.kits as Kit[]) ?? [];
+  const shields = (catalog.shields as Shield[]) ?? [];
   const armorTypes = (eq.armor_types as ArmorType[]) ?? [];
   const itemTraits = (eq.item_traits as ItemTrait[]) ?? [];
 
@@ -234,11 +233,11 @@ export default function EquipmentPage() {
                       <tr key={w.id} style={{ backgroundColor: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-nav)' }}>
                         <td style={{ padding: '0.5rem 0.75rem', fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' }}>{w.name}</td>
                         <td style={{ padding: '0.5rem 0.75rem', color: 'var(--primary)', fontFamily: 'var(--font-heading)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>{w.damage}</td>
-                        <td style={{ padding: '0.5rem 0.75rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>{w.damage_types.map(d => DMG_LABELS[d] ?? d).join(', ')}</td>
-                        <td style={{ padding: '0.5rem 0.75rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>{w.range_bands.map(r => RANGE_LABELS[r] ?? r).join(', ')}</td>
+                        <td style={{ padding: '0.5rem 0.75rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>{w.damage_types.map(d => d.name).join(', ')}</td>
+                        <td style={{ padding: '0.5rem 0.75rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>{w.range_bands.map(r => r.name).join(', ')}</td>
                         <td style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid var(--border)' }}>
                           <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-                            {w.traits.map(t => <TraitBadge key={t} trait={t} variant="muted" />)}
+                            {w.traits.map(t => <TraitBadge key={t.name} trait={t.name} variant="muted" />)}
                           </div>
                         </td>
                         <td style={{ padding: '0.5rem 0.75rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>
@@ -263,11 +262,11 @@ export default function EquipmentPage() {
               <div key={s.id} style={{ padding: '1rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.625rem' }}>
                 <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.95rem', color: 'var(--text)', marginBottom: '0.35rem' }}>{s.name}</h3>
                 {s.shield_type && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Type: <strong style={{ color: 'var(--text)' }}>{s.shield_type}</strong></div>}
-                {s.bonus.raw && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Bonus: <strong style={{ color: 'var(--primary)' }}>{s.bonus.raw}</strong></div>}
+                {s.armor_bonus?.raw && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Bonus: <strong style={{ color: 'var(--primary)' }}>{s.armor_bonus.raw}</strong></div>}
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>Pool: <strong style={{ color: 'var(--text)' }}>{s.reduction_pool}</strong></div>
                 {s.traits.length > 0 && (
                   <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-                    {s.traits.map(t => <TraitBadge key={t} trait={t} variant="muted" />)}
+                    {s.traits.map(t => <TraitBadge key={t.name} trait={t.name} variant="muted" />)}
                   </div>
                 )}
               </div>
@@ -284,7 +283,7 @@ export default function EquipmentPage() {
             {kits.map((k) => (
               <div key={k.id} style={{ padding: '1rem 1.25rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.625rem' }}>
                 <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.95rem', color: 'var(--text)', marginBottom: '0.35rem' }}>{k.name}</h3>
-                {k.category && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'capitalize', marginBottom: '0.4rem' }}>{k.category}</div>}
+                {k.subcategory && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'capitalize', marginBottom: '0.4rem' }}>{k.subcategory}</div>}
                 {k.bonus && <div style={{ fontSize: '0.85rem', color: 'var(--text)', marginBottom: '0.25rem' }}><strong>Bonus:</strong> {k.bonus}</div>}
                 {k.critical && <div style={{ fontSize: '0.85rem', color: 'var(--text)', marginBottom: '0.25rem' }}><strong>Critical:</strong> {k.critical}</div>}
                 {k.uses?.length > 0 && (

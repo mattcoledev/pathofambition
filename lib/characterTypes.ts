@@ -146,6 +146,12 @@ export interface Character {
 
   // BUG-09: Spell Armor active state
   spellArmorActive?: boolean;
+
+  // Conditions: key = condition name (e.g. "Bleeding"), value = stack count (0 = off, 1+ = on/stacks)
+  activeConditions?: Record<string, number>;
+
+  // Favorites: items/feats/spells pinned to the right rail quick-access panel
+  favorites?: { type: "item" | "feat" | "spell"; id: string }[];
 }
 
 // ─── Choice feature resolution ────────────────────────────────────────────────
@@ -212,6 +218,7 @@ export interface BuilderProfession {
   startingVitality: string;
   vitalityPerTier: string;
   bodyModifierBonus: string;
+  woundBonusPerTier: number;
   pathOptions: string[];
   vitalsChoiceCount: number;
   vitalsOptions: string[];
@@ -268,6 +275,7 @@ export interface BuilderSpell {
   isCantrip: boolean;
   school: string;
   sources: string[];
+  grantedByOwners: string[];
   range: string;
   duration: string;
   descriptionMarkdown: string;

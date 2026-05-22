@@ -32,6 +32,7 @@ export interface Profession {
   starting_vitality: string;
   vitality_gained_per_tier: string;
   body_modifier_bonus: string;
+  wound_bonus_per_tier: number;
   proficiencies: {
     vitals_skills: string[];
     armaments: string[];
@@ -164,7 +165,7 @@ export interface EquipmentItem {
 
 // Search result
 export interface SearchResult {
-  type: 'profession' | 'spell' | 'origin' | 'feat' | 'action' | 'equipment';
+  type: "profession" | "spell" | "origin" | "feat" | "action" | "equipment";
   id: string;
   name: string;
   slug: string;

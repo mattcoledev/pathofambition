@@ -20,6 +20,7 @@ import {
   calcSpellcastingTier,
   computeExpertiseBumps,
   clearFeatChoices,
+  computeKnownSpheres,
 } from "@/lib/characterCalc";
 import type {
   BuilderProfession,
@@ -328,13 +329,39 @@ export default function CharacterBuilder({
       }
     : (draft.vocationCaster ?? featCaster);
 
+  const knownSpheres = useMemo(
+    () => computeKnownSpheres(draft.choiceSelections, choiceFeatures),
+    [draft.choiceSelections, choiceFeatures],
+  );
+
   const mySpells = useMemo(() => {
     const source = effectiveCaster?.casterSource;
     if (!source) return [];
-    return spells.filter(
-      (s) => s.sources.includes(source) || s.sources.length === 0,
-    );
-  }, [spells, effectiveCaster]);
+    const profName = draft.professionName;
+    const originName = draft.originName;
+    const vocationName = draft.vocationName;
+    return spells.filter((s) => {
+      if (s.isCantrip) {
+        if (s.grantedByOwners.length === 0) return false;
+        return s.grantedByOwners.some((entry) => {
+          if (entry.includes(":")) {
+            const [orig, voc] = entry.split(":");
+            return orig === originName && voc === vocationName;
+          }
+          return (
+            entry === profName ||
+            entry === originName ||
+            entry === vocationName ||
+            (knownSpheres.size > 0 && knownSpheres.has(entry))
+          );
+        });
+      }
+      const isUniversal = s.sources.includes("Universal");
+      const sourceMatch = s.sources.includes(source) || s.sources.includes(profName);
+      const sphereMatch = knownSpheres.size > 0 && !!s.school && knownSpheres.has(s.school);
+      return isUniversal || sourceMatch || sphereMatch;
+    });
+  }, [spells, effectiveCaster, draft.professionName, draft.originName, draft.vocationName, knownSpheres]);
 
   const totalBasePoints =
     draft.baseAttributes.body +
@@ -2779,7 +2806,7 @@ export default function CharacterBuilder({
           bodyDef: calcBodyDefense(totalAttributes),
           mindDef: calcMindDefense(totalAttributes),
           willDef: calcWillDefense(totalAttributes),
-          wounds: calcMaxWounds(totalAttributes, draft.tier),
+          wounds: calcMaxWounds(selectedProf ?? { woundBonusPerTier: 1 }, totalAttributes, draft.tier),
           carry: calcCarryWeight(totalAttributes, draft.tier),
         }
       : null;

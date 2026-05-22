@@ -30,11 +30,12 @@ import {
   calcSkillPool,
   calcSkillAttrValue,
   calcBaseDiceFromAttr,
-  BASE_SKILL_DIE_FACES,
   calcFullMaxVitality,
   computeExpertiseBumps,
   clearFeatChoices,
+  computeKnownSpheres,
   VITALS_SET,
+  TIER_TOTAL_SLOTS,
 } from "@/lib/characterCalc";
 import type { SkillPoolInfo, ProficiencyRank } from "@/lib/characterCalc";
 import type {
@@ -55,6 +56,7 @@ import {
   parseRequired,
   FEAT_COST_BY_TIER,
 } from "@/lib/featLogic";
+import { CONDITIONS } from "@/conditions";
 
 interface Props {
   id: string;
@@ -67,7 +69,7 @@ interface Props {
   choiceFeatures: ChoiceFeature[];
 }
 
-type TabId = "feats" | "inventory" | "spellcasting" | "notes";
+type TabId = "combat" | "feats" | "inventory" | "spellcasting" | "notes";
 
 const INVENTORY_CATEGORIES: InventoryCategory[] = [
   "Weapon",
@@ -407,7 +409,7 @@ function Section({
       style={{
         backgroundColor: "var(--bg-card)",
         border: "1px solid var(--border)",
-        borderRadius: "12px",
+        borderRadius: "6px",
         overflow: "hidden",
         marginBottom: "1rem",
       }}
@@ -457,7 +459,7 @@ export default function CharacterSheetPage({
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesVal, setNotesVal] = useState("");
 
-  const [activeTab, setActiveTab] = useState<TabId>("feats");
+  const [activeTab, setActiveTab] = useState<TabId>("combat");
 
   // Feat expand state (Issue 4 — collapsed by default)
   const [expandedFeats, setExpandedFeats] = useState<Set<string>>(new Set());
@@ -504,6 +506,21 @@ export default function CharacterSheetPage({
   // Traits editing input
   const [traitInputVal, setTraitInputVal] = useState("");
 
+  // Portrait image upload
+  const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
+  const [portraitCollapsed, setPortraitCollapsed] = useState(false);
+  const [favoritesCollapsed, setFavoritesCollapsed] = useState(false);
+  const [conditionsCollapsed, setConditionsCollapsed] = useState(false);
+  const [vitAdjInput, setVitAdjInput] = useState<string | null>(null);
+  const [renownAdjInput, setRenownAdjInput] = useState<string | null>(null);
+  const portraitInputRef = React.useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (char?.id) {
+      const stored = localStorage.getItem(`portrait-${char.id}`);
+      setPortraitUrl(stored ?? null);
+    }
+  }, [char?.id]);
+
   const filteredCatalog = useMemo(() => {
     const q = catalogSearch.toLowerCase().trim();
     if (!q) return catalog;
@@ -520,6 +537,12 @@ export default function CharacterSheetPage({
   const [expandedSpells, setExpandedSpells] = useState<Set<string>>(new Set());
   const [showSpellManager, setShowSpellManager] = useState(false);
   const [spellManagerSearch, setSpellManagerSearch] = useState("");
+  const [spellShopSourceFilter, setSpellShopSourceFilter] = useState<
+    Set<string>
+  >(new Set());
+  const [spellShopSphereFilter, setSpellShopSphereFilter] = useState<
+    Set<string>
+  >(new Set());
 
   // Feat shop state
   const [showFeatShop, setShowFeatShop] = useState(false);
@@ -532,6 +555,8 @@ export default function CharacterSheetPage({
 
   // FEATURE-01: Ref sidebar
   const [showRefSidebar, setShowRefSidebar] = useState(false);
+  const [showFavsSidebar, setShowFavsSidebar] = useState(false);
+  const [showPortraitSidebar, setShowPortraitSidebar] = useState(false);
 
   // FEATURE-02: Apply Damage pipeline
   const [damageInput, setDamageInput] = useState("");
@@ -544,6 +569,10 @@ export default function CharacterSheetPage({
   );
   const [editChoiceFeatId, setEditChoiceFeatId] = useState<string | null>(null);
   const [editChoiceSels, setEditChoiceSels] = useState<string[]>([]);
+  const [favPopout, setFavPopout] = useState<{
+    type: "item" | "feat" | "spell";
+    id: string;
+  } | null>(null);
 
   useEffect(() => {
     const loaded = getCharacter(id);
@@ -748,13 +777,40 @@ export default function CharacterSheetPage({
   const bodyDef = calcBodyDefense(attrs);
   const mindDef = calcMindDefense(attrs);
   const willDef = calcWillDefense(attrs);
-  const maxWounds = calcMaxWounds(attrs, effectiveTier);
+  const maxWounds = calcMaxWounds(
+    prof ?? { woundBonusPerTier: 1 },
+    attrs,
+    effectiveTier,
+  );
   const carryWeight = calcCarryWeight(attrs, effectiveTier);
   const spellDC = isCaster ? calcSpellDC(spellTier, modVal) : null;
 
+  // Magic sources the character can draw from (e.g. "Anima", "Mana")
+  const accessibleSources: string[] = isCaster
+    ? Array.from(
+        new Set(
+          [
+            casterInfo?.casterSource,
+            ...allFeats
+              .filter(
+                (f) =>
+                  c.selectedFeatIds.includes(f.id) &&
+                  f.casterInfo?.casterSource,
+              )
+              .map((f) => f.casterInfo!.casterSource!),
+          ].filter(Boolean) as string[],
+        ),
+      )
+    : [];
+
+  // School spheres unlocked via choice features (e.g. "Aberration", "Conjuration")
+  const knownSchoolSpheres: string[] = isCaster
+    ? Array.from(computeKnownSpheres(c.choiceSelections ?? {}, choiceFeatures))
+    : [];
+
   const ambition = calcAmbition(attrs.will, effectiveTier);
-  const maxAmbition = c.maxAmbition ?? ambition.max;
-  const ambitionDice = c.ambitionDice ?? ambition.dice;
+  const maxAmbition = ambition.max;
+  const ambitionDice = ambition.dice;
 
   // BUG-11: Derive max vitality reactively from profession formula + tier + attrs + feats
   const derivedMaxVitality = prof
@@ -797,6 +853,19 @@ export default function CharacterSheetPage({
     if (updated) setChar(updated);
   }
 
+  function toggleFavorite(type: "item" | "feat" | "spell", id: string) {
+    const favs = c.favorites ?? [];
+    const exists = favs.some((f) => f.type === type && f.id === id);
+    persist({
+      favorites: exists
+        ? favs.filter((f) => !(f.type === type && f.id === id))
+        : [...favs, { type, id }],
+    });
+  }
+  function isFavorite(type: "item" | "feat" | "spell", id: string) {
+    return (c.favorites ?? []).some((f) => f.type === type && f.id === id);
+  }
+
   function handleDelete() {
     if (!confirm(`Delete "${c.name}"? This cannot be undone.`)) return;
     deleteCharacter(id);
@@ -806,7 +875,7 @@ export default function CharacterSheetPage({
   // ─── Rest actions ────────────────────────────────────────────────────────
   function takeRespite() {
     if (currentRespites <= 0) return;
-    const vitRestore = Math.max(4, attrs.body * 2);
+    const vitRestore = Math.max(4, 4 + attrs.body * 2);
     const ambRestore = Math.max(4, attrs.will);
     persist({
       currentRespites: currentRespites - 1,
@@ -1128,6 +1197,470 @@ export default function CharacterSheetPage({
 
   // ─── Tab content renderers ───────────────────────────────────────────────
 
+  function renderCombatTab() {
+    const activeConds = c.activeConditions ?? {};
+    const STACKING = new Set([
+      "Bleeding",
+      "Burning",
+      "Dazed",
+      "Poisoned",
+      "Weakened",
+    ]);
+
+    function setCondition(code: string, val: number) {
+      persist({
+        activeConditions: { ...activeConds, [code]: Math.max(0, val) },
+      });
+    }
+
+    const equippedSlots: { label: string; item: typeof equippedMain }[] = [
+      { label: "Main Hand", item: equippedMain },
+      { label: "Two Hands", item: equippedTwoHands },
+      { label: "Off Hand", item: equippedOff },
+      { label: "Body", item: equippedBody },
+    ];
+
+    const cardStyle: React.CSSProperties = {
+      backgroundColor: "var(--bg-card)",
+      border: "1px solid var(--border)",
+      borderRadius: "6px",
+      marginBottom: "14px",
+      overflow: "hidden",
+    };
+    const headStyle: React.CSSProperties = {
+      padding: "8px 14px",
+      borderBottom: "1px solid var(--border)",
+      backgroundColor: "var(--bg-nav)",
+      fontSize: "10px",
+      fontFamily: "monospace",
+      letterSpacing: "0.16em",
+      textTransform: "uppercase" as const,
+      color: "var(--text-muted)",
+    };
+
+    return (
+      <>
+        {/* ── Equipped Gear ── */}
+        <div style={cardStyle}>
+          <div style={headStyle}>Equipped Gear</div>
+          <div style={{ padding: "4px 0" }}>
+            {equippedSlots.map(({ label, item }) => {
+              if (!item) {
+                return (
+                  <div
+                    key={label}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      padding: "8px 14px",
+                      borderBottom: "1px solid var(--border)",
+                      opacity: 0.35,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: "9px",
+                        letterSpacing: "0.14em",
+                        textTransform: "uppercase" as const,
+                        color: "var(--text-muted)",
+                        minWidth: "72px",
+                      }}
+                    >
+                      {label}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "var(--font-heading)",
+                        fontSize: "13px",
+                        fontStyle: "italic",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      — empty —
+                    </span>
+                  </div>
+                );
+              }
+              const isWeapon = item.category === "Weapon";
+              const isArmor = item.category === "Armor";
+              const isShield = item.category === "Shield";
+              const modKey = item.modifierStat ?? "body";
+              const toHitMod = attrs[modKey] + (item.masterworkBonus ?? 0);
+              const dmgStr =
+                item.damageDiceCount > 0
+                  ? `${item.damageDiceCount}d${item.damageDiceSize}`
+                  : null;
+              const typeStr = item.damageTypeTags.join(" / ");
+              const shieldPool = item.reductionPoolCurrent ?? null;
+              const shieldMax = item.reductionPoolMax ?? null;
+              return (
+                <div
+                  key={label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "9px 14px",
+                    borderBottom: "1px solid var(--border)",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "9px",
+                      letterSpacing: "0.14em",
+                      textTransform: "uppercase" as const,
+                      color: "var(--text-muted)",
+                      minWidth: "72px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {label}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-heading)",
+                        fontSize: "14px",
+                        fontWeight: 700,
+                        color: "var(--text)",
+                        marginBottom: "2px",
+                      }}
+                    >
+                      {item.name}
+                      {item.masterworkBonus > 0 && (
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            color: "var(--primary)",
+                            marginLeft: "5px",
+                          }}
+                        >
+                          +{item.masterworkBonus}
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        flexWrap: "wrap" as const,
+                        alignItems: "center",
+                      }}
+                    >
+                      {isWeapon && dmgStr && (
+                        <>
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              fontFamily: "monospace",
+                              color: "var(--text-muted)",
+                            }}
+                          >
+                            {fmtAttr(toHitMod)} to hit
+                          </span>
+                          <span
+                            style={{ fontSize: "10px", color: "var(--border)" }}
+                          >
+                            ·
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              fontFamily: "monospace",
+                              color: "var(--text)",
+                            }}
+                          >
+                            {dmgStr}
+                          </span>
+                          {typeStr && (
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                fontFamily: "var(--font-heading)",
+                                color: "var(--text-muted)",
+                                textTransform: "capitalize" as const,
+                              }}
+                            >
+                              {typeStr}
+                            </span>
+                          )}
+                        </>
+                      )}
+                      {isArmor && (
+                        <>
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              fontFamily: "monospace",
+                              color: "var(--text-muted)",
+                            }}
+                          >
+                            +{item.armorBonus} armor
+                          </span>
+                          {item.armorCategory && (
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                fontFamily: "var(--font-heading)",
+                                color: "var(--text-muted)",
+                              }}
+                            >
+                              {item.armorCategory}
+                            </span>
+                          )}
+                        </>
+                      )}
+                      {isShield && shieldPool != null && (
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontFamily: "monospace",
+                            color:
+                              shieldPool === 0
+                                ? "#c66464"
+                                : "var(--text-muted)",
+                          }}
+                        >
+                          Pool {shieldPool}/{shieldMax}
+                          {shieldPool === 0 ? " (broken)" : ""}
+                        </span>
+                      )}
+                      {item.traits.length > 0 &&
+                        item.traits.map((t) => (
+                          <span
+                            key={t}
+                            style={{
+                              fontSize: "9px",
+                              padding: "1px 6px",
+                              border: "1px solid var(--border)",
+                              borderRadius: "9999px",
+                              color: "var(--text-muted)",
+                              fontFamily: "var(--font-heading)",
+                              textTransform: "capitalize" as const,
+                            }}
+                          >
+                            {t}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Conditions ── */}
+        <div style={cardStyle}>
+          <div
+            style={{
+              ...headStyle,
+              cursor: "pointer",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+            onClick={() => setConditionsCollapsed((v) => !v)}
+          >
+            <span>Conditions</span>
+            <span style={{ fontSize: "10px", opacity: 0.6 }}>
+              {conditionsCollapsed ? "▶" : "▼"}
+            </span>
+          </div>
+          {!conditionsCollapsed && (
+            <div
+              style={{
+                padding: "12px 14px",
+                display: "flex",
+                flexWrap: "wrap" as const,
+                gap: "6px",
+              }}
+            >
+              {(
+                Object.entries(CONDITIONS) as [
+                  string,
+                  { stack: boolean; tip: string },
+                ][]
+              ).map(([code, def]) => {
+                const count = activeConds[code] ?? 0;
+                const active = count > 0;
+                const isStack = STACKING.has(code);
+                return (
+                  <div
+                    key={code}
+                    title={def.tip}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: active ? "3px 8px 3px 8px" : "3px 8px",
+                      borderRadius: "5px",
+                      border: `1px solid ${active ? "var(--primary)" : "var(--border)"}`,
+                      backgroundColor: active
+                        ? "var(--primary-light)"
+                        : "var(--bg-nav)",
+                      cursor: "pointer",
+                      transition: "all 0.1s",
+                    }}
+                    onClick={() =>
+                      setCondition(
+                        code,
+                        isStack ? (active ? 0 : 1) : active ? 0 : 1,
+                      )
+                    }
+                  >
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontFamily: "monospace",
+                        letterSpacing: "0.06em",
+                        color: active ? "var(--primary)" : "var(--text-muted)",
+                        fontWeight: active ? 700 : 400,
+                      }}
+                    >
+                      {code}
+                    </span>
+                    {active && !isStack && (
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          color: "var(--primary)",
+                          marginLeft: "1px",
+                        }}
+                      >
+                        ✓
+                      </span>
+                    )}
+                    {active && isStack && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCondition(code, count - 1);
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "11px",
+                            color: "var(--primary)",
+                            padding: "0 1px",
+                            lineHeight: 1,
+                          }}
+                        >
+                          −
+                        </button>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontFamily: "monospace",
+                            color: "var(--primary)",
+                            fontWeight: 700,
+                            minWidth: "12px",
+                            textAlign: "center" as const,
+                          }}
+                        >
+                          {count}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCondition(code, count + 1);
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "11px",
+                            color: "var(--primary)",
+                            padding: "0 1px",
+                            lineHeight: 1,
+                          }}
+                        >
+                          +
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {!conditionsCollapsed &&
+            Object.values(activeConds).some((v) => v > 0) && (
+              <div
+                style={{
+                  padding: "0 14px 10px",
+                  display: "flex",
+                  flexDirection: "column" as const,
+                  gap: "4px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "9px",
+                    fontFamily: "monospace",
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase" as const,
+                    color: "var(--text-muted)",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Active
+                </div>
+                {(Object.entries(activeConds) as [string, number][])
+                  .filter(([, v]) => v > 0)
+                  .map(([code, count]) => {
+                    const def = CONDITIONS[code as keyof typeof CONDITIONS];
+                    if (!def) return null;
+                    return (
+                      <div
+                        key={code}
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          alignItems: "flex-start",
+                          padding: "6px 10px",
+                          backgroundColor: "var(--bg-nav)",
+                          border: "1px solid var(--primary)",
+                          borderRadius: "5px",
+                          borderLeftWidth: "3px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: "monospace",
+                            fontSize: "10px",
+                            fontWeight: 700,
+                            color: "var(--primary)",
+                            minWidth: "32px",
+                          }}
+                        >
+                          {code}
+                          {count > 1 ? ` ×${count}` : ""}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            color: "var(--text-muted)",
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {def.tip}
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+        </div>
+      </>
+    );
+  }
+
   function renderFeatsTab() {
     const baseFeatures = prof?.baseFeatures ?? [];
     const vocationFeatures = vocation?.features ?? [];
@@ -1201,69 +1734,52 @@ export default function CharacterSheetPage({
             overflow: "hidden",
           }}
         >
-          <button
-            onClick={() => toggleFeat(id)}
-            style={{
-              width: "100%",
-              padding: "0.625rem 0.875rem",
-              backgroundColor: expanded
-                ? "var(--primary-light)"
-                : "var(--bg-card)",
-              border: "none",
-              cursor: "pointer",
-              textAlign: "left",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              flexWrap: "wrap",
-            }}
-          >
-            <span
+          <div style={{ display: "flex", alignItems: "stretch" }}>
+            <button
+              onClick={() => toggleFeat(id)}
               style={{
-                fontFamily: "var(--font-heading)",
-                fontWeight: 700,
-                fontSize: "0.9rem",
-                color: expanded ? "var(--primary)" : "var(--text)",
                 flex: 1,
+                padding: "0.625rem 0.875rem",
+                backgroundColor: expanded
+                  ? "var(--primary-light)"
+                  : "var(--bg-card)",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "left",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                flexWrap: "wrap",
               }}
             >
-              {name}
-            </span>
-            {resolvedOptions && resolvedOptions.length > 0 && (
               <span
                 style={{
-                  fontSize: "0.65rem",
                   fontFamily: "var(--font-heading)",
-                  fontWeight: 600,
-                  color: "var(--primary)",
-                  backgroundColor: "var(--primary-light)",
-                  padding: "0.1rem 0.4rem",
-                  borderRadius: "9999px",
-                  border: "1px solid var(--primary)",
-                }}
-              >
-                {resolvedOptions.map((o) => o.name).join(", ")}
-              </span>
-            )}
-            {tier !== undefined && (
-              <span
-                style={{
-                  fontSize: "0.62rem",
                   fontWeight: 700,
-                  fontFamily: "var(--font-heading)",
-                  padding: "0.1rem 0.35rem",
-                  borderRadius: "9999px",
-                  backgroundColor: "var(--bg-nav)",
-                  color: "var(--text-muted)",
-                  border: "1px solid var(--border)",
+                  fontSize: "0.9rem",
+                  color: expanded ? "var(--primary)" : "var(--text)",
+                  flex: 1,
                 }}
               >
-                Tier {tier}
+                {name}
               </span>
-            )}
-            {activationRaw &&
-              activationRaw !== "-" &&
-              activationRaw !== "null" && (
+              {resolvedOptions && resolvedOptions.length > 0 && (
+                <span
+                  style={{
+                    fontSize: "0.65rem",
+                    fontFamily: "var(--font-heading)",
+                    fontWeight: 600,
+                    color: "var(--primary)",
+                    backgroundColor: "var(--primary-light)",
+                    padding: "0.1rem 0.4rem",
+                    borderRadius: "9999px",
+                    border: "1px solid var(--primary)",
+                  }}
+                >
+                  {resolvedOptions.map((o) => o.name).join(", ")}
+                </span>
+              )}
+              {tier !== undefined && (
                 <span
                   style={{
                     fontSize: "0.62rem",
@@ -1271,42 +1787,90 @@ export default function CharacterSheetPage({
                     fontFamily: "var(--font-heading)",
                     padding: "0.1rem 0.35rem",
                     borderRadius: "9999px",
-                    backgroundColor: "var(--accent-light)",
-                    color: "var(--accent)",
-                    border: "1px solid #FCD34D",
-                  }}
-                >
-                  {activationRaw}
-                </span>
-              )}
-            {traits
-              ?.filter((t) => t)
-              .map((t) => (
-                <span
-                  key={t}
-                  style={{
-                    fontSize: "0.6rem",
-                    padding: "0.1rem 0.35rem",
-                    borderRadius: "9999px",
                     backgroundColor: "var(--bg-nav)",
                     color: "var(--text-muted)",
                     border: "1px solid var(--border)",
-                    fontFamily: "var(--font-heading)",
                   }}
                 >
-                  {t}
+                  Tier {tier}
                 </span>
-              ))}
-            <span
-              style={{
-                fontSize: "0.65rem",
-                color: "var(--text-muted)",
-                marginLeft: "auto",
-              }}
-            >
-              {expanded ? "▲" : "▼"}
-            </span>
-          </button>
+              )}
+              {activationRaw &&
+                activationRaw !== "-" &&
+                activationRaw !== "null" && (
+                  <span
+                    style={{
+                      fontSize: "0.62rem",
+                      fontWeight: 700,
+                      fontFamily: "var(--font-heading)",
+                      padding: "0.1rem 0.35rem",
+                      borderRadius: "9999px",
+                      backgroundColor: "var(--accent-light)",
+                      color: "var(--accent)",
+                      border: "1px solid #FCD34D",
+                    }}
+                  >
+                    {activationRaw}
+                  </span>
+                )}
+              {traits
+                ?.filter((t) => t)
+                .map((t) => (
+                  <span
+                    key={t}
+                    style={{
+                      fontSize: "0.6rem",
+                      padding: "0.1rem 0.35rem",
+                      borderRadius: "9999px",
+                      backgroundColor: "var(--bg-nav)",
+                      color: "var(--text-muted)",
+                      border: "1px solid var(--border)",
+                      fontFamily: "var(--font-heading)",
+                    }}
+                  >
+                    {t}
+                  </span>
+                ))}
+              <span
+                style={{
+                  fontSize: "0.65rem",
+                  color: "var(--text-muted)",
+                  marginLeft: "auto",
+                }}
+              >
+                {expanded ? "▲" : "▼"}
+              </span>
+            </button>
+            {(() => {
+              const favId = id.startsWith("base-")
+                ? id.slice(5)
+                : id.startsWith("voc-")
+                  ? id.slice(4)
+                  : id;
+              const faved = isFavorite("feat", favId);
+              return (
+                <button
+                  onClick={() => toggleFavorite("feat", favId)}
+                  title={faved ? "Remove from Favorites" : "Add to Favorites"}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    borderLeft: "1px solid var(--border)",
+                    cursor: "pointer",
+                    fontSize: "0.8rem",
+                    color: faved ? "var(--primary)" : "var(--text-muted)",
+                    padding: "0 10px",
+                    flexShrink: 0,
+                    backgroundColor: expanded
+                      ? "var(--primary-light)"
+                      : "var(--bg-card)",
+                  }}
+                >
+                  {faved ? "★" : "☆"}
+                </button>
+              );
+            })()}
+          </div>
           {expanded && (
             <div
               style={{
@@ -1555,8 +2119,14 @@ export default function CharacterSheetPage({
         current.entity_name,
         current.feature_name,
       );
-      const updatedSelections = { ...clearedSelections, [key]: shopCurrentSels };
-      const expertise = recomputeExpertise(c.selectedFeatIds, updatedSelections);
+      const updatedSelections = {
+        ...clearedSelections,
+        [key]: shopCurrentSels,
+      };
+      const expertise = recomputeExpertise(
+        c.selectedFeatIds,
+        updatedSelections,
+      );
       persist({ choiceSelections: updatedSelections, ...expertise });
 
       // Build follow-up synthetic skill picks for options with expertise_skill_count
@@ -1656,9 +2226,16 @@ export default function CharacterSheetPage({
       if (!feat) return;
       const key = `${feat.ownerName}__${feat.name}`;
       // Clear stale synthetic follow-up keys before writing new selection
-      const clearedSelections = clearFeatChoices(c.choiceSelections ?? {}, feat.ownerName, feat.name);
+      const clearedSelections = clearFeatChoices(
+        c.choiceSelections ?? {},
+        feat.ownerName,
+        feat.name,
+      );
       const updatedSelections = { ...clearedSelections, [key]: editChoiceSels };
-      const expertise = recomputeExpertise(c.selectedFeatIds, updatedSelections);
+      const expertise = recomputeExpertise(
+        c.selectedFeatIds,
+        updatedSelections,
+      );
       persist({ choiceSelections: updatedSelections, ...expertise });
       setEditChoiceFeatId(null);
       setEditChoiceSels([]);
@@ -3901,6 +4478,28 @@ export default function CharacterSheetPage({
                     >
                       ✕
                     </button>
+                    <button
+                      onClick={() => toggleFavorite("item", item.id)}
+                      title={
+                        isFavorite("item", item.id)
+                          ? "Remove from Favorites"
+                          : "Add to Favorites"
+                      }
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: "0.8rem",
+                        color: isFavorite("item", item.id)
+                          ? "var(--primary)"
+                          : "var(--text-muted)",
+                        padding: "0 2px",
+                        flexShrink: 0,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {isFavorite("item", item.id) ? "★" : "☆"}
+                    </button>
                   </div>
                   {/* Notes popover — BUG-07 */}
                   {notePopoverItemId === item.id && item.notes && (
@@ -5530,109 +6129,138 @@ export default function CharacterSheetPage({
           }}
         >
           {/* Collapsed header */}
-          <button
-            onClick={() => toggleSpellExpand(spell.id)}
-            style={{
-              width: "100%",
-              padding: "0.6rem 0.875rem",
-              border: "none",
-              cursor: "pointer",
-              textAlign: "left",
-              backgroundColor: expanded
-                ? "var(--primary-light)"
-                : "var(--bg-card)",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.4rem",
-              flexWrap: "wrap",
-            }}
-          >
-            <span
+          <div style={{ display: "flex", alignItems: "stretch" }}>
+            <button
+              onClick={() => toggleSpellExpand(spell.id)}
               style={{
-                fontFamily: "var(--font-heading)",
-                fontWeight: 700,
-                fontSize: "0.9rem",
-                color: expanded ? "var(--primary)" : "var(--text)",
                 flex: 1,
-                minWidth: "120px",
+                padding: "0.6rem 0.875rem",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "left",
+                backgroundColor: expanded
+                  ? "var(--primary-light)"
+                  : "var(--bg-card)",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                flexWrap: "wrap",
               }}
             >
-              {spell.name}
-            </span>
-            <span
-              style={{
-                ...badgeStyle,
-                backgroundColor: spell.isCantrip
-                  ? "var(--accent-light)"
-                  : "var(--bg-nav)",
-                color: spell.isCantrip ? "var(--accent)" : "var(--text-muted)",
-                border: spell.isCantrip
-                  ? "1px solid #FCD34D"
-                  : "1px solid var(--border)",
-              }}
-            >
-              {spell.isCantrip ? "Cantrip" : `Tier ${spell.tier}`}
-            </span>
-            {!spell.isCantrip && (
+              <span
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  fontWeight: 700,
+                  fontSize: "0.9rem",
+                  color: expanded ? "var(--primary)" : "var(--text)",
+                  flex: 1,
+                  minWidth: "120px",
+                }}
+              >
+                {spell.name}
+              </span>
               <span
                 style={{
                   ...badgeStyle,
-                  backgroundColor: canCast
-                    ? "var(--primary-light)"
+                  backgroundColor: spell.isCantrip
+                    ? "var(--accent-light)"
                     : "var(--bg-nav)",
-                  color: canCast ? "var(--primary)" : "var(--text-muted)",
-                  border: canCast
-                    ? "1px solid var(--primary)"
+                  color: spell.isCantrip
+                    ? "var(--accent)"
+                    : "var(--text-muted)",
+                  border: spell.isCantrip
+                    ? "1px solid #FCD34D"
                     : "1px solid var(--border)",
                 }}
               >
-                Cost: {totalCost}
+                {spell.isCantrip ? "Cantrip" : `Tier ${spell.tier}`}
               </span>
-            )}
-            {spell.range && (
+              {!spell.isCantrip && (
+                <span
+                  style={{
+                    ...badgeStyle,
+                    backgroundColor: canCast
+                      ? "var(--primary-light)"
+                      : "var(--bg-nav)",
+                    color: canCast ? "var(--primary)" : "var(--text-muted)",
+                    border: canCast
+                      ? "1px solid var(--primary)"
+                      : "1px solid var(--border)",
+                  }}
+                >
+                  Cost: {totalCost}
+                </span>
+              )}
+              {spell.range && (
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "var(--text-muted)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {spell.range}
+                </span>
+              )}
+              {spell.duration && (
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "var(--text-muted)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {spell.duration}
+                </span>
+              )}
+              {hasAmps && (
+                <span
+                  style={{
+                    ...badgeStyle,
+                    backgroundColor: "#FEF3C7",
+                    color: "#92400E",
+                    border: "1px solid #FCD34D",
+                  }}
+                >
+                  Amps
+                </span>
+              )}
               <span
                 style={{
-                  fontSize: "0.7rem",
+                  fontSize: "0.65rem",
                   color: "var(--text-muted)",
-                  whiteSpace: "nowrap",
+                  marginLeft: "auto",
                 }}
               >
-                {spell.range}
+                {expanded ? "▲" : "▼"}
               </span>
-            )}
-            {spell.duration && (
-              <span
-                style={{
-                  fontSize: "0.7rem",
-                  color: "var(--text-muted)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {spell.duration}
-              </span>
-            )}
-            {hasAmps && (
-              <span
-                style={{
-                  ...badgeStyle,
-                  backgroundColor: "#FEF3C7",
-                  color: "#92400E",
-                  border: "1px solid #FCD34D",
-                }}
-              >
-                Amps
-              </span>
-            )}
-            <span
+            </button>
+            <button
+              onClick={() => toggleFavorite("spell", spell.id)}
+              title={
+                isFavorite("spell", spell.id)
+                  ? "Remove from Favorites"
+                  : "Add to Favorites"
+              }
               style={{
-                fontSize: "0.65rem",
-                color: "var(--text-muted)",
-                marginLeft: "auto",
+                background: "none",
+                border: "none",
+                borderLeft: "1px solid var(--border)",
+                cursor: "pointer",
+                fontSize: "0.8rem",
+                color: isFavorite("spell", spell.id)
+                  ? "var(--primary)"
+                  : "var(--text-muted)",
+                padding: "0 10px",
+                flexShrink: 0,
+                backgroundColor: expanded
+                  ? "var(--primary-light)"
+                  : "var(--bg-card)",
               }}
             >
-              {expanded ? "▲" : "▼"}
-            </span>
-          </button>
+              {isFavorite("spell", spell.id) ? "★" : "☆"}
+            </button>
+          </div>
 
           {/* Expanded content */}
           {expanded && (
@@ -5817,21 +6445,6 @@ export default function CharacterSheetPage({
     const myCantripsAll = mySpells.filter((s) => s.isCantrip);
     const cantripAtCap = myCantripsAll.length >= cantripCap;
 
-    // Sphere access: from casterInfo + any feat-granted caster spheres
-    const accessibleSpheres = Array.from(
-      new Set(
-        [
-          casterInfo?.casterSource,
-          ...allFeats
-            .filter(
-              (f) =>
-                c.selectedFeatIds.includes(f.id) && f.casterInfo?.casterSource,
-            )
-            .map((f) => f.casterInfo!.casterSource!),
-        ].filter(Boolean) as string[],
-      ),
-    );
-
     const allSearchable = spellManagerSearch.trim()
       ? spells.filter(
           (s) =>
@@ -5842,215 +6455,129 @@ export default function CharacterSheetPage({
             ),
         )
       : spells;
-    // Filter by accessible spheres; Universal sphere spells always available to all casters
-    const sphereFiltered =
-      accessibleSpheres.length > 0
+    // Filter by accessible sources; Universal spells always available to all casters
+    const sourceFiltered =
+      accessibleSources.length > 0
         ? allSearchable.filter(
             (s) =>
               s.sources.includes("Universal") ||
-              s.sources.some((src) => accessibleSpheres.includes(src)),
+              s.sources.some((src) => accessibleSources.includes(src)),
           )
         : allSearchable;
-    const unknownSpells = sphereFiltered.filter(
+    // Apply shop source/sphere/tier filters
+    const shopFiltered = sourceFiltered.filter((s) => {
+      if (
+        spellShopSourceFilter.size > 0 &&
+        !s.sources.some((src) => spellShopSourceFilter.has(src))
+      )
+        return false;
+      if (
+        spellShopSphereFilter.size > 0 &&
+        !spellShopSphereFilter.has(s.school)
+      )
+        return false;
+      if (!s.isCantrip && s.tier > spellTier) return false;
+      return true;
+    });
+    const unknownSpells = shopFiltered.filter(
       (s) => !c.knownSpellIds.includes(s.id),
     );
+    const shopHasFilter =
+      spellManagerSearch.trim() ||
+      spellShopSourceFilter.size > 0 ||
+      spellShopSphereFilter.size > 0;
 
     return (
       <div
         style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}
       >
-        {/* Summary row */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "0.5rem",
-          }}
-        >
-          <StatCard
-            label="Caster"
-            value={
-              casterInfo?.casterType === "full"
-                ? "Full"
-                : casterInfo?.casterType === "half"
-                  ? "Half"
-                  : "Ltd."
-            }
-            sub={casterInfo?.casterSource ?? ""}
-          />
+        {/* Magic sources + school spheres */}
+        {(accessibleSources.length > 0 || knownSchoolSpheres.length > 0) && (
           <div
             style={{
-              textAlign: "center",
-              padding: "0.625rem 0.5rem",
-              backgroundColor: "var(--bg-nav)",
-              border: "1px solid var(--border)",
-              borderRadius: "0.5rem",
+              display: "flex",
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: "1rem",
+              alignItems: "flex-start",
             }}
           >
-            <div
-              style={{
-                fontFamily: "var(--font-heading)",
-                fontWeight: 600,
-                fontSize: "0.6rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                color: "var(--text-muted)",
-                marginBottom: "0.25rem",
-              }}
-            >
-              Reservoir
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.3rem",
-              }}
-            >
-              <button
-                onClick={() =>
-                  persist({
-                    currentReservoir: Math.max(0, currentReservoir - 1),
-                  })
-                }
-                style={{
-                  width: "20px",
-                  height: "20px",
-                  borderRadius: "50%",
-                  border: "1px solid var(--border)",
-                  backgroundColor: "var(--bg-card)",
-                  cursor: "pointer",
-                  fontSize: "0.8rem",
-                  color: "var(--text-muted)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                −
-              </button>
-              <span
-                style={{
-                  fontFamily: "var(--font-heading)",
-                  fontWeight: 700,
-                  fontSize: "1.1rem",
-                  color: "var(--primary)",
-                }}
-              >
-                {currentReservoir}
-                <span
-                  style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
-                >
-                  /{maxReservoir}
-                </span>
-              </span>
-              <button
-                onClick={() =>
-                  persist({
-                    currentReservoir: Math.min(
-                      maxReservoir,
-                      currentReservoir + 1,
-                    ),
-                  })
-                }
-                style={{
-                  width: "20px",
-                  height: "20px",
-                  borderRadius: "50%",
-                  border: "1px solid var(--border)",
-                  backgroundColor: "var(--bg-card)",
-                  cursor: "pointer",
-                  fontSize: "0.8rem",
-                  color: "var(--text-muted)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                +
-              </button>
-            </div>
-          </div>
-          <StatCard
-            label="Spell DC"
-            value={spellDC ?? "—"}
-            sub={`Spell Tier ${spellTier}`}
-          />
-          <StatCard
-            label="Modifier"
-            value={fmtAttr(modVal)}
-            sub={
-              (casterInfo?.casterModifierOptions?.length ?? 0) > 1
-                ? `${modKey} (auto)`
-                : modKey
-            }
-          />
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "0.5rem",
-          }}
-        >
-          <StatCard
-            label="Spell Threshold"
-            value={spellThreshold}
-            sub={`${c.featsPurchased ?? 0} feats bought`}
-          />
-          <StatCard
-            label="Known Spells"
-            value={knownSpellsMax}
-            sub={`${mySpells.filter((s) => !s.isCantrip).length} known`}
-          />
-          <StatCard
-            label="Prepared"
-            value={preparedSpellsMax}
-            sub="Mod + Tier"
-          />
-          <StatCard
-            label="Cantrips"
-            value={`${myCantripsAll.length}/${cantripCap}`}
-            sub={cantripAtCap ? "at cap" : "available"}
-          />
-        </div>
-
-        {/* Sphere access */}
-        {accessibleSpheres.length > 0 && (
-          <div>
-            <div
-              style={{
-                fontSize: "0.65rem",
-                fontWeight: 700,
-                letterSpacing: "0.07em",
-                textTransform: "uppercase",
-                color: "var(--text-muted)",
-                fontFamily: "var(--font-heading)",
-                marginBottom: "0.375rem",
-              }}
-            >
-              Spell Spheres
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
-              {accessibleSpheres.map((sphere) => (
-                <span
-                  key={sphere}
+            {accessibleSources.length > 0 && (
+              <div>
+                <div
                   style={{
-                    fontSize: "0.78rem",
-                    padding: "0.2rem 0.625rem",
-                    borderRadius: "9999px",
-                    backgroundColor: "var(--primary-light)",
-                    border: "1px solid var(--primary)",
-                    color: "var(--primary)",
+                    fontSize: "0.65rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.07em",
+                    textTransform: "uppercase",
+                    color: "var(--text-muted)",
                     fontFamily: "var(--font-heading)",
-                    fontWeight: 600,
+                    marginBottom: "0.375rem",
                   }}
                 >
-                  {sphere}
-                </span>
-              ))}
-            </div>
+                  Magic Source{accessibleSources.length > 1 ? "s" : ""}
+                </div>
+                <div
+                  style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}
+                >
+                  {accessibleSources.map((src) => (
+                    <span
+                      key={src}
+                      style={{
+                        fontSize: "0.78rem",
+                        padding: "0.2rem 0.625rem",
+                        borderRadius: "9999px",
+                        backgroundColor: "var(--primary-light)",
+                        border: "1px solid var(--primary)",
+                        color: "var(--primary)",
+                        fontFamily: "var(--font-heading)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {src}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {knownSchoolSpheres.length > 0 && (
+              <div>
+                <div
+                  style={{
+                    fontSize: "0.65rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.07em",
+                    textTransform: "uppercase",
+                    color: "var(--text-muted)",
+                    fontFamily: "var(--font-heading)",
+                    marginBottom: "0.375rem",
+                  }}
+                >
+                  Known Sphere{knownSchoolSpheres.length > 1 ? "s" : ""}
+                </div>
+                <div
+                  style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}
+                >
+                  {knownSchoolSpheres.map((sphere) => (
+                    <span
+                      key={sphere}
+                      style={{
+                        fontSize: "0.78rem",
+                        padding: "0.2rem 0.625rem",
+                        borderRadius: "9999px",
+                        backgroundColor: "var(--bg-nav)",
+                        border: "1px solid var(--accent)",
+                        color: "var(--accent)",
+                        fontFamily: "var(--font-heading)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {sphere}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -6179,7 +6706,11 @@ export default function CharacterSheetPage({
               overflowY: "auto",
             }}
             onClick={(e) => {
-              if (e.target === e.currentTarget) setShowSpellManager(false);
+              if (e.target === e.currentTarget) {
+                setShowSpellManager(false);
+                setSpellShopSourceFilter(new Set());
+                setSpellShopSphereFilter(new Set());
+              }
             }}
           >
             <div
@@ -6223,18 +6754,19 @@ export default function CharacterSheetPage({
                     }}
                   >
                     Spells: {mySpells.filter((s) => !s.isCantrip).length} ·
-                    Cantrips: {myCantripsAll.length}/{cantripCap}
-                    {accessibleSpheres.length > 0 && (
-                      <>
-                        {" "}
-                        · Sphere{accessibleSpheres.length > 1 ? "s" : ""}:{" "}
-                        {accessibleSpheres.join(", ")}
-                      </>
+                    Cantrips: {myCantripsAll.length}/{cantripCap} · Spell Tier:{" "}
+                    {spellTier}
+                    {accessibleSources.length > 0 && (
+                      <> · Source: {accessibleSources.join(", ")}</>
                     )}
                   </div>
                 </div>
                 <button
-                  onClick={() => setShowSpellManager(false)}
+                  onClick={() => {
+                    setShowSpellManager(false);
+                    setSpellShopSourceFilter(new Set());
+                    setSpellShopSphereFilter(new Set());
+                  }}
                   style={{
                     background: "none",
                     border: "none",
@@ -6430,6 +6962,125 @@ export default function CharacterSheetPage({
                       add another.
                     </div>
                   )}
+                  {/* Source + sphere filter pills */}
+                  {accessibleSources.length > 0 && (
+                    <div style={{ marginBottom: "0.4rem" }}>
+                      <div
+                        style={{
+                          fontSize: "0.58rem",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                          color: "var(--text-muted)",
+                          fontFamily: "var(--font-heading)",
+                          marginBottom: "0.25rem",
+                        }}
+                      >
+                        Source
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "0.3rem",
+                        }}
+                      >
+                        {accessibleSources.map((src) => {
+                          const active = spellShopSourceFilter.has(src);
+                          return (
+                            <button
+                              key={src}
+                              onClick={() =>
+                                setSpellShopSourceFilter((prev) => {
+                                  const next = new Set(prev);
+                                  next.has(src)
+                                    ? next.delete(src)
+                                    : next.add(src);
+                                  return next;
+                                })
+                              }
+                              style={{
+                                padding: "0.15rem 0.5rem",
+                                borderRadius: "9999px",
+                                fontSize: "0.7rem",
+                                fontFamily: "var(--font-heading)",
+                                fontWeight: 600,
+                                border: active
+                                  ? "1.5px solid var(--primary)"
+                                  : "1.5px solid var(--border)",
+                                backgroundColor: active
+                                  ? "var(--primary)"
+                                  : "var(--bg-card)",
+                                color: active ? "#fff" : "var(--text-muted)",
+                                cursor: "pointer",
+                              }}
+                            >
+                              {src}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {knownSchoolSpheres.length > 0 && (
+                    <div style={{ marginBottom: "0.4rem" }}>
+                      <div
+                        style={{
+                          fontSize: "0.58rem",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                          color: "var(--text-muted)",
+                          fontFamily: "var(--font-heading)",
+                          marginBottom: "0.25rem",
+                        }}
+                      >
+                        Sphere
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "0.3rem",
+                        }}
+                      >
+                        {knownSchoolSpheres.map((sphere) => {
+                          const active = spellShopSphereFilter.has(sphere);
+                          return (
+                            <button
+                              key={sphere}
+                              onClick={() =>
+                                setSpellShopSphereFilter((prev) => {
+                                  const next = new Set(prev);
+                                  next.has(sphere)
+                                    ? next.delete(sphere)
+                                    : next.add(sphere);
+                                  return next;
+                                })
+                              }
+                              style={{
+                                padding: "0.15rem 0.5rem",
+                                borderRadius: "9999px",
+                                fontSize: "0.7rem",
+                                fontFamily: "var(--font-heading)",
+                                fontWeight: 600,
+                                border: active
+                                  ? "1.5px solid var(--accent)"
+                                  : "1.5px solid var(--border)",
+                                backgroundColor: active
+                                  ? "var(--accent)"
+                                  : "var(--bg-card)",
+                                color: active ? "#fff" : "var(--text-muted)",
+                                cursor: "pointer",
+                              }}
+                            >
+                              {sphere}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   <input
                     value={spellManagerSearch}
                     onChange={(e) => setSpellManagerSearch(e.target.value)}
@@ -6448,7 +7099,7 @@ export default function CharacterSheetPage({
                       boxSizing: "border-box",
                     }}
                   />
-                  {spellManagerSearch.trim() && (
+                  {shopHasFilter && (
                     <div
                       style={{
                         display: "flex",
@@ -6620,6 +7271,7 @@ export default function CharacterSheetPage({
   }
 
   const tabs: { id: TabId; label: string; hidden?: boolean }[] = [
+    { id: "combat", label: "Combat" },
     { id: "feats", label: "Feats" },
     { id: "inventory", label: "Inventory" },
     {
@@ -6789,11 +7441,1029 @@ export default function CharacterSheetPage({
     },
   ];
 
+  // ─── Left rail renderer ───────────────────────────────────────────────────
+  function renderLeftRail() {
+    const totalAvailableBase = TIER_TOTAL_SLOTS[effectiveTier - 1] ?? 4;
+    const currentTotalBase =
+      c.baseAttributes.body + c.baseAttributes.mind + c.baseAttributes.will;
+    const dynamicUnspent = totalAvailableBase - currentTotalBase;
+    const totalAvailableSkill = 4 + 2 * Math.floor((c.featsPurchased ?? 0) / 2);
+    const totalSpentSkill = Object.values(c.skillPoints ?? {}).reduce(
+      (s, v) => s + v,
+      0,
+    );
+    const dynUnspentSkill = totalAvailableSkill - totalSpentSkill;
+
+    return (
+      <>
+        {/* Attributes */}
+        <div
+          style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: "6px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              padding: "0.5rem 1rem",
+              borderBottom: "1px solid var(--border)",
+              backgroundColor: "var(--bg-nav)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.65rem",
+                fontFamily: "var(--font-heading)",
+                fontStyle: "italic",
+                letterSpacing: "0.12em",
+                color: "var(--text-muted)",
+                textTransform: "uppercase" as const,
+              }}
+            >
+              Attributes
+            </span>
+            <span
+              style={{
+                fontSize: "0.6rem",
+                color: "var(--text-faint)",
+                fontFamily: "var(--font-heading)",
+              }}
+            >
+              {currentTotalBase}/{totalAvailableBase} pts
+            </span>
+          </div>
+          {dynamicUnspent > 0 && (
+            <div
+              style={{
+                margin: "10px 12px 0",
+                padding: "0.375rem 0.625rem",
+                backgroundColor: "var(--accent-light)",
+                border: "1px solid var(--accent)",
+                borderRadius: "0.375rem",
+                fontSize: "0.75rem",
+                color: "var(--text)",
+                fontFamily: "var(--font-heading)",
+                fontWeight: 700,
+              }}
+            >
+              ⚠ {dynamicUnspent} unspent attr pt
+              {dynamicUnspent !== 1 ? "s" : ""}
+              <span style={{ fontWeight: 400, marginLeft: "0.35rem" }}>
+                ({currentTotalBase} / {totalAvailableBase})
+              </span>
+            </div>
+          )}
+          {/* Score tiles */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "8px",
+              padding: "12px 12px 0",
+            }}
+          >
+            {(["body", "mind", "will"] as const).map((key) => {
+              const val = attrs[key];
+              const isHighest =
+                val === Math.max(attrs.body, attrs.mind, attrs.will);
+              return (
+                <div
+                  key={key}
+                  style={{
+                    backgroundColor: "var(--bg-nav)",
+                    border: `1px solid ${isHighest ? "var(--primary)" : "var(--border)"}`,
+                    borderRadius: "6px",
+                    padding: "10px 8px 8px",
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "9px",
+                      fontFamily: "monospace",
+                      letterSpacing: "0.16em",
+                      textTransform: "uppercase" as const,
+                      color: "var(--text-muted)",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {key.toUpperCase()}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "'Cormorant Garamond', Georgia, serif",
+                      fontSize: "28px",
+                      fontWeight: 700,
+                      color: isHighest ? "var(--primary)" : "var(--text)",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {fmtAttr(val)}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "9px",
+                      fontFamily: "monospace",
+                      color: "var(--text-muted)",
+                      marginTop: "3px",
+                      letterSpacing: "0.08em",
+                    }}
+                  >
+                    {key}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Edit controls */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "8px",
+              padding: "8px 12px 12px",
+            }}
+          >
+            {(["body", "mind", "will"] as const).map((key) => {
+              const val = attrs[key];
+              const base = c.baseAttributes[key];
+              const voc =
+                c.vocationAttributeBonus.attribute === key
+                  ? c.vocationAttributeBonus.value
+                  : 0;
+              const canIncrease = dynamicUnspent > 0 && val < 12;
+              const canDecrease = base > 0;
+              function adjustAttr(delta: number) {
+                const newBase = base + delta;
+                if (newBase < 0 || newBase + voc > 12) return;
+                if (delta > 0 && !canIncrease) return;
+                persist({
+                  baseAttributes: { ...c.baseAttributes, [key]: newBase },
+                  unspentAttributePoints: Math.max(0, dynamicUnspent - delta),
+                });
+              }
+              return (
+                <div
+                  key={key}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column" as const,
+                    alignItems: "center",
+                    gap: "3px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                  >
+                    <button
+                      onClick={() => adjustAttr(-1)}
+                      disabled={!canDecrease}
+                      className="poa-attr-btn"
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "50%",
+                        border: "1px solid var(--border)",
+                        backgroundColor: "var(--bg-card)",
+                        cursor: canDecrease ? "pointer" : "not-allowed",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        fontSize: "0.8rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      −
+                    </button>
+                    <span
+                      style={{
+                        fontFamily: "var(--font-heading)",
+                        fontSize: "0.72rem",
+                        fontWeight: 600,
+                        color: "var(--text-muted)",
+                        minWidth: "16px",
+                        textAlign: "center" as const,
+                      }}
+                    >
+                      {fmtAttr(base)}
+                    </span>
+                    <button
+                      onClick={() => adjustAttr(1)}
+                      disabled={!canIncrease}
+                      className="poa-attr-btn"
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "50%",
+                        border: "1px solid var(--border)",
+                        backgroundColor: "var(--bg-card)",
+                        cursor: canIncrease ? "pointer" : "not-allowed",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        fontSize: "0.8rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                  {voc > 0 && (
+                    <span
+                      style={{
+                        fontSize: "0.58rem",
+                        color: "var(--text-muted)",
+                        letterSpacing: "0.06em",
+                      }}
+                    >
+                      +{voc} voc
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* V.I.T.A.L.S. */}
+        <div
+          style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: "6px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              padding: "0.5rem 1rem",
+              borderBottom: "1px solid var(--border)",
+              backgroundColor: "var(--bg-nav)",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.65rem",
+                fontFamily: "var(--font-heading)",
+                fontStyle: "italic",
+                letterSpacing: "0.12em",
+                color: "var(--text-muted)",
+                textTransform: "uppercase" as const,
+              }}
+            >
+              V.I.T.A.L.S.
+            </span>
+          </div>
+          <div
+            style={{
+              padding: "0.875rem 1rem",
+              display: "flex",
+              flexDirection: "column" as const,
+              gap: "0.75rem",
+            }}
+          >
+            {!isArmorProficient && (
+              <div
+                style={{
+                  padding: "0.4rem 0.75rem",
+                  backgroundColor: "var(--section-alert-bg)",
+                  border: "1px solid #ff7979",
+                  borderRadius: "0.375rem",
+                  fontSize: "0.78rem",
+                  color: "#cc2222",
+                  fontFamily: "var(--font-heading)",
+                  fontWeight: 700,
+                }}
+              >
+                ⚠ Armor Penalty active — all skill dice reduced one step (min
+                d4)
+              </div>
+            )}
+            {dynUnspentSkill > 0 && (
+              <div
+                style={{
+                  padding: "0.4rem 0.75rem",
+                  backgroundColor: "var(--accent-light)",
+                  border: "1px solid #FCD34D",
+                  borderRadius: "0.375rem",
+                  fontSize: "0.8rem",
+                  color: "(#92400E)",
+                  fontFamily: "var(--font-heading)",
+                  fontWeight: 700,
+                }}
+              >
+                ✦ {dynUnspentSkill} unspent Skill Point
+                {dynUnspentSkill !== 1 ? "s" : ""} — allocate below
+                <span style={{ fontWeight: 400, marginLeft: "0.5rem" }}>
+                  ({totalSpentSkill} / {totalAvailableSkill} spent)
+                </span>
+              </div>
+            )}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column" as const,
+                gap: "0.3rem",
+              }}
+            >
+              {[
+                "Vigor",
+                "Intuition",
+                "Talent",
+                "Awareness",
+                "Lore",
+                "Social",
+              ].map((skill) => {
+                const pool = calcSkillPool(
+                  skill,
+                  attrs,
+                  c.vitalsProficiencies,
+                  c.vitalsExpertiseBumps ?? {},
+                  c.skillPoints ?? {},
+                );
+                const invested = c.skillPoints?.[skill] ?? 0;
+                const canAdd = dynUnspentSkill > 0 && invested < 12;
+                const canRemove = invested > 0;
+                const RANK_COLORS: Record<string, string> = {
+                  Untrained: "var(--text-muted)",
+                  Trained: "var(--primary)",
+                  Expert: "var(--accent)",
+                  Master: "#7C3AED",
+                };
+                const DIE_STEP = [4, 6, 8, 10, 12] as const;
+                function stepDown(faces: number): number {
+                  const i = DIE_STEP.indexOf(
+                    faces as (typeof DIE_STEP)[number],
+                  );
+                  return i > 0 ? DIE_STEP[i - 1] : 4;
+                }
+                const penalizedDisplay = (() => {
+                  if (pool.profDieFaces !== null)
+                    return `${pool.baseDiceCount + pool.skillDiceCount}d${stepDown(pool.profDieFaces)}`;
+                  const baseFaces = calcBaseDiceFromAttr(
+                    calcSkillAttrValue(skill, attrs),
+                  );
+                  return `${pool.baseDiceCount + pool.skillDiceCount}d${stepDown(baseFaces)}`;
+                })();
+                const dieFaces =
+                  pool.profDieFaces ??
+                  calcBaseDiceFromAttr(calcSkillAttrValue(skill, attrs));
+                const badgeStyle: React.CSSProperties =
+                  dieFaces >= 10
+                    ? {
+                        backgroundColor: "var(--primary)",
+                        color: "var(--text-on-primary)",
+                      }
+                    : dieFaces === 8
+                      ? {
+                          backgroundColor: "var(--primary-light)",
+                          color: "var(--primary)",
+                          border: "1px solid var(--primary)",
+                        }
+                      : {
+                          backgroundColor: "var(--bg-nav)",
+                          color: "var(--text-muted)",
+                          border: "1px solid var(--border)",
+                        };
+                return (
+                  <div
+                    key={skill}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      backgroundColor: "var(--bg-nav)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "8px",
+                      padding: "0.375rem 0.625rem",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--text)",
+                        flex: 1,
+                        letterSpacing: "0.01em",
+                      }}
+                    >
+                      {skill}
+                    </span>
+                    {pool.rank !== "Untrained" && (
+                      <span
+                        style={{
+                          fontSize: "0.6rem",
+                          fontWeight: 700,
+                          fontFamily: "var(--font-heading)",
+                          padding: "0.1rem 0.35rem",
+                          borderRadius: "9999px",
+                          border: `1px solid ${RANK_COLORS[pool.rank]}`,
+                          color: RANK_COLORS[pool.rank],
+                        }}
+                      >
+                        {pool.rank}
+                      </span>
+                    )}
+                    {isArmorProficient ? (
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          fontFamily: "var(--font-heading)",
+                          padding: "1px 7px",
+                          borderRadius: "5px",
+                          ...badgeStyle,
+                        }}
+                      >
+                        {pool.display}
+                      </span>
+                    ) : (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "0.2rem",
+                          alignItems: "center",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.72rem",
+                            fontFamily: "var(--font-heading)",
+                            color: "var(--text-muted)",
+                            textDecoration: "line-through",
+                          }}
+                        >
+                          {pool.display}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            fontFamily: "var(--font-heading)",
+                            padding: "1px 7px",
+                            borderRadius: "5px",
+                            backgroundColor: "var(--bg-nav)",
+                            color: "#cc2222",
+                            border: "1px solid #cc2222",
+                          }}
+                        >
+                          {penalizedDisplay}
+                        </span>
+                      </div>
+                    )}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.2rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <button
+                        onClick={() => {
+                          if (!canRemove) return;
+                          persist({
+                            skillPoints: {
+                              ...(c.skillPoints ?? {}),
+                              [skill]: invested - 1,
+                            },
+                            unspentSkillPoints:
+                              totalAvailableSkill - (totalSpentSkill - 1),
+                          });
+                        }}
+                        disabled={!canRemove}
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          borderRadius: "50%",
+                          border: "1px solid var(--border)",
+                          backgroundColor: "var(--bg-card)",
+                          cursor: canRemove ? "pointer" : "not-allowed",
+                          fontWeight: 700,
+                          color: "var(--text-muted)",
+                          fontSize: "0.75rem",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        −
+                      </button>
+                      <span
+                        style={{
+                          fontFamily: "var(--font-heading)",
+                          fontWeight: 700,
+                          fontSize: "0.75rem",
+                          minWidth: "14px",
+                          textAlign: "center" as const,
+                          color: "var(--primary)",
+                        }}
+                      >
+                        {invested}
+                      </span>
+                      <button
+                        onClick={() => {
+                          if (!canAdd) return;
+                          persist({
+                            skillPoints: {
+                              ...(c.skillPoints ?? {}),
+                              [skill]: invested + 1,
+                            },
+                            unspentSkillPoints:
+                              totalAvailableSkill - (totalSpentSkill + 1),
+                          });
+                        }}
+                        disabled={!canAdd}
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          borderRadius: "50%",
+                          border: "1px solid var(--border)",
+                          backgroundColor: "var(--bg-card)",
+                          cursor: canAdd ? "pointer" : "not-allowed",
+                          fontWeight: 700,
+                          color: "var(--text-muted)",
+                          fontSize: "0.75rem",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Armaments / Protection / Tool Kits */}
+        {[
+          { label: "Armaments", items: prof?.armaments ?? [] },
+          { label: "Protection", items: prof?.protection ?? [] },
+          {
+            label: "Tool Kits",
+            items: (prof?.toolKits ?? []).filter((t) => t !== "-"),
+          },
+        ]
+          .filter((g) => g.items.length > 0)
+          .map((group) => (
+            <div
+              key={group.label}
+              style={{
+                backgroundColor: "var(--bg-card)",
+                border: "1px solid var(--border)",
+                borderRadius: "6px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  padding: "0.5rem 1rem",
+                  borderBottom: "1px solid var(--border)",
+                  backgroundColor: "var(--bg-nav)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.65rem",
+                    fontFamily: "var(--font-heading)",
+                    fontStyle: "italic",
+                    letterSpacing: "0.12em",
+                    color: "var(--text-muted)",
+                    textTransform: "uppercase" as const,
+                  }}
+                >
+                  {group.label}
+                </span>
+              </div>
+              <div
+                style={{
+                  padding: "0.5rem 1rem",
+                  display: "flex",
+                  flexDirection: "column" as const,
+                  gap: "0.35rem",
+                }}
+              >
+                {group.items.map((item) => (
+                  <div
+                    key={item}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.625rem",
+                      padding: "0.45rem 0.75rem",
+                      backgroundColor: "var(--bg-nav)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "0.375rem",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "var(--font-heading)",
+                        fontWeight: 700,
+                        fontSize: "0.85rem",
+                        color: "var(--text)",
+                        flex: 1,
+                      }}
+                    >
+                      {item}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.6rem",
+                        fontWeight: 700,
+                        fontFamily: "var(--font-heading)",
+                        padding: "0.1rem 0.35rem",
+                        borderRadius: "9999px",
+                        border: "1px solid var(--primary)",
+                        color: "var(--primary)",
+                      }}
+                    >
+                      Proficient
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+      </>
+    );
+  }
+
+  // ─── Right rail renderer ──────────────────────────────────────────────────
+  function renderRightRail() {
+    return (
+      <>
+        {/* Portrait */}
+        <div
+          style={{
+            border: "1px solid var(--border)",
+            borderRadius: "6px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              padding: "6px 14px",
+              backgroundColor: "var(--bg-nav)",
+              borderBottom: portraitCollapsed
+                ? "none"
+                : "1px solid var(--border)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              cursor: "pointer",
+              fontSize: "10px",
+              fontFamily: "monospace",
+              letterSpacing: "0.16em",
+              textTransform: "uppercase" as const,
+              color: "var(--text-muted)",
+            }}
+            onClick={() => setPortraitCollapsed((v) => !v)}
+          >
+            <span>Portrait</span>
+            <span style={{ fontSize: "10px", opacity: 0.6 }}>
+              {portraitCollapsed ? "▶" : "▼"}
+            </span>
+          </div>
+          {!portraitCollapsed && (
+            <div
+              onClick={() => portraitInputRef.current?.click()}
+              title={
+                portraitUrl
+                  ? "Click to change portrait"
+                  : "Click to upload portrait"
+              }
+              style={{
+                position: "relative",
+                overflow: "hidden",
+                aspectRatio: "3/4",
+                backgroundColor: "var(--bg-nav)",
+                cursor: "pointer",
+              }}
+            >
+              {portraitUrl ? (
+                <img
+                  src={portraitUrl}
+                  alt={c.name}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background:
+                      "repeating-linear-gradient(135deg, transparent 0 12px, var(--border) 12px 13px)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "var(--font-heading)",
+                      fontSize: "10px",
+                      letterSpacing: "0.3em",
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase" as const,
+                      opacity: 0.6,
+                    }}
+                  >
+                    PORTRAIT
+                  </div>
+                </div>
+              )}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: "auto 0 0 0",
+                  padding: "14px 14px 12px",
+                  background:
+                    "linear-gradient(180deg, transparent 0%, var(--bg-nav) 100%)",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "var(--font-heading)",
+                    fontSize: "9px",
+                    letterSpacing: "0.2em",
+                    textTransform: "uppercase" as const,
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  Character
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-heading)",
+                    fontStyle: "italic",
+                    fontWeight: 700,
+                    fontSize: "19px",
+                    color: "var(--text)",
+                    lineHeight: 1.1,
+                    marginTop: "2px",
+                  }}
+                >
+                  {c.name}
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-heading)",
+                    fontSize: "10px",
+                    letterSpacing: "0.08em",
+                    color: "var(--text-muted)",
+                    marginTop: "3px",
+                  }}
+                >
+                  {c.vocationName || c.professionName} · Tier {effectiveTier}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        <input
+          ref={portraitInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              const url = ev.target?.result as string;
+              localStorage.setItem(`portrait-${c.id}`, url);
+              setPortraitUrl(url);
+            };
+            reader.readAsDataURL(file);
+            e.target.value = "";
+          }}
+        />
+
+        {/* Favorites Panel */}
+        {(() => {
+          const favs = c.favorites ?? [];
+          const favItems = favs
+            .filter((f) => f.type === "item")
+            .map((f) => inventory.find((i) => i.id === f.id))
+            .filter(Boolean)
+            .sort((a, b) => a!.name.localeCompare(b!.name)) as typeof inventory;
+          const allFeatEntries = [
+            ...allFeats,
+            ...(prof?.baseFeatures ?? []),
+            ...(vocation?.features ?? []),
+          ];
+          const favFeats = favs
+            .filter((f) => f.type === "feat")
+            .map((f) => allFeatEntries.find((e) => e.id === f.id))
+            .filter(Boolean)
+            .sort((a, b) =>
+              a!.name.localeCompare(b!.name),
+            ) as typeof allFeatEntries;
+          const favSpells = favs
+            .filter((f) => f.type === "spell")
+            .map((f) => spells.find((s) => s.id === f.id))
+            .filter(Boolean)
+            .sort((a, b) => a!.name.localeCompare(b!.name)) as typeof spells;
+          const isEmpty =
+            favItems.length === 0 &&
+            favFeats.length === 0 &&
+            favSpells.length === 0;
+          const pipBtnStyle: React.CSSProperties = {
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "0.8rem",
+            color: "var(--primary)",
+            padding: "0 4px",
+            flexShrink: 0,
+            lineHeight: 1,
+          };
+          const rowStyle: React.CSSProperties = {
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "4px 0",
+            borderBottom: "1px solid var(--border)",
+          };
+          const entryBtnStyle: React.CSSProperties = {
+            flex: 1,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            textAlign: "left",
+            fontFamily: "var(--font-heading)",
+            fontSize: "0.8rem",
+            color: "var(--text)",
+            padding: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          };
+          const sectionLabelStyle: React.CSSProperties = {
+            fontSize: "9px",
+            fontFamily: "monospace",
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            color: "var(--text-muted)",
+            marginBottom: "4px",
+            marginTop: "8px",
+          };
+          return (
+            <div
+              style={{
+                backgroundColor: "var(--bg-card)",
+                border: "1px solid var(--border)",
+                borderRadius: "6px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  padding: "6px 14px",
+                  borderBottom: favoritesCollapsed
+                    ? "none"
+                    : "1px solid var(--border)",
+                  backgroundColor: "var(--bg-nav)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  cursor: "pointer",
+                  fontSize: "10px",
+                  fontFamily: "monospace",
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase" as const,
+                  color: "var(--text-muted)",
+                }}
+                onClick={() => setFavoritesCollapsed((v) => !v)}
+              >
+                <span>Favorites</span>
+                <span style={{ fontSize: "10px", opacity: 0.6 }}>
+                  {favoritesCollapsed ? "▶" : "▼"}
+                </span>
+              </div>
+              {!favoritesCollapsed && (
+                <div style={{ padding: "8px 14px 12px" }}>
+                  {isEmpty && (
+                    <div
+                      style={{
+                        fontSize: "0.72rem",
+                        color: "var(--text-muted)",
+                        fontStyle: "italic",
+                        padding: "8px 0",
+                      }}
+                    >
+                      Mark items, feats, or spells with ☆ to pin them here.
+                    </div>
+                  )}
+                  {favItems.length > 0 && (
+                    <div>
+                      <div style={sectionLabelStyle}>Items</div>
+                      {favItems.map((item) => (
+                        <div key={item.id} style={rowStyle}>
+                          <button
+                            style={entryBtnStyle}
+                            onClick={() =>
+                              setFavPopout({ type: "item", id: item.id })
+                            }
+                            title={item.name}
+                          >
+                            {item.name}
+                          </button>
+                          <button
+                            style={pipBtnStyle}
+                            onClick={() => toggleFavorite("item", item.id)}
+                            title="Remove"
+                          >
+                            ★
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {favFeats.length > 0 && (
+                    <div>
+                      <div style={sectionLabelStyle}>Feats</div>
+                      {favFeats.map((feat) => (
+                        <div key={feat.id} style={rowStyle}>
+                          <button
+                            style={entryBtnStyle}
+                            onClick={() =>
+                              setFavPopout({ type: "feat", id: feat.id })
+                            }
+                            title={feat.name}
+                          >
+                            {feat.name}
+                          </button>
+                          <button
+                            style={pipBtnStyle}
+                            onClick={() => toggleFavorite("feat", feat.id)}
+                            title="Remove"
+                          >
+                            ★
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {favSpells.length > 0 && (
+                    <div>
+                      <div style={sectionLabelStyle}>Spells</div>
+                      {favSpells.map((spell) => (
+                        <div key={spell.id} style={rowStyle}>
+                          <button
+                            style={entryBtnStyle}
+                            onClick={() =>
+                              setFavPopout({ type: "spell", id: spell.id })
+                            }
+                            title={spell.name}
+                          >
+                            {spell.name}
+                          </button>
+                          <button
+                            style={pipBtnStyle}
+                            onClick={() => toggleFavorite("spell", spell.id)}
+                            title="Remove"
+                          >
+                            ★
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+      </>
+    );
+  }
+
   return (
-    <div style={{ maxWidth: "860px" }}>
-      {/* FEATURE-01: Fixed Ref button */}
-      <button
-        onClick={() => setShowRefSidebar((v) => !v)}
+    <div style={{ width: "100%" }}>
+      {/* Fixed sidebar button group */}
+      <div
         style={{
           position: "fixed",
           right: "1rem",
@@ -6802,30 +8472,117 @@ export default function CharacterSheetPage({
           zIndex: 70,
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
-          gap: "0.2rem",
-          padding: "0.5rem 0.4rem",
-          backgroundColor: showRefSidebar ? "var(--primary)" : "var(--bg-card)",
-          border: `1.5px solid ${showRefSidebar ? "var(--primary)" : "var(--border)"}`,
-          borderRadius: "0.5rem",
-          cursor: "pointer",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-          writingMode: "vertical-rl",
+          gap: "6px",
         }}
       >
-        <span
+        {/* Portrait button — mobile only (hidden via CSS at >860px) */}
+        <button
+          className="poa-mobile-sidebar-btn"
+          onClick={() => {
+            setShowPortraitSidebar((v) => !v);
+            setShowFavsSidebar(false);
+            setShowRefSidebar(false);
+          }}
           style={{
-            fontFamily: "var(--font-heading)",
-            fontWeight: 800,
-            fontSize: "0.72rem",
-            color: showRefSidebar ? "#fff" : "var(--primary)",
-            letterSpacing: "0.06em",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "0.2rem",
+            padding: "0.5rem 0.4rem",
+            backgroundColor: showPortraitSidebar
+              ? "var(--primary)"
+              : "var(--bg-card)",
+            border: `1.5px solid ${showPortraitSidebar ? "var(--primary)" : "var(--border)"}`,
+            borderRadius: "0.5rem",
+            cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            writingMode: "vertical-rl",
           }}
         >
-          ❖ Ref
-        </span>
-      </button>
-
+          <span
+            style={{
+              fontFamily: "var(--font-heading)",
+              fontWeight: 800,
+              fontSize: "0.72rem",
+              color: showPortraitSidebar ? "#fff" : "var(--primary)",
+              letterSpacing: "0.06em",
+            }}
+          >
+            ◉ Portrait
+          </span>
+        </button>
+        {/* Favorites button — mobile only */}
+        <button
+          className="poa-mobile-sidebar-btn"
+          onClick={() => {
+            setShowFavsSidebar((v) => !v);
+            setShowPortraitSidebar(false);
+            setShowRefSidebar(false);
+          }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "0.2rem",
+            padding: "0.5rem 0.4rem",
+            backgroundColor: showFavsSidebar
+              ? "var(--primary)"
+              : "var(--bg-card)",
+            border: `1.5px solid ${showFavsSidebar ? "var(--primary)" : "var(--border)"}`,
+            borderRadius: "0.5rem",
+            cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            writingMode: "vertical-rl",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-heading)",
+              fontWeight: 800,
+              fontSize: "0.72rem",
+              color: showFavsSidebar ? "#fff" : "var(--primary)",
+              letterSpacing: "0.06em",
+            }}
+          >
+            ★ Favs
+          </span>
+        </button>
+        {/* Actions button — always visible */}
+        <button
+          onClick={() => {
+            setShowRefSidebar((v) => !v);
+            setShowFavsSidebar(false);
+            setShowPortraitSidebar(false);
+          }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "0.2rem",
+            padding: "0.5rem 0.4rem",
+            backgroundColor: showRefSidebar
+              ? "var(--primary)"
+              : "var(--bg-card)",
+            border: `1.5px solid ${showRefSidebar ? "var(--primary)" : "var(--border)"}`,
+            borderRadius: "0.5rem",
+            cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            writingMode: "vertical-rl",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-heading)",
+              fontWeight: 800,
+              fontSize: "0.72rem",
+              color: showRefSidebar ? "#fff" : "var(--primary)",
+              letterSpacing: "0.06em",
+            }}
+          >
+            ❖ Actions
+          </span>
+        </button>
+      </div>
       {/* FEATURE-01: Ref sidebar overlay */}
       {showRefSidebar && (
         <div
@@ -6871,7 +8628,7 @@ export default function CharacterSheetPage({
                   color: "var(--text)",
                 }}
               >
-                ❖ Action Reference
+                ❖ Actions
               </span>
               <button
                 onClick={() => setShowRefSidebar(false)}
@@ -7048,44 +8805,438 @@ export default function CharacterSheetPage({
           </div>
         </div>
       )}
-
+      {/* Portrait mobile sidebar */}
+      {showPortraitSidebar && (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowPortraitSidebar(false);
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 65,
+            backgroundColor: "rgba(0,0,0,0.3)",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: "300px",
+              maxWidth: "95vw",
+              backgroundColor: "var(--bg-card)",
+              borderLeft: "1px solid var(--border)",
+              overflowY: "auto",
+              padding: "1rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "0.75rem",
+                paddingBottom: "0.5rem",
+                borderBottom: "2px solid var(--primary)",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  fontWeight: 800,
+                  fontSize: "0.95rem",
+                  color: "var(--text)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                </svg>
+                Portrait
+              </span>
+              <button
+                onClick={() => setShowPortraitSidebar(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                  color: "var(--text-muted)",
+                  padding: "0.1rem 0.3rem",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              onClick={() => portraitInputRef.current?.click()}
+              title={
+                portraitUrl
+                  ? "Click to change portrait"
+                  : "Click to upload portrait"
+              }
+              style={{
+                position: "relative",
+                overflow: "hidden",
+                aspectRatio: "3/4",
+                backgroundColor: "var(--bg-nav)",
+                borderRadius: "6px",
+                cursor: "pointer",
+              }}
+            >
+              {portraitUrl ? (
+                <img
+                  src={portraitUrl}
+                  alt={c.name}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background:
+                      "repeating-linear-gradient(135deg, transparent 0 12px, var(--border) 12px 13px)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "var(--font-heading)",
+                      fontSize: "10px",
+                      letterSpacing: "0.3em",
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase" as const,
+                      opacity: 0.6,
+                    }}
+                  >
+                    PORTRAIT
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{ marginTop: "12px" }}>
+              <div
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  fontStyle: "italic",
+                  fontWeight: 700,
+                  fontSize: "1.1rem",
+                  color: "var(--text)",
+                }}
+              >
+                {c.name}
+              </div>
+              <div
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  fontSize: "11px",
+                  color: "var(--text-muted)",
+                  marginTop: "3px",
+                }}
+              >
+                {c.vocationName || c.professionName} · Tier {effectiveTier}
+              </div>
+              {c.ambition && (
+                <div
+                  style={{
+                    fontFamily: "var(--font-heading)",
+                    fontStyle: "italic",
+                    fontSize: "12px",
+                    color: "var(--text-muted)",
+                    marginTop: "6px",
+                  }}
+                >
+                  {c.ambition}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Favorites mobile sidebar */}
+      {showFavsSidebar && (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowFavsSidebar(false);
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 65,
+            backgroundColor: "rgba(0,0,0,0.3)",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: "300px",
+              maxWidth: "95vw",
+              backgroundColor: "var(--bg-card)",
+              borderLeft: "1px solid var(--border)",
+              overflowY: "auto",
+              padding: "1rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "0.75rem",
+                paddingBottom: "0.5rem",
+                borderBottom: "2px solid var(--primary)",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  fontWeight: 800,
+                  fontSize: "0.95rem",
+                  color: "var(--text)",
+                }}
+              >
+                ★ Favorites
+              </span>
+              <button
+                onClick={() => setShowFavsSidebar(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                  color: "var(--text-muted)",
+                  padding: "0.1rem 0.3rem",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            {(() => {
+              const favs = c.favorites ?? [];
+              const allFeatEntries = [
+                ...allFeats,
+                ...(prof?.baseFeatures ?? []),
+                ...(vocation?.features ?? []),
+              ];
+              const favItems = favs
+                .filter((f) => f.type === "item")
+                .map((f) => inventory.find((i) => i.id === f.id))
+                .filter(Boolean)
+                .sort((a, b) =>
+                  a!.name.localeCompare(b!.name),
+                ) as typeof inventory;
+              const favFeats = favs
+                .filter((f) => f.type === "feat")
+                .map((f) => allFeatEntries.find((e) => e.id === f.id))
+                .filter(Boolean)
+                .sort((a, b) =>
+                  a!.name.localeCompare(b!.name),
+                ) as typeof allFeatEntries;
+              const favSpells = favs
+                .filter((f) => f.type === "spell")
+                .map((f) => spells.find((s) => s.id === f.id))
+                .filter(Boolean)
+                .sort((a, b) =>
+                  a!.name.localeCompare(b!.name),
+                ) as typeof spells;
+              const isEmpty =
+                favItems.length === 0 &&
+                favFeats.length === 0 &&
+                favSpells.length === 0;
+              const rowStyle: React.CSSProperties = {
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "6px 0",
+                borderBottom: "1px solid var(--border)",
+              };
+              const entryBtnStyle: React.CSSProperties = {
+                flex: 1,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "left",
+                fontFamily: "var(--font-heading)",
+                fontSize: "0.85rem",
+                color: "var(--text)",
+                padding: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap" as const,
+              };
+              const pipBtnStyle: React.CSSProperties = {
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "0.8rem",
+                color: "var(--primary)",
+                padding: "0 4px",
+                flexShrink: 0,
+              };
+              const sectionLabel: React.CSSProperties = {
+                fontSize: "9px",
+                fontFamily: "monospace",
+                letterSpacing: "0.16em",
+                textTransform: "uppercase" as const,
+                color: "var(--text-muted)",
+                marginTop: "12px",
+                marginBottom: "4px",
+              };
+              if (isEmpty)
+                return (
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-muted)",
+                      fontStyle: "italic",
+                      padding: "8px 0",
+                    }}
+                  >
+                    Mark items, feats, or spells with ☆ to pin them here.
+                  </div>
+                );
+              return (
+                <>
+                  {favItems.length > 0 && (
+                    <>
+                      <div style={sectionLabel}>Items</div>
+                      {favItems.map((item) => (
+                        <div key={item.id} style={rowStyle}>
+                          <button
+                            style={entryBtnStyle}
+                            onClick={() => {
+                              setShowFavsSidebar(false);
+                              setFavPopout({ type: "item", id: item.id });
+                            }}
+                          >
+                            {item.name}
+                          </button>
+                          <button
+                            style={pipBtnStyle}
+                            onClick={() => toggleFavorite("item", item.id)}
+                          >
+                            ★
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {favFeats.length > 0 && (
+                    <>
+                      <div style={sectionLabel}>Feats</div>
+                      {favFeats.map((feat) => (
+                        <div key={feat.id} style={rowStyle}>
+                          <button
+                            style={entryBtnStyle}
+                            onClick={() => {
+                              setShowFavsSidebar(false);
+                              setFavPopout({ type: "feat", id: feat.id });
+                            }}
+                          >
+                            {feat.name}
+                          </button>
+                          <button
+                            style={pipBtnStyle}
+                            onClick={() => toggleFavorite("feat", feat.id)}
+                          >
+                            ★
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {favSpells.length > 0 && (
+                    <>
+                      <div style={sectionLabel}>Spells</div>
+                      {favSpells.map((spell) => (
+                        <div key={spell.id} style={rowStyle}>
+                          <button
+                            style={entryBtnStyle}
+                            onClick={() => {
+                              setShowFavsSidebar(false);
+                              setFavPopout({ type: "spell", id: spell.id });
+                            }}
+                          >
+                            {spell.name}
+                          </button>
+                          <button
+                            style={pipBtnStyle}
+                            onClick={() => toggleFavorite("spell", spell.id)}
+                          >
+                            ★
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
       {/* ──── HEADER ──── */}
       <div
+        className="poa-header"
         style={{
           backgroundColor: "var(--bg-nav)",
           border: "1px solid var(--border)",
-          borderRadius: "12px",
-          padding: "1rem 1.25rem",
+          borderRadius: "6px",
+          padding: "14px 20px",
           marginBottom: "1rem",
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "0.75rem",
+          gap: "1rem",
         }}
       >
+        {/* LEFT: name + tags + back */}
         <div>
           <h1
             style={{
               fontFamily: "var(--font-heading)",
               fontStyle: "italic",
-              fontSize: "1.5rem",
+              fontSize: "2rem",
               fontWeight: 700,
               color: "var(--text)",
               margin: 0,
-              letterSpacing: "0.02em",
+              lineHeight: 1.1,
             }}
           >
             {c.name || "Unnamed Adventurer"}
           </h1>
           <div
             style={{
-              fontSize: "0.7rem",
-              color: "var(--primary)",
-              letterSpacing: "0.08em",
-              marginTop: "0.2rem",
-              fontFamily: "var(--font-heading)",
-              fontStyle: "italic",
+              marginTop: "5px",
+              fontSize: "11px",
+              fontFamily: "monospace",
+              color: "var(--text-muted)",
+              letterSpacing: "0.06em",
+              display: "flex",
+              alignItems: "center",
+              flexWrap: "wrap" as const,
+              gap: "0px",
             }}
           >
             {[
@@ -7095,13 +9246,22 @@ export default function CharacterSheetPage({
               `Tier ${effectiveTier}`,
             ]
               .filter(Boolean)
-              .join(" · ")}
+              .map((tag, i, arr) => (
+                <span key={i} style={{ whiteSpace: "nowrap" as const }}>
+                  <span>{tag}</span>
+                  {i < arr.length - 1 && (
+                    <span style={{ margin: "0 7px", color: "var(--border)" }}>
+                      ·
+                    </span>
+                  )}
+                </span>
+              ))}
           </div>
           {c.ambition && (
             <div
               style={{
-                marginTop: "0.25rem",
-                fontSize: "0.75rem",
+                marginTop: "4px",
+                fontSize: "0.72rem",
                 color: "var(--text-muted)",
                 fontStyle: "italic",
               }}
@@ -7109,11 +9269,11 @@ export default function CharacterSheetPage({
               {c.ambition}
             </div>
           )}
-          <div style={{ marginTop: "0.375rem" }}>
+          <div style={{ marginTop: "8px" }}>
             <Link
               href="/characters"
               style={{
-                fontSize: "0.72rem",
+                fontSize: "0.7rem",
                 color: "var(--text-muted)",
                 textDecoration: "none",
                 fontFamily: "var(--font-heading)",
@@ -7124,30 +9284,220 @@ export default function CharacterSheetPage({
             </Link>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.875rem" }}>
-          <div style={{ textAlign: "right" }}>
+        {/* RIGHT: tier + renown bar + spell DC + delete */}
+        <div
+          className="poa-header-right"
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "16px",
+            flexShrink: 0,
+          }}
+        >
+          {/* Tier + Renown bar */}
+          <div>
             <div
               style={{
-                fontSize: "0.6rem",
-                color: "var(--text-muted)",
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
+                display: "flex",
+                alignItems: "baseline",
+                gap: "5px",
+                marginBottom: "6px",
               }}
             >
-              Renown
+              <span
+                style={{
+                  fontSize: "9px",
+                  fontFamily: "monospace",
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase" as const,
+                  color: "var(--text-muted)",
+                }}
+              >
+                Tier
+              </span>
+              <span
+                style={{
+                  fontSize: "22px",
+                  fontFamily: "var(--font-heading)",
+                  fontWeight: 700,
+                  color: "var(--text)",
+                  lineHeight: 1,
+                }}
+              >
+                {effectiveTier}
+              </span>
             </div>
+            {renownAdjInput !== null ? (
+              <input
+                autoFocus
+                value={renownAdjInput}
+                onChange={(e) => setRenownAdjInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const trimmed = renownAdjInput.trim();
+                    if (trimmed !== "") {
+                      const cur = c.renown ?? 0;
+                      let next: number;
+                      if (trimmed.startsWith("+")) {
+                        next = cur + parseInt(trimmed.slice(1), 10);
+                      } else if (trimmed.startsWith("-")) {
+                        next = cur + parseInt(trimmed, 10);
+                      } else {
+                        next = parseInt(trimmed, 10);
+                      }
+                      if (!isNaN(next)) {
+                        persist({ renown: Math.max(0, next) });
+                      }
+                    }
+                    setRenownAdjInput(null);
+                  } else if (e.key === "Escape") {
+                    setRenownAdjInput(null);
+                  }
+                }}
+                onBlur={() => setRenownAdjInput(null)}
+                placeholder="+5 or -2"
+                style={{
+                  width: "160px",
+                  padding: "1px 6px",
+                  borderRadius: "2px",
+                  border: "1px solid var(--primary)",
+                  backgroundColor: "var(--bg-nav)",
+                  color: "var(--text)",
+                  fontFamily: "monospace",
+                  fontSize: "0.75rem",
+                  textAlign: "center" as const,
+                  outline: "none",
+                }}
+              />
+            ) : (
+              <div
+                onClick={() => setRenownAdjInput("")}
+                title="Click to adjust renown"
+                style={{
+                  width: "160px",
+                  height: "8px",
+                  backgroundColor: "var(--border)",
+                  borderRadius: "2px",
+                  overflow: "hidden",
+                  cursor: "pointer",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${Math.min(100, Math.round(((c.renown ?? 0) / (FEAT_COST_BY_TIER[effectiveTier] ?? 6)) * 100))}%`,
+                    background: "var(--primary)",
+                    borderRadius: "2px",
+                    transition: "width 0.3s ease",
+                  }}
+                />
+              </div>
+            )}
             <div
               style={{
-                fontSize: "1.35rem",
-                color: "var(--primary)",
-                fontWeight: 700,
-                fontFamily: "var(--font-heading)",
-                lineHeight: 1,
+                marginTop: "5px",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
               }}
             >
-              {c.renown ?? 0}
+              <button
+                onClick={() =>
+                  persist({ renown: Math.max(0, (c.renown ?? 0) - 1) })
+                }
+                style={{
+                  width: "16px",
+                  height: "16px",
+                  borderRadius: "50%",
+                  border: "1px solid var(--border)",
+                  backgroundColor: "var(--bg-nav)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  color: "var(--text-muted)",
+                  fontSize: "0.7rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  lineHeight: 1,
+                }}
+              >
+                −
+              </button>
+              <span
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "10px",
+                  color: "var(--text-muted)",
+                  letterSpacing: "0.04em",
+                  minWidth: "32px",
+                  textAlign: "center",
+                }}
+              >
+                {c.renown ?? 0} / {FEAT_COST_BY_TIER[effectiveTier] ?? 6}
+              </span>
+              <button
+                onClick={() => persist({ renown: (c.renown ?? 0) + 1 })}
+                style={{
+                  width: "16px",
+                  height: "16px",
+                  borderRadius: "50%",
+                  border: "1px solid var(--border)",
+                  backgroundColor: "var(--bg-nav)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  color: "var(--text-muted)",
+                  fontSize: "0.7rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  lineHeight: 1,
+                }}
+              >
+                +
+              </button>
+              <span
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "9px",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase" as const,
+                  color: "var(--text-muted)",
+                  marginLeft: "2px",
+                }}
+              >
+                Renown
+              </span>
             </div>
           </div>
+          {/* Spell DC (casters only) */}
+          {isCaster && (
+            <div style={{ textAlign: "center" }}>
+              <div
+                style={{
+                  fontSize: "9px",
+                  fontFamily: "monospace",
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase" as const,
+                  color: "var(--text-muted)",
+                  marginBottom: "3px",
+                }}
+              >
+                Spell DC
+              </div>
+              <div
+                style={{
+                  fontSize: "28px",
+                  fontFamily: "'Cormorant Garamond', Georgia, serif",
+                  fontWeight: 700,
+                  color: "var(--primary)",
+                  lineHeight: 1,
+                }}
+              >
+                {spellDC}
+              </div>
+            </div>
+          )}
+          {/* Delete */}
           <button
             onClick={handleDelete}
             style={{
@@ -7159,877 +9509,53 @@ export default function CharacterSheetPage({
               color: "var(--text-muted)",
               fontSize: "0.75rem",
               fontFamily: "var(--font-heading)",
+              marginTop: "2px",
             }}
           >
             Delete
           </button>
         </div>
       </div>
-
-      {/* ──── VITALITY BAR ──── */}
-      {(() => {
-        const tempHp = c.tempHp ?? 0;
-        const effectiveMax = derivedMaxVitality + tempHp;
-        const vitPct =
-          effectiveMax > 0
-            ? Math.min(
-                100,
-                Math.round(((c.currentVitality ?? 0) / effectiveMax) * 100),
-              )
-            : 0;
-        return (
-          <div
-            style={{
-              backgroundColor: "var(--bg-card)",
-              border: "1px solid var(--border)",
-              borderRadius: "12px",
-              padding: "0.875rem 1.25rem",
-              marginBottom: "1rem",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "baseline",
-                marginBottom: "0.4rem",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "0.65rem",
-                  letterSpacing: "0.12em",
-                  color: "var(--text-muted)",
-                  fontFamily: "var(--font-heading)",
-                  fontStyle: "italic",
-                  textTransform: "uppercase",
-                }}
-              >
-                Vitality
-              </span>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: "0.25rem",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "1.25rem",
-                    fontWeight: 700,
-                    color: "var(--primary)",
-                    fontFamily: "var(--font-heading)",
-                  }}
-                >
-                  {c.currentVitality ?? 0}
-                </span>
-                <span
-                  style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}
-                >
-                  / {effectiveMax}
-                </span>
-              </div>
-            </div>
-            <div
-              style={{
-                backgroundColor: "var(--border)",
-                borderRadius: "6px",
-                height: "8px",
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  backgroundColor: "var(--primary)",
-                  height: "100%",
-                  width: `${vitPct}%`,
-                  borderRadius: "6px",
-                  transition: "width 0.2s ease",
-                }}
-              />
-            </div>
-            <div
-              style={{
-                display: "flex",
-                gap: "1.25rem",
-                marginTop: "0.5rem",
-                flexWrap: "wrap",
-                alignItems: "center",
-              }}
-            >
-              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                Wounds{" "}
-                <span style={{ color: "var(--text)", fontWeight: 700 }}>
-                  {c.currentWounds ?? 0}/{maxWounds}
-                </span>
-              </span>
-              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                Carry{" "}
-                <span style={{ color: "var(--text)", fontWeight: 700 }}>
-                  {totalCarried}/{carryWeight} lb
-                </span>
-              </span>
-              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                Respites{" "}
-                <span style={{ color: "var(--text)", fontWeight: 700 }}>
-                  {currentRespites}/3
-                </span>
-              </span>
-              {tempHp !== 0 && (
-                <span
-                  style={{
-                    fontSize: "0.7rem",
-                    color: "var(--primary)",
-                    fontWeight: 700,
-                  }}
-                >
-                  {tempHp > 0 ? `+${tempHp}` : tempHp} Temp HP
-                </span>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ──── VITALITY & DAMAGE MANAGEMENT (unified) ──── */}
+      {/* ──── 3-COLUMN BODY ──── */}
       <div
-        style={{
-          backgroundColor: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: "12px",
-          overflow: "hidden",
-          marginBottom: "1rem",
-        }}
-      >
-        {/* Unified header */}
-        <div
-          style={{
-            padding: "0.625rem 1rem",
-            borderBottom: "1px solid var(--border)",
-            backgroundColor: "var(--bg-nav)",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "0.65rem",
-              fontFamily: "var(--font-heading)",
-              fontStyle: "italic",
-              letterSpacing: "0.12em",
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
-            }}
-          >
-            Vitality & Damage
-          </span>
-        </div>
-        {/* Inner 2-col layout */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          }}
-        >
-          {/* Left: HP + Wounds + Temp HP */}
-          <div
-            style={{
-              padding: "0.875rem 1rem",
-              borderBottom: "1px solid var(--border)",
-            }}
-          >
-            {(() => {
-              const tempHp = c.tempHp ?? 0;
-              const effectiveMax = derivedMaxVitality + tempHp;
-              return (
-                <>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "0.625rem",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
-                    <DeltaNumber
-                      label={`HP / ${derivedMaxVitality}${tempHp !== 0 ? (tempHp > 0 ? ` +${tempHp}` : ` ${tempHp}`) : ""}`}
-                      value={c.currentVitality ?? 0}
-                      min={0}
-                      max={effectiveMax || undefined}
-                      onChange={(v) => persist({ currentVitality: v })}
-                    />
-                    <EditableNumber
-                      label={`Wounds / ${maxWounds}`}
-                      value={c.currentWounds ?? 0}
-                      min={0}
-                      max={maxWounds}
-                      onChange={(v) => persist({ currentWounds: v })}
-                    />
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "0.375rem",
-                      padding: "0.25rem 0.5rem",
-                      backgroundColor: "var(--bg-nav)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "0.375rem",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "0.6rem",
-                        color: "var(--text-muted)",
-                        fontFamily: "var(--font-heading)",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Temp HP
-                    </span>
-                    <button
-                      onClick={() => {
-                        const next = tempHp - 1;
-                        const newMax = derivedMaxVitality + next;
-                        const patch: Partial<typeof c> = { tempHp: next };
-                        if ((c.currentVitality ?? 0) > newMax)
-                          patch.currentVitality = Math.max(0, newMax);
-                        persist(patch);
-                      }}
-                      style={{
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        fontSize: "0.75rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      −
-                    </button>
-                    <span
-                      style={{
-                        fontFamily: "var(--font-heading)",
-                        fontWeight: 700,
-                        fontSize: "0.9rem",
-                        color: "var(--text)",
-                        minWidth: "24px",
-                        textAlign: "center",
-                      }}
-                    >
-                      {tempHp}
-                    </span>
-                    <button
-                      onClick={() => persist({ tempHp: tempHp + 1 })}
-                      style={{
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        fontSize: "0.75rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      +
-                    </button>
-                    {tempHp !== 0 && (
-                      <button
-                        onClick={() => {
-                          const patch: Partial<typeof c> = { tempHp: 0 };
-                          if ((c.currentVitality ?? 0) > derivedMaxVitality)
-                            patch.currentVitality = Math.max(
-                              0,
-                              derivedMaxVitality,
-                            );
-                          persist(patch);
-                        }}
-                        style={{
-                          fontSize: "0.6rem",
-                          color: "var(--text-muted)",
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          fontFamily: "var(--font-heading)",
-                        }}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-
-          {/* Right: Apply Damage + pool tracker */}
-          {(() => {
-            const spellPool = c.spellReductionPool ?? 0;
-            const featPool = c.featReductionPool ?? 0;
-            const shieldPool = equippedShield?.reductionPoolCurrent ?? null;
-            const shieldPoolMax = equippedShield?.reductionPoolMax ?? null;
-            const hasAnyPool =
-              spellPool > 0 || featPool > 0 || shieldPool != null;
-            return (
-              <div
-                style={{
-                  padding: "0.875rem 1rem",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "1rem",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  Reduction Pool
-                </span>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  <input
-                    type="number"
-                    min={1}
-                    value={damageInput}
-                    onChange={(e) => setDamageInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        const n = parseInt(damageInput);
-                        if (n > 0) {
-                          applyDamage(n);
-                          setDamageInput("");
-                        }
-                      }
-                    }}
-                    placeholder="0"
-                    style={{
-                      ...inputStyle,
-                      width: "60px",
-                      textAlign: "center",
-                    }}
-                  />
-                  <button
-                    onClick={() => {
-                      const n = parseInt(damageInput);
-                      if (n > 0) {
-                        applyDamage(n);
-                        setDamageInput("");
-                      }
-                    }}
-                    style={{
-                      padding: "0.3rem 0.75rem",
-                      border: "none",
-                      borderRadius: "0.375rem",
-                      backgroundColor: "#EF4444",
-                      color: "#fff",
-                      cursor: "pointer",
-                      fontFamily: "var(--font-heading)",
-                      fontWeight: 700,
-                      fontSize: "0.8rem",
-                    }}
-                  >
-                    Hit
-                  </button>
-                  <span
-                    style={{
-                      fontSize: "0.6rem",
-                      color: "var(--text-muted)",
-                      fontStyle: "italic",
-                    }}
-                  >
-                    Spell → Feat → Shield → HP
-                  </span>
-                </div>
-                <div
-                  style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}
-                >
-                  {spellPool > 0 && (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.25rem",
-                        padding: "0.2rem 0.5rem",
-                        backgroundColor: "var(--primary-light)",
-                        border: "1px solid var(--primary)",
-                        borderRadius: "9999px",
-                        fontSize: "0.62rem",
-                        fontFamily: "var(--font-heading)",
-                        color: "var(--primary)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      ✦ Spell: {spellPool}
-                      <button
-                        onClick={() =>
-                          persist({
-                            spellReductionPool: Math.max(0, spellPool - 1),
-                          })
-                        }
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          fontSize: "0.6rem",
-                          color: "var(--primary)",
-                          padding: 0,
-                        }}
-                      >
-                        −
-                      </button>
-                      <button
-                        onClick={() =>
-                          persist({ spellReductionPool: spellPool + 1 })
-                        }
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          fontSize: "0.6rem",
-                          color: "var(--primary)",
-                          padding: 0,
-                        }}
-                      >
-                        +
-                      </button>
-                      <button
-                        onClick={() => persist({ spellReductionPool: 0 })}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          fontSize: "0.55rem",
-                          color: "var(--text-muted)",
-                          padding: 0,
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  )}
-                  {featPool > 0 && (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.25rem",
-                        padding: "0.2rem 0.5rem",
-                        backgroundColor: "var(--accent-light)",
-                        border: "1px solid var(--accent)",
-                        borderRadius: "9999px",
-                        fontSize: "0.62rem",
-                        fontFamily: "var(--font-heading)",
-                        color: "var(--accent)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      ✦ Feat: {featPool}
-                      <button
-                        onClick={() =>
-                          persist({
-                            featReductionPool: Math.max(0, featPool - 1),
-                          })
-                        }
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          fontSize: "0.6rem",
-                          color: "var(--accent)",
-                          padding: 0,
-                        }}
-                      >
-                        −
-                      </button>
-                      <button
-                        onClick={() =>
-                          persist({ featReductionPool: featPool + 1 })
-                        }
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          fontSize: "0.6rem",
-                          color: "var(--accent)",
-                          padding: 0,
-                        }}
-                      >
-                        +
-                      </button>
-                      <button
-                        onClick={() => persist({ featReductionPool: 0 })}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          fontSize: "0.55rem",
-                          color: "var(--text-muted)",
-                          padding: 0,
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  )}
-                  {shieldPool != null && (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.25rem",
-                        padding: "0.2rem 0.5rem",
-                        backgroundColor:
-                          shieldPool === 0
-                            ? "var(--section-alert-bg)"
-                            : "var(--bg-nav)",
-                        border: `1px solid ${shieldPool === 0 ? "#ff7979" : "var(--border)"}`,
-                        borderRadius: "9999px",
-                        fontSize: "0.62rem",
-                        fontFamily: "var(--font-heading)",
-                        color:
-                          shieldPool === 0 ? "#ff7979" : "var(--text-muted)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      🛡 {shieldPool}/{shieldPoolMax}
-                      {shieldPool === 0 && " (broken)"}
-                    </div>
-                  )}
-                  {!hasAnyPool && (
-                    <div style={{ display: "flex", gap: "0.375rem" }}>
-                      <button
-                        onClick={() => persist({ spellReductionPool: 1 })}
-                        style={{
-                          fontSize: "0.6rem",
-                          padding: "0.15rem 0.4rem",
-                          border: "1px dashed var(--border)",
-                          borderRadius: "9999px",
-                          backgroundColor: "transparent",
-                          cursor: "pointer",
-                          color: "var(--text-muted)",
-                          fontFamily: "var(--font-heading)",
-                        }}
-                      >
-                        + Spell Pool
-                      </button>
-                      <button
-                        onClick={() => persist({ featReductionPool: 1 })}
-                        style={{
-                          fontSize: "0.6rem",
-                          padding: "0.15rem 0.4rem",
-                          border: "1px dashed var(--border)",
-                          borderRadius: "9999px",
-                          backgroundColor: "transparent",
-                          cursor: "pointer",
-                          color: "var(--text-muted)",
-                          fontFamily: "var(--font-heading)",
-                        }}
-                      >
-                        + Feat Pool
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      </div>
-
-      {/* ──── ATTRS | DEFENCE TWO-COLUMN ──── */}
-      <div
+        className="poa-sheet-grid"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: "1rem",
-          marginBottom: "1rem",
+          gridTemplateColumns: "320px 1fr 320px",
+          gap: "14px",
+          marginTop: "18px",
+          alignItems: "start",
         }}
       >
-        {/* Left: Attributes bar display */}
+        {/* LEFT COLUMN */}
         <div
+          className="poa-col-left"
           style={{
-            backgroundColor: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "12px",
-            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+            minWidth: 0,
           }}
         >
-          <div
-            style={{
-              padding: "0.5rem 1rem",
-              borderBottom: "1px solid var(--border)",
-              backgroundColor: "var(--bg-nav)",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.65rem",
-                fontFamily: "var(--font-heading)",
-                fontStyle: "italic",
-                letterSpacing: "0.12em",
-                color: "var(--text-muted)",
-                textTransform: "uppercase",
-              }}
-            >
-              Attributes
-            </span>
-          </div>
-          <div
-            style={{
-              padding: "0.875rem 1rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.875rem",
-            }}
-          >
-            {(() => {
-              const totalAvailableBase = Math.min(
-                12,
-                4 + (c.featsPurchased ?? 0),
-              );
-              const currentTotalBase =
-                c.baseAttributes.body +
-                c.baseAttributes.mind +
-                c.baseAttributes.will;
-              const dynamicUnspent = totalAvailableBase - currentTotalBase;
-
-              return (
-                <>
-                  {dynamicUnspent > 0 && (
-                    <div
-                      style={{
-                        padding: "0.375rem 0.625rem",
-                        backgroundColor: "var(--accent-light)",
-                        border: "1px solid var(--accent)",
-                        borderRadius: "0.375rem",
-                        fontSize: "0.75rem",
-                        color: "var(--text)",
-                        fontFamily: "var(--font-heading)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      ⚠ {dynamicUnspent} unspent attr pt
-                      {dynamicUnspent !== 1 ? "s" : ""}
-                      <span style={{ fontWeight: 400, marginLeft: "0.35rem" }}>
-                        ({currentTotalBase} / {totalAvailableBase})
-                      </span>
-                    </div>
-                  )}
-                  {(["body", "mind", "will"] as const).map((key) => {
-                    const val = attrs[key];
-                    const base = c.baseAttributes[key];
-                    const voc =
-                      c.vocationAttributeBonus.attribute === key
-                        ? c.vocationAttributeBonus.value
-                        : 0;
-                    const isHighest =
-                      val === Math.max(attrs.body, attrs.mind, attrs.will);
-                    const barPct = Math.min(
-                      100,
-                      Math.max(0, Math.round((Math.max(0, val) / 12) * 100)),
-                    );
-                    const canIncrease = dynamicUnspent > 0;
-                    const canDecrease = base > 0;
-                    function adjustAttr(delta: number) {
-                      const newBase = base + delta;
-                      if (newBase < 0) return;
-                      if (delta > 0 && !canIncrease) return;
-                      persist({
-                        baseAttributes: {
-                          ...c.baseAttributes,
-                          [key]: newBase,
-                        },
-                        unspentAttributePoints: Math.max(
-                          0,
-                          dynamicUnspent - delta,
-                        ),
-                      });
-                    }
-                    return (
-                      <div key={key}>
-                        {/* Label + total value */}
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginBottom: "3px",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: "0.75rem",
-                              color: isHighest
-                                ? "var(--primary)"
-                                : "var(--text-muted)",
-                              letterSpacing: "0.04em",
-                              textTransform: "capitalize",
-                            }}
-                          >
-                            {key}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: "1.15rem",
-                              fontWeight: 700,
-                              color: "var(--primary)",
-                              fontFamily: "var(--font-heading)",
-                              lineHeight: 1,
-                            }}
-                          >
-                            {fmtAttr(val)}
-                          </span>
-                        </div>
-                        {/* Bar */}
-                        <div
-                          style={{
-                            backgroundColor: "var(--border)",
-                            borderRadius: "4px",
-                            height: "4px",
-                            overflow: "hidden",
-                            marginBottom: "0.4rem",
-                          }}
-                        >
-                          <div
-                            style={{
-                              backgroundColor: "var(--primary)",
-                              height: "100%",
-                              width: `${barPct}%`,
-                              opacity: isHighest ? 1 : 0.5,
-                              borderRadius: "4px",
-                            }}
-                          />
-                        </div>
-                        {/* Allocator controls */}
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.4rem",
-                          }}
-                        >
-                          <button
-                            onClick={() => adjustAttr(-1)}
-                            disabled={!canDecrease}
-                            style={{
-                              width: "20px",
-                              height: "20px",
-                              borderRadius: "50%",
-                              border: "1px solid var(--border)",
-                              backgroundColor: "var(--bg-card)",
-                              cursor: canDecrease ? "pointer" : "not-allowed",
-                              fontWeight: 700,
-                              color: "var(--text-muted)",
-                              fontSize: "0.85rem",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
-                            −
-                          </button>
-                          <span
-                            style={{
-                              fontFamily: "var(--font-heading)",
-                              fontSize: "0.78rem",
-                              fontWeight: 600,
-                              color: "var(--text-muted)",
-                              minWidth: "20px",
-                              textAlign: "center",
-                            }}
-                          >
-                            {fmtAttr(base)}
-                          </span>
-                          <button
-                            onClick={() => adjustAttr(1)}
-                            disabled={!canIncrease}
-                            style={{
-                              width: "20px",
-                              height: "20px",
-                              borderRadius: "50%",
-                              border: "1px solid var(--border)",
-                              backgroundColor: "var(--bg-card)",
-                              cursor: canIncrease ? "pointer" : "not-allowed",
-                              fontWeight: 700,
-                              color: "var(--text-muted)",
-                              fontSize: "0.85rem",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
-                            +
-                          </button>
-                          <span
-                            style={{
-                              fontSize: "0.62rem",
-                              color: "var(--text-muted)",
-                              marginLeft: "0.15rem",
-                            }}
-                          >
-                            base{voc > 0 ? ` + ${voc} (${c.vocationName})` : ""}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </>
-              );
-            })()}
-          </div>
+          {renderLeftRail()}
         </div>
-
-        {/* Right: Defence 2×2 grid */}
+        {/* CENTER COLUMN */}
         <div
+          className="poa-col-center"
           style={{
-            backgroundColor: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "12px",
-            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+            minWidth: 0,
           }}
         >
+          {/* ──── DEFENSE STAT ROW ──── */}
           <div
+            className="poa-defense-grid"
             style={{
-              padding: "0.5rem 1rem",
-              borderBottom: "1px solid var(--border)",
-              backgroundColor: "var(--bg-nav)",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.65rem",
-                fontFamily: "var(--font-heading)",
-                fontStyle: "italic",
-                letterSpacing: "0.12em",
-                color: "var(--text-muted)",
-                textTransform: "uppercase",
-              }}
-            >
-              Defence
-            </span>
-          </div>
-          <div
-            style={{
-              padding: "0.875rem 1rem",
               display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
-              gap: "0.5rem",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: "12px",
             }}
           >
             {(() => {
@@ -8049,71 +9575,77 @@ export default function CharacterSheetPage({
                     : equippedBody
                       ? `${equippedBody.name} +${equippedBody.armorBonus}`
                       : "Base";
+              const btnSm: React.CSSProperties = {
+                width: "16px",
+                height: "16px",
+                borderRadius: "50%",
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--bg-nav)",
+                cursor: "pointer",
+                fontWeight: 700,
+                color: "var(--text-muted)",
+                fontSize: "0.7rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              };
               return (
                 <div
                   style={{
-                    textAlign: "center",
-                    padding: "0.5rem 0.35rem",
                     backgroundColor: spellArmorOn
                       ? "var(--primary-light)"
-                      : "var(--bg-nav)",
+                      : "var(--bg-card)",
                     border: `1px solid ${spellArmorOn ? "var(--primary)" : "var(--border)"}`,
-                    borderRadius: "8px",
+                    borderRadius: "6px",
+                    padding: "14px 12px 10px",
+                    textAlign: "center",
                   }}
                 >
                   <div
                     style={{
-                      fontSize: "0.6rem",
-                      letterSpacing: "0.07em",
+                      fontFamily: "var(--font-heading)",
+                      fontSize: "10px",
+                      letterSpacing: "0.16em",
+                      textTransform: "uppercase" as const,
                       color: "var(--text-muted)",
-                      marginBottom: "2px",
+                      marginBottom: "6px",
                     }}
                   >
                     Armor Def
                   </div>
                   <div
                     style={{
-                      fontFamily: "var(--font-heading)",
+                      fontFamily: "'Cormorant Garamond', Georgia, serif",
+                      fontSize: "32px",
                       fontWeight: 700,
-                      fontSize: "1.25rem",
-                      color: "var(--primary)",
-                      lineHeight: 1,
+                      color: spellArmorOn ? "var(--primary)" : "var(--text)",
+                      lineHeight: 1.05,
                     }}
                   >
                     {totalAD}
-                    {tempAD !== 0 && (
-                      <span
-                        style={{
-                          fontSize: "0.7rem",
-                          color:
-                            tempAD > 0 ? "var(--primary)" : "var(--text-muted)",
-                          marginLeft: "0.1rem",
-                        }}
-                      >
-                        {tempAD > 0 ? `+${tempAD}` : tempAD}
-                      </span>
-                    )}
                   </div>
-                  {subLabel && (
-                    <div
-                      style={{
-                        fontSize: "0.52rem",
-                        color: spellArmorOn
-                          ? "var(--primary)"
-                          : "var(--text-muted)",
-                        marginTop: "0.1rem",
-                        marginBottom: "0.15rem",
-                      }}
-                    >
-                      {subLabel}
-                    </div>
-                  )}
+                  <div
+                    style={{
+                      fontFamily: "var(--font-heading)",
+                      fontSize: "9px",
+                      letterSpacing: "0.1em",
+                      color: spellArmorOn
+                        ? "var(--primary)"
+                        : "var(--text-muted)",
+                      marginTop: "2px",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    {subLabel}
+                  </div>
                   {isCaster && (
                     <button
                       onClick={() =>
                         persist({ spellArmorActive: !c.spellArmorActive })
                       }
                       style={{
+                        display: "block",
+                        margin: "0 auto 6px",
                         fontSize: "0.5rem",
                         fontFamily: "var(--font-heading)",
                         fontWeight: 700,
@@ -8125,7 +9657,6 @@ export default function CharacterSheetPage({
                           : "var(--bg-card)",
                         color: spellArmorOn ? "#fff" : "var(--text-muted)",
                         cursor: "pointer",
-                        marginBottom: "0.15rem",
                       }}
                     >
                       {spellArmorOn ? "Spell Armor ON" : "Spell Armor"}
@@ -8141,20 +9672,7 @@ export default function CharacterSheetPage({
                   >
                     <button
                       onClick={() => persist({ tempArmorDef: tempAD - 1 })}
-                      style={{
-                        width: "16px",
-                        height: "16px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        fontSize: "0.7rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                      style={btnSm}
                     >
                       −
                     </button>
@@ -8164,27 +9682,14 @@ export default function CharacterSheetPage({
                         color: "var(--text-muted)",
                         fontFamily: "var(--font-heading)",
                         minWidth: "14px",
-                        textAlign: "center",
+                        textAlign: "center" as const,
                       }}
                     >
                       {tempAD === 0 ? "tmp" : tempAD}
                     </span>
                     <button
                       onClick={() => persist({ tempArmorDef: tempAD + 1 })}
-                      style={{
-                        width: "16px",
-                        height: "16px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        fontSize: "0.7rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                      style={btnSm}
                     >
                       +
                     </button>
@@ -8206,1069 +9711,1705 @@ export default function CharacterSheetPage({
                 </div>
               );
             })()}
-            <StatCard label="Body Def" value={bodyDef} />
-            <StatCard label="Mind Def" value={mindDef} />
-            <StatCard label="Will Def" value={willDef} />
-          </div>
-        </div>
-      </div>
-
-      {/* ──── RESOURCES STRIP ──── */}
-      <div
-        style={{
-          backgroundColor: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: "12px",
-          padding: "0.875rem 1.25rem",
-          marginBottom: "1rem",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "0.65rem",
-            letterSpacing: "0.12em",
-            color: "var(--text-muted)",
-            fontFamily: "var(--font-heading)",
-            fontStyle: "italic",
-            textTransform: "uppercase",
-            marginBottom: "0.625rem",
-          }}
-        >
-          Resources
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))",
-            gap: "0.5rem",
-          }}
-        >
-          {/* Renown */}
-          <div
-            style={{
-              textAlign: "center",
-              backgroundColor: "var(--bg-nav)",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              padding: "0.4rem 0.25rem",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "0.6rem",
-                color: "var(--text-muted)",
-                letterSpacing: "0.06em",
-                marginBottom: "2px",
-              }}
-            >
-              Renown
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.25rem",
-              }}
-            >
-              <button
-                onClick={() =>
-                  persist({ renown: Math.max(0, (c.renown ?? 0) - 1) })
-                }
+            {(
+              [
+                { label: "Body Def", value: bodyDef, sub: "body" },
+                { label: "Mind Def", value: mindDef, sub: "mind" },
+                { label: "Will Def", value: willDef, sub: "will" },
+              ] as const
+            ).map(({ label, value, sub }) => (
+              <div
+                key={label}
                 style={{
-                  width: "18px",
-                  height: "18px",
-                  borderRadius: "50%",
-                  border: "1px solid var(--border)",
                   backgroundColor: "var(--bg-card)",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  color: "var(--text-muted)",
-                  fontSize: "0.75rem",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                −
-              </button>
-              <span
-                style={{
-                  fontFamily: "var(--font-heading)",
-                  fontWeight: 700,
-                  fontSize: "1.1rem",
-                  color: "var(--primary)",
-                }}
-              >
-                {c.renown ?? 0}
-              </span>
-              <button
-                onClick={() => persist({ renown: (c.renown ?? 0) + 1 })}
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  borderRadius: "50%",
                   border: "1px solid var(--border)",
-                  backgroundColor: "var(--bg-card)",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  color: "var(--text-muted)",
-                  fontSize: "0.75rem",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  borderRadius: "6px",
+                  padding: "14px 12px 12px",
+                  textAlign: "center",
                 }}
               >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Ambition */}
-          <div
-            style={{
-              textAlign: "center",
-              backgroundColor: "var(--bg-nav)",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              padding: "0.4rem 0.25rem",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "0.6rem",
-                color: "var(--text-muted)",
-                letterSpacing: "0.06em",
-                marginBottom: "2px",
-              }}
-            >
-              Ambition
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.25rem",
-              }}
-            >
-              <button
-                onClick={() =>
-                  persist({
-                    currentAmbition: Math.max(0, (c.currentAmbition ?? 0) - 1),
-                  })
-                }
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  borderRadius: "50%",
-                  border: "1px solid var(--border)",
-                  backgroundColor: "var(--bg-card)",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  color: "var(--text-muted)",
-                  fontSize: "0.75rem",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                −
-              </button>
-              <span
-                style={{
-                  fontFamily: "var(--font-heading)",
-                  fontWeight: 700,
-                  fontSize: "1.1rem",
-                  color: "var(--primary)",
-                }}
-              >
-                {c.currentAmbition ?? 0}
-                <span
-                  style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
-                >
-                  /{maxAmbition}
-                </span>
-              </span>
-              <button
-                onClick={() =>
-                  persist({
-                    currentAmbition: Math.min(
-                      maxAmbition,
-                      (c.currentAmbition ?? 0) + 1,
-                    ),
-                  })
-                }
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  borderRadius: "50%",
-                  border: "1px solid var(--border)",
-                  backgroundColor: "var(--bg-card)",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  color: "var(--text-muted)",
-                  fontSize: "0.75rem",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                +
-              </button>
-            </div>
-            <div
-              style={{
-                fontSize: "0.55rem",
-                color: "var(--text-muted)",
-                marginTop: "1px",
-              }}
-            >
-              {ambitionDice}
-            </div>
-          </div>
-
-          {/* Respites dots */}
-          <div
-            style={{
-              textAlign: "center",
-              backgroundColor: "var(--bg-nav)",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              padding: "0.4rem 0.25rem",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "0.6rem",
-                color: "var(--text-muted)",
-                letterSpacing: "0.06em",
-                marginBottom: "4px",
-              }}
-            >
-              Respites
-            </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                gap: "0.25rem",
-              }}
-            >
-              {[0, 1, 2].map((i) => (
                 <div
-                  key={i}
-                  onClick={() =>
-                    persist({
-                      currentRespites: i < currentRespites ? i : i + 1,
-                    })
-                  }
-                  style={{
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "50%",
-                    border: `2px solid ${i < currentRespites ? "var(--primary)" : "var(--border)"}`,
-                    backgroundColor:
-                      i < currentRespites ? "var(--primary)" : "transparent",
-                    cursor: "pointer",
-                  }}
-                />
-              ))}
-            </div>
-            <div
-              style={{
-                fontSize: "0.55rem",
-                color: "var(--text-muted)",
-                marginTop: "2px",
-              }}
-            >
-              {currentRespites}/3
-            </div>
-          </div>
-
-          {/* Carry */}
-          <StatCard
-            label="Carry"
-            value={`${totalCarried}/${carryWeight}`}
-            sub="lb"
-          />
-
-          {/* Caster stats */}
-          {isCaster && (
-            <div
-              style={{
-                textAlign: "center",
-                backgroundColor: "var(--bg-nav)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "0.4rem 0.25rem",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.6rem",
-                  color: "var(--text-muted)",
-                  letterSpacing: "0.06em",
-                  marginBottom: "2px",
-                }}
-              >
-                Reservoir
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "0.25rem",
-                }}
-              >
-                <button
-                  onClick={() =>
-                    persist({
-                      currentReservoir: Math.max(0, currentReservoir - 1),
-                    })
-                  }
-                  style={{
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "50%",
-                    border: "1px solid var(--border)",
-                    backgroundColor: "var(--bg-card)",
-                    cursor: "pointer",
-                    fontWeight: 700,
-                    color: "var(--text-muted)",
-                    fontSize: "0.75rem",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  −
-                </button>
-                <span
                   style={{
                     fontFamily: "var(--font-heading)",
-                    fontWeight: 700,
-                    fontSize: "1.1rem",
-                    color: "var(--primary)",
-                  }}
-                >
-                  {currentReservoir}
-                  <span
-                    style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
-                  >
-                    /{maxReservoir}
-                  </span>
-                </span>
-                <button
-                  onClick={() =>
-                    persist({
-                      currentReservoir: Math.min(
-                        maxReservoir,
-                        currentReservoir + 1,
-                      ),
-                    })
-                  }
-                  style={{
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "50%",
-                    border: "1px solid var(--border)",
-                    backgroundColor: "var(--bg-card)",
-                    cursor: "pointer",
-                    fontWeight: 700,
+                    fontSize: "10px",
+                    letterSpacing: "0.16em",
+                    textTransform: "uppercase" as const,
                     color: "var(--text-muted)",
-                    fontSize: "0.75rem",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    marginBottom: "6px",
                   }}
                 >
-                  +
-                </button>
-              </div>
-              {casterInfo?.casterSource && (
+                  {label}
+                </div>
                 <div
                   style={{
-                    fontSize: "0.52rem",
-                    color: "var(--text-muted)",
-                    marginTop: "1px",
+                    fontFamily: "'Cormorant Garamond', Georgia, serif",
+                    fontSize: "32px",
+                    fontWeight: 700,
+                    color: "var(--text)",
+                    lineHeight: 1.05,
                   }}
                 >
-                  {casterInfo.casterSource}
+                  {value}
                 </div>
-              )}
-            </div>
-          )}
-          {isCaster && <StatCard label="Spell DC" value={spellDC ?? "—"} />}
-          {isCaster && (
-            <StatCard
-              label="Known"
-              value={`${c.knownSpellIds.length}/${knownSpellsMax}`}
-            />
-          )}
-          {isCaster && <StatCard label="Prepared" value={preparedSpellsMax} />}
-        </div>
-      </div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-heading)",
+                    fontSize: "9px",
+                    letterSpacing: "0.16em",
+                    textTransform: "uppercase" as const,
+                    color: "var(--text-muted)",
+                    marginTop: "2px",
+                  }}
+                >
+                  {sub}
+                </div>
+              </div>
+            ))}
+          </div>
 
-      {/* ──── PROFESSION CLASS RESOURCE ──── */}
-      {(() => {
-        const isDuelist = c.professionName === "Duelist";
-        const isFighter = c.professionName === "Fighter";
-        const isEidolon = c.professionName === "Eidolon";
-        const isStygian = c.professionName === "Stygian";
-        if (!isDuelist && !isFighter && !isEidolon && !isStygian) return null;
-        const maxAdrenaline = attrs.body + effectiveTier;
-        const maxSoulTokens = 3;
-        const btnStyle: React.CSSProperties = {
-          width: "18px",
-          height: "18px",
-          borderRadius: "50%",
-          border: "1px solid var(--border)",
-          backgroundColor: "var(--bg-card)",
-          cursor: "pointer",
-          fontWeight: 700,
-          color: "var(--text-muted)",
-          fontSize: "0.75rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        };
-        const cellStyle: React.CSSProperties = {
-          textAlign: "center",
-          backgroundColor: "var(--bg-nav)",
-          border: "1px solid var(--border)",
-          borderRadius: "8px",
-          padding: "0.4rem 0.25rem",
-        };
-        return (
+          {/* ──── CENTER VITALS GRID ──── */}
+          {(() => {
+            const tempHp = c.tempHp ?? 0;
+            const effectiveMax = derivedMaxVitality + tempHp;
+            const vitPct =
+              effectiveMax > 0
+                ? Math.min(
+                    100,
+                    Math.round(((c.currentVitality ?? 0) / effectiveMax) * 100),
+                  )
+                : 0;
+            const pmBtn: React.CSSProperties = {
+              width: "22px",
+              height: "22px",
+              borderRadius: "50%",
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg-nav)",
+              cursor: "pointer",
+              fontWeight: 700,
+              color: "var(--text-muted)",
+              fontSize: "0.9rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            };
+            return (
+              <div
+                className="poa-vitals-grid"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1.5fr 1fr 1fr",
+                  gap: "12px",
+                }}
+              >
+                {/* HP Card */}
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "6px",
+                    padding: "12px 16px 16px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "var(--font-heading)",
+                      fontSize: "10px",
+                      letterSpacing: "0.16em",
+                      textTransform: "uppercase" as const,
+                      color: "#7a9d6f",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    ♥ Vitality
+                  </div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr auto 1fr",
+                      gap: "8px",
+                      alignItems: "end",
+                    }}
+                  >
+                    <div style={{ textAlign: "center" }}>
+                      <div
+                        style={{
+                          fontFamily: "var(--font-heading)",
+                          fontSize: "9px",
+                          letterSpacing: "0.18em",
+                          textTransform: "uppercase" as const,
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        Current
+                      </div>
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          lineHeight: 1,
+                        }}
+                      >
+                        <button
+                          onClick={() =>
+                            persist({
+                              currentVitality: Math.max(
+                                0,
+                                (c.currentVitality ?? 0) - 1,
+                              ),
+                            })
+                          }
+                          style={pmBtn}
+                        >
+                          −
+                        </button>
+                        <span
+                          style={{
+                            fontFamily: "'Cormorant Garamond', Georgia, serif",
+                            fontSize: "30px",
+                            fontWeight: 700,
+                            color: "var(--text)",
+                          }}
+                        >
+                          {c.currentVitality ?? 0}
+                        </span>
+                        <button
+                          onClick={() =>
+                            persist({
+                              currentVitality: Math.min(
+                                effectiveMax,
+                                (c.currentVitality ?? 0) + 1,
+                              ),
+                            })
+                          }
+                          style={pmBtn}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <div
+                        style={{
+                          fontFamily: "var(--font-heading)",
+                          fontSize: "9px",
+                          letterSpacing: "0.18em",
+                          textTransform: "uppercase" as const,
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        Max
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: "'Cormorant Garamond', Georgia, serif",
+                          fontSize: "30px",
+                          fontWeight: 700,
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        {derivedMaxVitality}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-heading)",
+                        fontSize: "26px",
+                        color: "var(--text-muted)",
+                        paddingBottom: "4px",
+                      }}
+                    >
+                      /
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <div
+                        style={{
+                          fontFamily: "var(--font-heading)",
+                          fontSize: "9px",
+                          letterSpacing: "0.18em",
+                          textTransform: "uppercase" as const,
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        Temp
+                      </div>
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          lineHeight: 1,
+                        }}
+                      >
+                        <button
+                          onClick={() => {
+                            const next = tempHp - 1;
+                            const newMax = derivedMaxVitality + next;
+                            const patch: Partial<Character> = { tempHp: next };
+                            if ((c.currentVitality ?? 0) > newMax)
+                              patch.currentVitality = Math.max(0, newMax);
+                            persist(patch);
+                          }}
+                          style={pmBtn}
+                        >
+                          −
+                        </button>
+                        <span
+                          style={{
+                            fontFamily: "'Cormorant Garamond', Georgia, serif",
+                            fontSize: "30px",
+                            fontWeight: 700,
+                            color:
+                              tempHp !== 0
+                                ? "var(--primary)"
+                                : "var(--text-muted)",
+                          }}
+                        >
+                          {tempHp}
+                        </span>
+                        <button
+                          onClick={() => persist({ tempHp: tempHp + 1 })}
+                          style={pmBtn}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  {vitAdjInput !== null ? (
+                    <div style={{ marginTop: "14px" }}>
+                      <input
+                        autoFocus
+                        value={vitAdjInput}
+                        onChange={(e) => setVitAdjInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            const trimmed = vitAdjInput.trim();
+                            if (trimmed !== "") {
+                              const cur = c.currentVitality ?? 0;
+                              let next: number;
+                              if (trimmed.startsWith("+")) {
+                                next = cur + parseInt(trimmed.slice(1), 10);
+                              } else if (trimmed.startsWith("-")) {
+                                next = cur + parseInt(trimmed, 10);
+                              } else {
+                                next = parseInt(trimmed, 10);
+                              }
+                              if (!isNaN(next)) {
+                                persist({
+                                  currentVitality: Math.max(
+                                    0,
+                                    Math.min(effectiveMax, next),
+                                  ),
+                                });
+                              }
+                            }
+                            setVitAdjInput(null);
+                          } else if (e.key === "Escape") {
+                            setVitAdjInput(null);
+                          }
+                        }}
+                        onBlur={() => setVitAdjInput(null)}
+                        placeholder="+5 or -10"
+                        style={{
+                          width: "100%",
+                          padding: "4px 8px",
+                          borderRadius: "3px",
+                          border: "1px solid var(--primary)",
+                          backgroundColor: "var(--bg-nav)",
+                          color: "var(--text)",
+                          fontFamily: "monospace",
+                          fontSize: "0.85rem",
+                          textAlign: "center" as const,
+                          outline: "none",
+                          boxSizing: "border-box" as const,
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => setVitAdjInput("")}
+                      title="Click to adjust vitality"
+                      style={{
+                        marginTop: "14px",
+                        height: "12px",
+                        backgroundColor: "rgba(122,157,111,0.1)",
+                        borderRadius: "3px",
+                        overflow: "hidden",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${vitPct}%`,
+                          background:
+                            "linear-gradient(90deg, #4a6042, #7a9d6f)",
+                          borderRadius: "3px",
+                          transition: "width 0.3s",
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontFamily: "var(--font-heading)",
+                      fontSize: "9px",
+                      color: "var(--text-muted)",
+                      letterSpacing: "0.14em",
+                      textTransform: "uppercase" as const,
+                      marginTop: "6px",
+                    }}
+                  >
+                    <span>
+                      {c.currentVitality ?? 0} / {effectiveMax}
+                    </span>
+                    <span>{Math.round(vitPct)}%</span>
+                  </div>
+                  {tempHp !== 0 && (
+                    <button
+                      onClick={() => {
+                        const patch: Partial<Character> = { tempHp: 0 };
+                        if ((c.currentVitality ?? 0) > derivedMaxVitality)
+                          patch.currentVitality = Math.max(
+                            0,
+                            derivedMaxVitality,
+                          );
+                        persist(patch);
+                      }}
+                      style={{
+                        fontSize: "0.55rem",
+                        color: "var(--text-muted)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        marginTop: "4px",
+                      }}
+                    >
+                      ✕ clear temp
+                    </button>
+                  )}
+                </div>
+
+                {/* Side Col 1: Wounds + Ambition */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column" as const,
+                    gap: "12px",
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundColor: "var(--bg-card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "6px",
+                      padding: "10px 14px 12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "var(--font-heading)",
+                        fontSize: "10px",
+                        letterSpacing: "0.16em",
+                        textTransform: "uppercase" as const,
+                        color: "#c66464",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      ☠ Wounds
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "4px",
+                        flexWrap: "wrap" as const,
+                      }}
+                    >
+                      {Array.from({ length: maxWounds }).map((_, i) => (
+                        <div
+                          key={i}
+                          onClick={() =>
+                            persist({
+                              currentWounds:
+                                i < (c.currentWounds ?? 0) ? i : i + 1,
+                            })
+                          }
+                          style={{
+                            width: "14px",
+                            height: "14px",
+                            borderRadius: "50%",
+                            border: `1px solid ${i < (c.currentWounds ?? 0) ? "#c66464" : "var(--border)"}`,
+                            backgroundColor:
+                              i < (c.currentWounds ?? 0)
+                                ? "#c66464"
+                                : "transparent",
+                            cursor: "pointer",
+                            boxShadow:
+                              i < (c.currentWounds ?? 0)
+                                ? "0 0 8px rgba(198,100,100,0.4)"
+                                : "none",
+                            transition: "all 0.15s",
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontFamily: "var(--font-heading)",
+                        fontSize: "9px",
+                        color: "var(--text-muted)",
+                        letterSpacing: "0.16em",
+                        textTransform: "uppercase" as const,
+                        marginTop: "8px",
+                      }}
+                    >
+                      <span>
+                        {c.currentWounds ?? 0} / {maxWounds}
+                      </span>
+                      <span>{maxWounds - (c.currentWounds ?? 0)} until KO</span>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      backgroundColor: "var(--bg-card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "6px",
+                      padding: "10px 14px 12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "var(--font-heading)",
+                        fontSize: "10px",
+                        letterSpacing: "0.16em",
+                        textTransform: "uppercase" as const,
+                        color: "var(--primary)",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      ✦ Ambition
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "5px",
+                        flexWrap: "wrap" as const,
+                      }}
+                    >
+                      {Array.from({ length: maxAmbition }).map((_, i) => (
+                        <div
+                          key={i}
+                          onClick={() =>
+                            persist({
+                              currentAmbition:
+                                i < (c.currentAmbition ?? 0) ? i : i + 1,
+                            })
+                          }
+                          style={{
+                            width: "22px",
+                            height: "18px",
+                            border: `1px solid ${i < (c.currentAmbition ?? 0) ? "var(--primary)" : "var(--border)"}`,
+                            borderRadius: "2px",
+                            background:
+                              i < (c.currentAmbition ?? 0)
+                                ? "var(--primary)"
+                                : "var(--bg-nav)",
+                            cursor: "pointer",
+                            transition: "all 0.15s",
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontFamily: "var(--font-heading)",
+                        fontSize: "9px",
+                        color: "var(--text-muted)",
+                        letterSpacing: "0.16em",
+                        textTransform: "uppercase" as const,
+                        marginTop: "8px",
+                      }}
+                    >
+                      <span>
+                        {c.currentAmbition ?? 0} / {maxAmbition}
+                      </span>
+                      <span>{ambitionDice}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Side Col 2: Respites + Carry */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column" as const,
+                    gap: "12px",
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundColor: "var(--bg-card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "6px",
+                      padding: "10px 14px 12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "var(--font-heading)",
+                        fontSize: "10px",
+                        letterSpacing: "0.16em",
+                        textTransform: "uppercase" as const,
+                        color: "var(--primary)",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Respites
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "6px",
+                        alignItems: "center",
+                      }}
+                    >
+                      {[0, 1, 2].map((i) => (
+                        <span
+                          key={i}
+                          onClick={() =>
+                            persist({
+                              currentRespites: i < currentRespites ? i : i + 1,
+                            })
+                          }
+                          style={{
+                            display: "inline-block",
+                            width: "14px",
+                            height: "14px",
+                            borderRadius: "50%",
+                            background:
+                              i < currentRespites
+                                ? "var(--primary)"
+                                : "transparent",
+                            border: `1px solid ${i < currentRespites ? "var(--primary)" : "var(--border)"}`,
+                            cursor: "pointer",
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontFamily: "var(--font-heading)",
+                        fontSize: "9px",
+                        color: "var(--text-muted)",
+                        letterSpacing: "0.16em",
+                        textTransform: "uppercase" as const,
+                        marginTop: "8px",
+                      }}
+                    >
+                      <span>{currentRespites} / 3</span>
+                      <span>per day</span>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      backgroundColor: "var(--bg-card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "6px",
+                      padding: "10px 14px 12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "var(--font-heading)",
+                        fontSize: "10px",
+                        letterSpacing: "0.16em",
+                        textTransform: "uppercase" as const,
+                        color: "var(--primary)",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Carry
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: "6px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: "var(--font-heading)",
+                          fontSize: "22px",
+                          fontWeight: 700,
+                          color: "var(--text)",
+                        }}
+                      >
+                        {totalCarried}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: "var(--font-heading)",
+                          fontSize: "11px",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        / {carryWeight} lb
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        marginTop: "6px",
+                        height: "4px",
+                        borderRadius: "2px",
+                        backgroundColor: "var(--border)",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${Math.min(100, carryWeight > 0 ? (totalCarried / carryWeight) * 100 : 0)}%`,
+                          backgroundColor: "var(--primary)",
+                          transition: "width 0.3s",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ──── CENTER BOTTOM: REDUCTION POOL + REST ──── */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.4fr 1fr",
+              gap: "12px",
+            }}
+          >
+            {/* Reduction Pool card */}
+            {(() => {
+              const spellPool = c.spellReductionPool ?? 0;
+              const featPool = c.featReductionPool ?? 0;
+              const shieldPool = equippedShield?.reductionPoolCurrent ?? null;
+              const shieldPoolMax = equippedShield?.reductionPoolMax ?? null;
+              const hasAnyPool =
+                spellPool > 0 || featPool > 0 || shieldPool != null;
+              return (
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-card)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "6px",
+                    padding: "12px 14px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "var(--font-heading)",
+                      fontSize: "10px",
+                      letterSpacing: "0.16em",
+                      textTransform: "uppercase" as const,
+                      color: "#c66464",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    Reduction Pool
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
+                    <input
+                      type="number"
+                      min={1}
+                      value={damageInput}
+                      onChange={(e) => setDamageInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const n = parseInt(damageInput);
+                          if (n > 0) {
+                            applyDamage(n);
+                            setDamageInput("");
+                          }
+                        }
+                      }}
+                      placeholder="0"
+                      style={{
+                        ...inputStyle,
+                        width: "60px",
+                        textAlign: "center" as const,
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        const n = parseInt(damageInput);
+                        if (n > 0) {
+                          applyDamage(n);
+                          setDamageInput("");
+                        }
+                      }}
+                      style={{
+                        padding: "0.3rem 0.75rem",
+                        border: "none",
+                        borderRadius: "0.375rem",
+                        backgroundColor: "#EF4444",
+                        color: "#fff",
+                        cursor: "pointer",
+                        fontFamily: "var(--font-heading)",
+                        fontWeight: 700,
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      Hit
+                    </button>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.58rem",
+                      color: "var(--text-muted)",
+                      fontStyle: "italic",
+                      marginBottom: "0.5rem",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    Spell → Feat → Shield → HP
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "0.375rem",
+                      flexWrap: "wrap" as const,
+                    }}
+                  >
+                    {spellPool > 0 && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          padding: "0.2rem 0.5rem",
+                          backgroundColor: "var(--primary-light)",
+                          border: "1px solid var(--primary)",
+                          borderRadius: "9999px",
+                          fontSize: "0.62rem",
+                          fontFamily: "var(--font-heading)",
+                          color: "var(--primary)",
+                          fontWeight: 700,
+                        }}
+                      >
+                        ✦ Spell: {spellPool}
+                        <button
+                          onClick={() =>
+                            persist({
+                              spellReductionPool: Math.max(0, spellPool - 1),
+                            })
+                          }
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "0.6rem",
+                            color: "var(--primary)",
+                            padding: 0,
+                          }}
+                        >
+                          −
+                        </button>
+                        <button
+                          onClick={() =>
+                            persist({ spellReductionPool: spellPool + 1 })
+                          }
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "0.6rem",
+                            color: "var(--primary)",
+                            padding: 0,
+                          }}
+                        >
+                          +
+                        </button>
+                        <button
+                          onClick={() => persist({ spellReductionPool: 0 })}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "0.55rem",
+                            color: "var(--text-muted)",
+                            padding: 0,
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                    {featPool > 0 && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          padding: "0.2rem 0.5rem",
+                          backgroundColor: "var(--accent-light)",
+                          border: "1px solid var(--accent)",
+                          borderRadius: "9999px",
+                          fontSize: "0.62rem",
+                          fontFamily: "var(--font-heading)",
+                          color: "var(--accent)",
+                          fontWeight: 700,
+                        }}
+                      >
+                        ✦ Feat: {featPool}
+                        <button
+                          onClick={() =>
+                            persist({
+                              featReductionPool: Math.max(0, featPool - 1),
+                            })
+                          }
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "0.6rem",
+                            color: "var(--accent)",
+                            padding: 0,
+                          }}
+                        >
+                          −
+                        </button>
+                        <button
+                          onClick={() =>
+                            persist({ featReductionPool: featPool + 1 })
+                          }
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "0.6rem",
+                            color: "var(--accent)",
+                            padding: 0,
+                          }}
+                        >
+                          +
+                        </button>
+                        <button
+                          onClick={() => persist({ featReductionPool: 0 })}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "0.55rem",
+                            color: "var(--text-muted)",
+                            padding: 0,
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                    {shieldPool != null && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          padding: "0.2rem 0.5rem",
+                          backgroundColor:
+                            shieldPool === 0
+                              ? "var(--section-alert-bg)"
+                              : "var(--bg-nav)",
+                          border: `1px solid ${shieldPool === 0 ? "#ff7979" : "var(--border)"}`,
+                          borderRadius: "9999px",
+                          fontSize: "0.62rem",
+                          fontFamily: "var(--font-heading)",
+                          color:
+                            shieldPool === 0 ? "#ff7979" : "var(--text-muted)",
+                          fontWeight: 700,
+                        }}
+                      >
+                        🛡 {shieldPool}/{shieldPoolMax}
+                        {shieldPool === 0 && " (broken)"}
+                      </div>
+                    )}
+                    {!hasAnyPool && (
+                      <div style={{ display: "flex", gap: "0.375rem" }}>
+                        <button
+                          onClick={() => persist({ spellReductionPool: 1 })}
+                          style={{
+                            fontSize: "0.6rem",
+                            padding: "0.15rem 0.4rem",
+                            border: "1px dashed var(--border)",
+                            borderRadius: "9999px",
+                            backgroundColor: "transparent",
+                            cursor: "pointer",
+                            color: "var(--text-muted)",
+                            fontFamily: "var(--font-heading)",
+                          }}
+                        >
+                          + Spell Pool
+                        </button>
+                        <button
+                          onClick={() => persist({ featReductionPool: 1 })}
+                          style={{
+                            fontSize: "0.6rem",
+                            padding: "0.15rem 0.4rem",
+                            border: "1px dashed var(--border)",
+                            borderRadius: "9999px",
+                            backgroundColor: "transparent",
+                            cursor: "pointer",
+                            color: "var(--text-muted)",
+                            fontFamily: "var(--font-heading)",
+                          }}
+                        >
+                          + Feat Pool
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Rest card */}
+            <div
+              style={{
+                backgroundColor: "var(--bg-card)",
+                border: "1px solid var(--border)",
+                borderRadius: "6px",
+                padding: "12px 14px",
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  fontSize: "10px",
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase" as const,
+                  color: "var(--text-muted)",
+                  marginBottom: "8px",
+                }}
+              >
+                Rest
+              </div>
+              <div
+                className="poa-rest-buttons"
+                style={{
+                  display: "flex",
+                  flexDirection: "row" as const,
+                  gap: "0.4rem",
+                }}
+              >
+                <button
+                  onClick={takeRespite}
+                  disabled={currentRespites <= 0}
+                  style={{
+                    flex: 1,
+                    padding: "0.5rem 0.4rem",
+                    border: `1px solid ${currentRespites > 0 ? "var(--primary)" : "var(--border)"}`,
+                    borderRadius: "5px",
+                    backgroundColor: "transparent",
+                    cursor: currentRespites > 0 ? "pointer" : "not-allowed",
+                    color:
+                      currentRespites > 0
+                        ? "var(--primary)"
+                        : "var(--text-muted)",
+                    fontFamily: "var(--font-heading)",
+                    fontWeight: 700,
+                    fontSize: "0.72rem",
+                    textAlign: "center" as const,
+                  }}
+                >
+                  <div>Respite</div>
+                  <div
+                    style={{
+                      fontSize: "0.58rem",
+                      fontWeight: 400,
+                      color: "var(--text-muted)",
+                      marginTop: "2px",
+                    }}
+                  >
+                    4 Vit · 1 Amb
+                  </div>
+                </button>
+                <button
+                  onClick={takeLongRest}
+                  style={{
+                    flex: 1,
+                    padding: "0.5rem 0.4rem",
+                    border: "1px solid var(--border)",
+                    borderRadius: "5px",
+                    backgroundColor: "transparent",
+                    cursor: "pointer",
+                    color: "var(--text)",
+                    fontFamily: "var(--font-heading)",
+                    fontWeight: 700,
+                    fontSize: "0.72rem",
+                    textAlign: "center" as const,
+                  }}
+                >
+                  <div>Long Rest</div>
+                  <div
+                    style={{
+                      fontSize: "0.58rem",
+                      fontWeight: 400,
+                      color: "var(--text-muted)",
+                      marginTop: "2px",
+                    }}
+                  >
+                    10 Vit · +1 Resp
+                  </div>
+                </button>
+                <button
+                  onClick={takeFullRest}
+                  style={{
+                    flex: 1,
+                    padding: "0.5rem 0.4rem",
+                    border: "1px solid var(--border)",
+                    borderRadius: "5px",
+                    backgroundColor: "transparent",
+                    cursor: "pointer",
+                    color: "var(--text)",
+                    fontFamily: "var(--font-heading)",
+                    fontWeight: 700,
+                    fontSize: "0.72rem",
+                    textAlign: "center" as const,
+                  }}
+                >
+                  <div>Full Rest</div>
+                  <div
+                    style={{
+                      fontSize: "0.58rem",
+                      fontWeight: 400,
+                      color: "var(--text-muted)",
+                      marginTop: "2px",
+                    }}
+                  >
+                    Full recovery
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ──── RESOURCES STRIP ──── */}
           <div
             style={{
               backgroundColor: "var(--bg-card)",
               border: "1px solid var(--border)",
-              borderRadius: "12px",
-              padding: "0.875rem 1.25rem",
+              borderRadius: "6px",
+              padding: "10px 14px",
               marginBottom: "1rem",
             }}
           >
             <div
               style={{
-                fontSize: "0.65rem",
-                letterSpacing: "0.12em",
-                color: "var(--text-muted)",
-                fontFamily: "var(--font-heading)",
-                fontStyle: "italic",
-                textTransform: "uppercase",
-                marginBottom: "0.625rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                flexWrap: "wrap" as const,
               }}
             >
-              Class Resource
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))",
-                gap: "0.5rem",
-              }}
-            >
-              {isDuelist && (
-                <div style={cellStyle}>
-                  <div
-                    style={{
-                      fontSize: "0.6rem",
-                      color: "var(--text-muted)",
-                      letterSpacing: "0.06em",
-                      marginBottom: "2px",
-                    }}
-                  >
-                    Cadence
-                  </div>
+              {/* Caster stats inline */}
+              {isCaster && (
+                <>
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      gap: "0.25rem",
+                      gap: "6px",
+                      paddingRight: "12px",
+                      borderRight: "1px solid var(--border)",
                     }}
                   >
+                    <span
+                      style={{
+                        fontSize: "9px",
+                        fontFamily: "monospace",
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase" as const,
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      Reservoir
+                    </span>
                     <button
                       onClick={() =>
                         persist({
-                          currentCadence: Math.max(
-                            0,
-                            (c.currentCadence ?? effectiveTier) - 1,
-                          ),
+                          currentReservoir: Math.max(0, currentReservoir - 1),
                         })
                       }
-                      style={btnStyle}
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "50%",
+                        border: "1px solid var(--border)",
+                        backgroundColor: "var(--bg-nav)",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        fontSize: "0.75rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
                     >
                       −
                     </button>
                     <span
                       style={{
-                        fontFamily: "var(--font-heading)",
+                        fontFamily: "'Cormorant Garamond', Georgia, serif",
                         fontWeight: 700,
-                        fontSize: "1.1rem",
+                        fontSize: "1.3rem",
                         color: "var(--primary)",
+                        lineHeight: 1,
                       }}
                     >
-                      {c.currentCadence ?? effectiveTier}
+                      {currentReservoir}
+                      <span
+                        style={{
+                          fontSize: "0.62rem",
+                          color: "var(--text-muted)",
+                          fontFamily: "monospace",
+                        }}
+                      >
+                        /{maxReservoir}
+                      </span>
                     </span>
                     <button
                       onClick={() =>
                         persist({
-                          currentCadence:
-                            (c.currentCadence ?? effectiveTier) + 1,
+                          currentReservoir: Math.min(
+                            maxReservoir,
+                            currentReservoir + 1,
+                          ),
                         })
                       }
-                      style={btnStyle}
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "50%",
+                        border: "1px solid var(--border)",
+                        backgroundColor: "var(--bg-nav)",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        fontSize: "0.75rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
                     >
                       +
                     </button>
                   </div>
-                  <div
-                    style={{
-                      fontSize: "0.52rem",
-                      color: "var(--text-muted)",
-                      marginTop: "1px",
-                    }}
-                  >
-                    Starting: Tier
-                  </div>
-                </div>
+                  {[
+                    { lbl: "Spell Tier", val: String(spellTier) },
+                    { lbl: "Spell DC", val: String(spellDC ?? "—") },
+                    {
+                      lbl: "Known",
+                      val: `${c.knownSpellIds.length}/${knownSpellsMax}`,
+                    },
+                    { lbl: "Prepared", val: String(preparedSpellsMax) },
+                  ].map(({ lbl, val }) => (
+                    <div
+                      key={lbl}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column" as const,
+                        alignItems: "center",
+                        gap: "1px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontFamily: "monospace",
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase" as const,
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        {lbl}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: "'Cormorant Garamond', Georgia, serif",
+                          fontWeight: 700,
+                          fontSize: "1.3rem",
+                          color: "var(--text)",
+                          lineHeight: 1,
+                        }}
+                      >
+                        {val}
+                      </span>
+                    </div>
+                  ))}
+                  {(accessibleSources.length > 0 ||
+                    knownSchoolSpheres.length > 0) && (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column" as const,
+                        gap: "1px",
+                      }}
+                    >
+                      {accessibleSources.length > 0 && (
+                        <span
+                          style={{
+                            fontSize: "0.52rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          {accessibleSources.join(", ")}
+                        </span>
+                      )}
+                      {knownSchoolSpheres.length > 0 && (
+                        <span
+                          style={{
+                            fontSize: "0.52rem",
+                            color: "var(--accent)",
+                          }}
+                        >
+                          {knownSchoolSpheres.join(", ")}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
-              {isFighter && (
-                <div style={cellStyle}>
-                  <div
-                    style={{
-                      fontSize: "0.6rem",
-                      color: "var(--text-muted)",
-                      letterSpacing: "0.06em",
-                      marginBottom: "2px",
-                    }}
-                  >
-                    Adrenaline
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "0.25rem",
-                    }}
-                  >
-                    <button
-                      onClick={() =>
+              {/* Class resource inline (Duelist/Fighter/Eidolon/Stygian only) */}
+              {(() => {
+                const isDuelist = c.professionName === "Duelist";
+                const isFighter = c.professionName === "Fighter";
+                const isEidolon = c.professionName === "Eidolon";
+                const isStygian = c.professionName === "Stygian";
+                if (!isDuelist && !isFighter && !isEidolon && !isStygian)
+                  return null;
+                const maxAdrenaline = attrs.body + effectiveTier;
+                const resourceName = isDuelist
+                  ? "Cadence"
+                  : isFighter
+                    ? "Adrenaline"
+                    : isEidolon
+                      ? "Resonance"
+                      : "Soul Tokens";
+                const resourceVal = isDuelist
+                  ? (c.currentCadence ?? effectiveTier)
+                  : isFighter
+                    ? (c.currentAdrenaline ?? maxAdrenaline)
+                    : isEidolon
+                      ? (c.currentResonance ?? spellThreshold)
+                      : (c.currentSoulTokens ?? 1);
+                const resourceMax = isFighter
+                  ? maxAdrenaline
+                  : isStygian
+                    ? 3
+                    : null;
+                const onDec = isDuelist
+                  ? () =>
+                      persist({
+                        currentCadence: Math.max(
+                          0,
+                          (c.currentCadence ?? effectiveTier) - 1,
+                        ),
+                      })
+                  : isFighter
+                    ? () =>
                         persist({
                           currentAdrenaline: Math.max(
                             0,
                             (c.currentAdrenaline ?? maxAdrenaline) - 1,
                           ),
                         })
-                      }
-                      style={btnStyle}
-                    >
-                      −
-                    </button>
-                    <span
-                      style={{
-                        fontFamily: "var(--font-heading)",
-                        fontWeight: 700,
-                        fontSize: "1.1rem",
-                        color: "var(--primary)",
-                      }}
-                    >
-                      {c.currentAdrenaline ?? maxAdrenaline}
-                      <span
-                        style={{
-                          fontSize: "0.65rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        /{maxAdrenaline}
-                      </span>
-                    </span>
-                    <button
-                      onClick={() =>
+                    : isEidolon
+                      ? () =>
+                          persist({
+                            currentResonance: Math.max(
+                              0,
+                              (c.currentResonance ?? spellThreshold) - 1,
+                            ),
+                          })
+                      : () =>
+                          persist({
+                            currentSoulTokens: Math.max(
+                              0,
+                              (c.currentSoulTokens ?? 1) - 1,
+                            ),
+                          });
+                const onInc = isDuelist
+                  ? () =>
+                      persist({
+                        currentCadence: (c.currentCadence ?? effectiveTier) + 1,
+                      })
+                  : isFighter
+                    ? () =>
                         persist({
                           currentAdrenaline: Math.min(
                             maxAdrenaline,
                             (c.currentAdrenaline ?? maxAdrenaline) + 1,
                           ),
                         })
-                      }
-                      style={btnStyle}
-                    >
-                      +
-                    </button>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.52rem",
-                      color: "var(--text-muted)",
-                      marginTop: "1px",
-                    }}
-                  >
-                    Max: Body + Tier
-                  </div>
-                </div>
-              )}
-              {isEidolon && (
-                <div style={cellStyle}>
-                  <div
-                    style={{
-                      fontSize: "0.6rem",
-                      color: "var(--text-muted)",
-                      letterSpacing: "0.06em",
-                      marginBottom: "2px",
-                    }}
-                  >
-                    Resonance
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "0.25rem",
-                    }}
-                  >
-                    <button
-                      onClick={() =>
-                        persist({
-                          currentResonance: Math.max(
-                            0,
-                            (c.currentResonance ?? spellThreshold) - 1,
-                          ),
-                        })
-                      }
-                      style={btnStyle}
-                    >
-                      −
-                    </button>
-                    <span
-                      style={{
-                        fontFamily: "var(--font-heading)",
-                        fontWeight: 700,
-                        fontSize: "1.1rem",
-                        color: "var(--primary)",
-                      }}
-                    >
-                      {c.currentResonance ?? spellThreshold}
-                    </span>
-                    <button
-                      onClick={() =>
-                        persist({
-                          currentResonance:
-                            (c.currentResonance ?? spellThreshold) + 1,
-                        })
-                      }
-                      style={btnStyle}
-                    >
-                      +
-                    </button>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.52rem",
-                      color: "var(--text-muted)",
-                      marginTop: "1px",
-                    }}
-                  >
-                    Spell Threshold
-                  </div>
-                </div>
-              )}
-              {isStygian && (
-                <div style={cellStyle}>
-                  <div
-                    style={{
-                      fontSize: "0.6rem",
-                      color: "var(--text-muted)",
-                      letterSpacing: "0.06em",
-                      marginBottom: "2px",
-                    }}
-                  >
-                    Soul Tokens
-                  </div>
+                    : isEidolon
+                      ? () =>
+                          persist({
+                            currentResonance:
+                              (c.currentResonance ?? spellThreshold) + 1,
+                          })
+                      : () =>
+                          persist({
+                            currentSoulTokens: Math.min(
+                              3,
+                              (c.currentSoulTokens ?? 1) + 1,
+                            ),
+                          });
+                const btnSm: React.CSSProperties = {
+                  width: "18px",
+                  height: "18px",
+                  borderRadius: "50%",
+                  border: "1px solid var(--border)",
+                  backgroundColor: "var(--bg-nav)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  color: "var(--text-muted)",
+                  fontSize: "0.75rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                };
+                return (
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      gap: "0.25rem",
+                      gap: "6px",
+                      paddingLeft: isCaster ? "12px" : "0",
+                      borderLeft: isCaster ? "1px solid var(--border)" : "none",
                     }}
                   >
-                    <button
-                      onClick={() =>
-                        persist({
-                          currentSoulTokens: Math.max(
-                            0,
-                            (c.currentSoulTokens ?? 1) - 1,
-                          ),
-                        })
-                      }
-                      style={btnStyle}
+                    <span
+                      style={{
+                        fontSize: "9px",
+                        fontFamily: "monospace",
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase" as const,
+                        color: "var(--text-muted)",
+                      }}
                     >
+                      {resourceName}
+                    </span>
+                    <button onClick={onDec} style={btnSm}>
                       −
                     </button>
                     <span
                       style={{
-                        fontFamily: "var(--font-heading)",
+                        fontFamily: "'Cormorant Garamond', Georgia, serif",
                         fontWeight: 700,
-                        fontSize: "1.1rem",
+                        fontSize: "1.3rem",
                         color: "var(--primary)",
+                        lineHeight: 1,
                       }}
                     >
-                      {c.currentSoulTokens ?? 1}
-                      <span
-                        style={{
-                          fontSize: "0.65rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        /{maxSoulTokens}
-                      </span>
+                      {resourceVal}
+                      {resourceMax != null && (
+                        <span
+                          style={{
+                            fontSize: "0.62rem",
+                            color: "var(--text-muted)",
+                            fontFamily: "monospace",
+                          }}
+                        >
+                          /{resourceMax}
+                        </span>
+                      )}
                     </span>
-                    <button
-                      onClick={() =>
-                        persist({
-                          currentSoulTokens: Math.min(
-                            maxSoulTokens,
-                            (c.currentSoulTokens ?? 1) + 1,
-                          ),
-                        })
-                      }
-                      style={btnStyle}
-                    >
+                    <button onClick={onInc} style={btnSm}>
                       +
                     </button>
                   </div>
-                  <div
-                    style={{
-                      fontSize: "0.52rem",
-                      color: "var(--text-muted)",
-                      marginTop: "1px",
-                    }}
-                  >
-                    Max: 3
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
-        );
-      })()}
 
-      {/* ──── REST ACTIONS ──── */}
-      <div
-        style={{
-          backgroundColor: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: "12px",
-          padding: "0.875rem 1.25rem",
-          marginBottom: "1rem",
-        }}
-      >
+          {/* ──── TAB NAVIGATION (top) ──── */}
+          <div
+            className="poa-tab-bar"
+            style={{
+              display: "flex",
+              borderBottom: "1px solid var(--border)",
+              marginBottom: "1rem",
+            }}
+          >
+            {tabs
+              .filter((t) => !t.hidden)
+              .map((tab) => {
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    style={{
+                      padding: "0.625rem 0.875rem",
+                      border: "none",
+                      cursor: "pointer",
+                      backgroundColor: "transparent",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontStyle: "normal",
+                      fontWeight: 500,
+                      fontSize: "0.7rem",
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase" as const,
+                      color: active ? "var(--primary)" : "var(--text-muted)",
+                      borderBottom: active
+                        ? "2px solid var(--primary)"
+                        : "2px solid transparent",
+                      marginBottom: "-1px",
+                      transition: "color 0.12s",
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+          </div>
+
+          {/* ──── TAB CONTENT ──── */}
+          <div style={{ minHeight: "200px" }}>
+            {activeTab === "combat" && renderCombatTab()}
+            {activeTab === "feats" && renderFeatsTab()}
+            {activeTab === "inventory" && renderInventoryTab()}
+            {activeTab === "spellcasting" && renderSpellcastingTab()}
+            {activeTab === "notes" && renderNotesTab()}
+          </div>
+        </div>{" "}
+        {/* end CENTER column */}
+        {/* RIGHT COLUMN */}
         <div
+          className="poa-col-right"
           style={{
-            fontSize: "0.65rem",
-            letterSpacing: "0.12em",
-            color: "var(--text-muted)",
-            fontFamily: "var(--font-heading)",
-            fontStyle: "italic",
-            textTransform: "uppercase",
-            marginBottom: "0.625rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+            minWidth: 0,
           }}
         >
-          Rest
+          {renderRightRail()}
         </div>
-        <div style={{ display: "flex", gap: "0.625rem", flexWrap: "wrap" }}>
-          <button
-            onClick={takeRespite}
-            disabled={currentRespites <= 0}
-            style={{
-              padding: "0.5rem 1rem",
-              border: "none",
-              borderRadius: "0.5rem",
-              backgroundColor:
-                currentRespites > 0 ? "var(--primary)" : "var(--border)",
-              color: "var(--text-on-primary)",
-              cursor: currentRespites > 0 ? "pointer" : "not-allowed",
-              fontFamily: "var(--font-heading)",
-              fontWeight: 700,
-              fontSize: "0.825rem",
-            }}
+      </div>{" "}
+      {/* end 3-col grid */}
+      {/* ──── PROFICIENCIES (moved to left rail — retained for Section component compatibility) ──── */}
+      {false && (
+        <Section title="Proficiencies">
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
           >
-            Respite{" "}
-            <span style={{ fontSize: "0.7rem", fontWeight: 400 }}>
-              ({Math.max(4, attrs.body * 2)} Vit, {Math.max(4, attrs.will)} Amb)
-            </span>
-          </button>
-          <button
-            onClick={takeLongRest}
-            style={{
-              padding: "0.5rem 1rem",
-              border: "1.5px solid var(--primary)",
-              borderRadius: "0.5rem",
-              backgroundColor: "transparent",
-              color: "var(--primary)",
-              cursor: "pointer",
-              fontFamily: "var(--font-heading)",
-              fontWeight: 700,
-              fontSize: "0.825rem",
-            }}
-          >
-            Long Rest{" "}
-            <span style={{ fontSize: "0.7rem", fontWeight: 400 }}>
-              ({Math.max(10, attrs.body * 3)} Vit, +1 Resp)
-            </span>
-          </button>
-          <button
-            onClick={takeFullRest}
-            style={{
-              padding: "0.5rem 1rem",
-              border: "1.5px solid var(--text-muted)",
-              borderRadius: "0.5rem",
-              backgroundColor: "transparent",
-              color: "var(--text-muted)",
-              cursor: "pointer",
-              fontFamily: "var(--font-heading)",
-              fontWeight: 700,
-              fontSize: "0.825rem",
-            }}
-          >
-            Full Rest{" "}
-            <span style={{ fontSize: "0.7rem", fontWeight: 400 }}>
-              (full recovery, safe location)
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* ──── PROFICIENCIES (skills with badge design + armaments) ──── */}
-      <Section title="Proficiencies">
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-        >
-          {/* Armor penalty warning */}
-          {!isArmorProficient && (
-            <div
-              style={{
-                padding: "0.4rem 0.75rem",
-                backgroundColor: "var(--section-alert-bg)",
-                border: "1px solid #ff7979",
-                borderRadius: "0.375rem",
-                fontSize: "0.78rem",
-                color: "#cc2222",
-                fontFamily: "var(--font-heading)",
-                fontWeight: 700,
-              }}
-            >
-              ⚠ Armor Penalty active — all skill dice reduced one step (min d4)
-            </div>
-          )}
-
-          {/* Unspent skill points notice */}
-          {(() => {
-            const totalAvailableSkill =
-              4 + 2 * Math.floor((c.featsPurchased ?? 0) / 2);
-            const totalSpentSkill = Object.values(c.skillPoints ?? {}).reduce(
-              (s, v) => s + v,
-              0,
-            );
-            const dynUnspentSkill = totalAvailableSkill - totalSpentSkill;
-            return dynUnspentSkill > 0 ? (
+            {/* Armor penalty warning */}
+            {!isArmorProficient && (
               <div
                 style={{
                   padding: "0.4rem 0.75rem",
-                  backgroundColor: "var(--accent-light)",
-                  border: "1px solid #FCD34D",
+                  backgroundColor: "var(--section-alert-bg)",
+                  border: "1px solid #ff7979",
                   borderRadius: "0.375rem",
-                  fontSize: "0.8rem",
-                  color: "(#92400E)",
+                  fontSize: "0.78rem",
+                  color: "#cc2222",
                   fontFamily: "var(--font-heading)",
                   fontWeight: 700,
                 }}
               >
-                ✦ {dynUnspentSkill} unspent Skill Point
-                {dynUnspentSkill !== 1 ? "s" : ""} — allocate below
-                <span style={{ fontWeight: 400, marginLeft: "0.5rem" }}>
-                  ({totalSpentSkill} / {totalAvailableSkill} spent)
-                </span>
+                ⚠ Armor Penalty active — all skill dice reduced one step (min
+                d4)
               </div>
-            ) : null;
-          })()}
+            )}
 
-          {/* V.I.T.A.L.S. skills — 2-col badge grid */}
-          <div>
-            <div
-              style={{
-                fontSize: "0.65rem",
-                fontWeight: 700,
-                letterSpacing: "0.07em",
-                textTransform: "uppercase",
-                color: "var(--text-muted)",
-                fontFamily: "var(--font-heading)",
-                marginBottom: "0.5rem",
-              }}
-            >
-              V.I.T.A.L.S.
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                gap: "0.3rem",
-              }}
-            >
-              {[
-                "Vigor",
-                "Intuition",
-                "Talent",
-                "Awareness",
-                "Lore",
-                "Social",
-              ].map((skill) => {
-                const pool = calcSkillPool(
-                  skill,
-                  attrs,
-                  c.vitalsProficiencies,
-                  c.vitalsExpertiseBumps ?? {},
-                  c.skillPoints ?? {},
-                );
-                const invested = c.skillPoints?.[skill] ?? 0;
-                const totalAvailableSkill =
-                  4 + 2 * Math.floor((c.featsPurchased ?? 0) / 2);
-                const totalSpentSkill = Object.values(
-                  c.skillPoints ?? {},
-                ).reduce((s, v) => s + v, 0);
-                const dynUnspentSkill = totalAvailableSkill - totalSpentSkill;
-                const canAdd = dynUnspentSkill > 0 && invested < 12;
-                const canRemove = invested > 0;
-                const RANK_COLORS: Record<string, string> = {
-                  Untrained: "var(--text-muted)",
-                  Trained: "var(--primary)",
-                  Expert: "var(--accent)",
-                  Master: "#7C3AED",
-                };
-                const DIE_STEP = [4, 6, 8, 10, 12] as const;
-                function stepDown(faces: number): number {
-                  const i = DIE_STEP.indexOf(
-                    faces as (typeof DIE_STEP)[number],
+            {/* Unspent skill points notice */}
+            {(() => {
+              const totalAvailableSkill =
+                4 + 2 * Math.floor((c.featsPurchased ?? 0) / 2);
+              const totalSpentSkill = Object.values(c.skillPoints ?? {}).reduce(
+                (s, v) => s + v,
+                0,
+              );
+              const dynUnspentSkill = totalAvailableSkill - totalSpentSkill;
+              return dynUnspentSkill > 0 ? (
+                <div
+                  style={{
+                    padding: "0.4rem 0.75rem",
+                    backgroundColor: "var(--accent-light)",
+                    border: "1px solid #FCD34D",
+                    borderRadius: "0.375rem",
+                    fontSize: "0.8rem",
+                    color: "(#92400E)",
+                    fontFamily: "var(--font-heading)",
+                    fontWeight: 700,
+                  }}
+                >
+                  ✦ {dynUnspentSkill} unspent Skill Point
+                  {dynUnspentSkill !== 1 ? "s" : ""} — allocate below
+                  <span style={{ fontWeight: 400, marginLeft: "0.5rem" }}>
+                    ({totalSpentSkill} / {totalAvailableSkill} spent)
+                  </span>
+                </div>
+              ) : null;
+            })()}
+
+            {/* V.I.T.A.L.S. skills — 2-col badge grid */}
+            <div>
+              <div
+                style={{
+                  fontSize: "0.65rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.07em",
+                  textTransform: "uppercase",
+                  color: "var(--text-muted)",
+                  fontFamily: "var(--font-heading)",
+                  marginBottom: "0.5rem",
+                }}
+              >
+                V.I.T.A.L.S.
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "0.3rem",
+                }}
+              >
+                {[
+                  "Vigor",
+                  "Intuition",
+                  "Talent",
+                  "Awareness",
+                  "Lore",
+                  "Social",
+                ].map((skill) => {
+                  const pool = calcSkillPool(
+                    skill,
+                    attrs,
+                    c.vitalsProficiencies,
+                    c.vitalsExpertiseBumps ?? {},
+                    c.skillPoints ?? {},
                   );
-                  return i > 0 ? DIE_STEP[i - 1] : 4;
-                }
-                const penalizedDisplay = (() => {
-                  if (pool.profDieFaces !== null) {
-                    return `${pool.baseDiceCount + pool.skillDiceCount}d${stepDown(pool.profDieFaces)}`;
+                  const invested = c.skillPoints?.[skill] ?? 0;
+                  const totalAvailableSkill =
+                    4 + 2 * Math.floor((c.featsPurchased ?? 0) / 2);
+                  const totalSpentSkill = Object.values(
+                    c.skillPoints ?? {},
+                  ).reduce((s, v) => s + v, 0);
+                  const dynUnspentSkill = totalAvailableSkill - totalSpentSkill;
+                  const canAdd = dynUnspentSkill > 0 && invested < 12;
+                  const canRemove = invested > 0;
+                  const RANK_COLORS: Record<string, string> = {
+                    Untrained: "var(--text-muted)",
+                    Trained: "var(--primary)",
+                    Expert: "var(--accent)",
+                    Master: "#7C3AED",
+                  };
+                  const DIE_STEP = [4, 6, 8, 10, 12] as const;
+                  function stepDown(faces: number): number {
+                    const i = DIE_STEP.indexOf(
+                      faces as (typeof DIE_STEP)[number],
+                    );
+                    return i > 0 ? DIE_STEP[i - 1] : 4;
                   }
-                  const baseFaces = calcBaseDiceFromAttr(
-                    calcSkillAttrValue(skill, attrs),
-                  );
-                  return `${pool.baseDiceCount + pool.skillDiceCount}d${stepDown(baseFaces)}`;
-                })();
+                  const penalizedDisplay = (() => {
+                    if (pool.profDieFaces !== null) {
+                      return `${pool.baseDiceCount + pool.skillDiceCount}d${stepDown(pool.profDieFaces)}`;
+                    }
+                    const baseFaces = calcBaseDiceFromAttr(
+                      calcSkillAttrValue(skill, attrs),
+                    );
+                    return `${pool.baseDiceCount + pool.skillDiceCount}d${stepDown(baseFaces)}`;
+                  })();
 
-                // Badge color by die size
-                const dieFaces =
-                  pool.profDieFaces ??
-                  calcBaseDiceFromAttr(calcSkillAttrValue(skill, attrs));
-                const badgeStyle: React.CSSProperties =
-                  dieFaces >= 10
-                    ? {
-                        backgroundColor: "var(--primary)",
-                        color: "var(--text-on-primary)",
-                      }
-                    : dieFaces === 8
+                  // Badge color by die size
+                  const dieFaces =
+                    pool.profDieFaces ??
+                    calcBaseDiceFromAttr(calcSkillAttrValue(skill, attrs));
+                  const badgeStyle: React.CSSProperties =
+                    dieFaces >= 10
                       ? {
-                          backgroundColor: "var(--primary-light)",
-                          color: "var(--primary)",
-                          border: "1px solid var(--primary)",
+                          backgroundColor: "var(--primary)",
+                          color: "var(--text-on-primary)",
                         }
-                      : dieFaces === 6
+                      : dieFaces === 8
                         ? {
-                            backgroundColor: "var(--bg-nav)",
-                            color: "var(--text-muted)",
-                            border: "1px solid var(--border)",
+                            backgroundColor: "var(--primary-light)",
+                            color: "var(--primary)",
+                            border: "1px solid var(--primary)",
                           }
-                        : {
-                            backgroundColor: "var(--bg-nav)",
-                            color: "var(--text-muted)",
-                            border: "1px solid var(--border)",
-                          };
+                        : dieFaces === 6
+                          ? {
+                              backgroundColor: "var(--bg-nav)",
+                              color: "var(--text-muted)",
+                              border: "1px solid var(--border)",
+                            }
+                          : {
+                              backgroundColor: "var(--bg-nav)",
+                              color: "var(--text-muted)",
+                              border: "1px solid var(--border)",
+                            };
 
-                return (
-                  <div
-                    key={skill}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      backgroundColor: "var(--bg-nav)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "8px",
-                      padding: "0.375rem 0.625rem",
-                    }}
-                  >
-                    {/* Skill name */}
-                    <span
+                  return (
+                    <div
+                      key={skill}
                       style={{
-                        fontSize: "0.8rem",
-                        color: "var(--text)",
-                        flex: 1,
-                        letterSpacing: "0.01em",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        backgroundColor: "var(--bg-nav)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "8px",
+                        padding: "0.375rem 0.625rem",
                       }}
                     >
-                      {skill}
-                    </span>
-                    {/* Rank badge (non-untrained only) */}
-                    {pool.rank !== "Untrained" && (
+                      {/* Skill name */}
                       <span
                         style={{
-                          fontSize: "0.6rem",
-                          fontWeight: 700,
-                          fontFamily: "var(--font-heading)",
-                          padding: "0.1rem 0.35rem",
-                          borderRadius: "9999px",
-                          border: `1px solid ${RANK_COLORS[pool.rank]}`,
-                          color: RANK_COLORS[pool.rank],
+                          fontSize: "0.8rem",
+                          color: "var(--text)",
+                          flex: 1,
+                          letterSpacing: "0.01em",
                         }}
                       >
-                        {pool.rank}
+                        {skill}
                       </span>
-                    )}
-                    {/* Die badge */}
-                    {isArmorProficient ? (
-                      <span
-                        style={{
-                          fontSize: "0.72rem",
-                          fontWeight: 700,
-                          fontFamily: "var(--font-heading)",
-                          padding: "1px 7px",
-                          borderRadius: "5px",
-                          ...badgeStyle,
-                        }}
-                      >
-                        {pool.display}
-                      </span>
-                    ) : (
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "0.2rem",
-                          alignItems: "center",
-                        }}
-                      >
+                      {/* Rank badge (non-untrained only) */}
+                      {pool.rank !== "Untrained" && (
                         <span
                           style={{
-                            fontSize: "0.72rem",
+                            fontSize: "0.6rem",
+                            fontWeight: 700,
                             fontFamily: "var(--font-heading)",
-                            color: "var(--text-muted)",
-                            textDecoration: "line-through",
+                            padding: "0.1rem 0.35rem",
+                            borderRadius: "9999px",
+                            border: `1px solid ${RANK_COLORS[pool.rank]}`,
+                            color: RANK_COLORS[pool.rank],
                           }}
                         >
-                          {pool.display}
+                          {pool.rank}
                         </span>
+                      )}
+                      {/* Die badge */}
+                      {isArmorProficient ? (
                         <span
                           style={{
                             fontSize: "0.72rem",
@@ -9276,235 +11417,451 @@ export default function CharacterSheetPage({
                             fontFamily: "var(--font-heading)",
                             padding: "1px 7px",
                             borderRadius: "5px",
-                            backgroundColor: "var(--bg-nav)",
-                            color: "#cc2222",
-                            border: "1px solid #cc2222",
+                            ...badgeStyle,
                           }}
                         >
-                          {penalizedDisplay}
+                          {pool.display}
+                        </span>
+                      ) : (
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "0.2rem",
+                            alignItems: "center",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "0.72rem",
+                              fontFamily: "var(--font-heading)",
+                              color: "var(--text-muted)",
+                              textDecoration: "line-through",
+                            }}
+                          >
+                            {pool.display}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              fontFamily: "var(--font-heading)",
+                              padding: "1px 7px",
+                              borderRadius: "5px",
+                              backgroundColor: "var(--bg-nav)",
+                              color: "#cc2222",
+                              border: "1px solid #cc2222",
+                            }}
+                          >
+                            {penalizedDisplay}
+                          </span>
+                        </div>
+                      )}
+                      {/* Invest +/− */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.2rem",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <button
+                          onClick={() => {
+                            if (!canRemove) return;
+                            const newSkillPts = {
+                              ...(c.skillPoints ?? {}),
+                              [skill]: invested - 1,
+                            };
+                            const newTotalSpent = totalSpentSkill - 1;
+                            persist({
+                              skillPoints: newSkillPts,
+                              unspentSkillPoints:
+                                totalAvailableSkill - newTotalSpent,
+                            });
+                          }}
+                          disabled={!canRemove}
+                          style={{
+                            width: "18px",
+                            height: "18px",
+                            borderRadius: "50%",
+                            border: "1px solid var(--border)",
+                            backgroundColor: "var(--bg-card)",
+                            cursor: canRemove ? "pointer" : "not-allowed",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                            fontSize: "0.75rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          −
+                        </button>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-heading)",
+                            fontWeight: 700,
+                            fontSize: "0.75rem",
+                            minWidth: "14px",
+                            textAlign: "center",
+                            color: "var(--primary)",
+                          }}
+                        >
+                          {invested}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (!canAdd) return;
+                            const newSkillPts = {
+                              ...(c.skillPoints ?? {}),
+                              [skill]: invested + 1,
+                            };
+                            const newTotalSpent = totalSpentSkill + 1;
+                            persist({
+                              skillPoints: newSkillPts,
+                              unspentSkillPoints:
+                                totalAvailableSkill - newTotalSpent,
+                            });
+                          }}
+                          disabled={!canAdd}
+                          style={{
+                            width: "18px",
+                            height: "18px",
+                            borderRadius: "50%",
+                            border: "1px solid var(--border)",
+                            backgroundColor: "var(--bg-card)",
+                            cursor: canAdd ? "pointer" : "not-allowed",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                            fontSize: "0.75rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Armaments / Protection / Tool Kits */}
+            {[
+              { label: "Armaments", items: prof?.armaments ?? [] },
+              { label: "Protection", items: prof?.protection ?? [] },
+              {
+                label: "Tool Kits",
+                items: (prof?.toolKits ?? []).filter((t) => t !== "-"),
+              },
+            ]
+              .filter((g) => g.items.length > 0)
+              .map((group) => (
+                <div key={group.label}>
+                  <div
+                    style={{
+                      fontSize: "0.65rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.07em",
+                      textTransform: "uppercase",
+                      color: "var(--text-muted)",
+                      fontFamily: "var(--font-heading)",
+                      marginBottom: "0.375rem",
+                    }}
+                  >
+                    {group.label}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.35rem",
+                    }}
+                  >
+                    {group.items.map((item) => (
+                      <div
+                        key={item}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.625rem",
+                          padding: "0.45rem 0.75rem",
+                          backgroundColor: "var(--bg-nav)",
+                          border: "1px solid var(--border)",
+                          borderRadius: "0.375rem",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: "var(--font-heading)",
+                            fontWeight: 700,
+                            fontSize: "0.85rem",
+                            color: "var(--text)",
+                            flex: 1,
+                          }}
+                        >
+                          {item}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "0.6rem",
+                            fontWeight: 700,
+                            fontFamily: "var(--font-heading)",
+                            padding: "0.1rem 0.35rem",
+                            borderRadius: "9999px",
+                            border: "1px solid var(--primary)",
+                            color: "var(--primary)",
+                          }}
+                        >
+                          Proficient
                         </span>
                       </div>
-                    )}
-                    {/* Invest +/− */}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.2rem",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <button
-                        onClick={() => {
-                          if (!canRemove) return;
-                          const newSkillPts = {
-                            ...(c.skillPoints ?? {}),
-                            [skill]: invested - 1,
-                          };
-                          const newTotalSpent = totalSpentSkill - 1;
-                          persist({
-                            skillPoints: newSkillPts,
-                            unspentSkillPoints:
-                              totalAvailableSkill - newTotalSpent,
-                          });
-                        }}
-                        disabled={!canRemove}
-                        style={{
-                          width: "18px",
-                          height: "18px",
-                          borderRadius: "50%",
-                          border: "1px solid var(--border)",
-                          backgroundColor: "var(--bg-card)",
-                          cursor: canRemove ? "pointer" : "not-allowed",
-                          fontWeight: 700,
-                          color: "var(--text-muted)",
-                          fontSize: "0.75rem",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        −
-                      </button>
-                      <span
-                        style={{
-                          fontFamily: "var(--font-heading)",
-                          fontWeight: 700,
-                          fontSize: "0.75rem",
-                          minWidth: "14px",
-                          textAlign: "center",
-                          color: "var(--primary)",
-                        }}
-                      >
-                        {invested}
-                      </span>
-                      <button
-                        onClick={() => {
-                          if (!canAdd) return;
-                          const newSkillPts = {
-                            ...(c.skillPoints ?? {}),
-                            [skill]: invested + 1,
-                          };
-                          const newTotalSpent = totalSpentSkill + 1;
-                          persist({
-                            skillPoints: newSkillPts,
-                            unspentSkillPoints:
-                              totalAvailableSkill - newTotalSpent,
-                          });
-                        }}
-                        disabled={!canAdd}
-                        style={{
-                          width: "18px",
-                          height: "18px",
-                          borderRadius: "50%",
-                          border: "1px solid var(--border)",
-                          backgroundColor: "var(--bg-card)",
-                          cursor: canAdd ? "pointer" : "not-allowed",
-                          fontWeight: 700,
-                          color: "var(--text-muted)",
-                          fontSize: "0.75rem",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        +
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Armaments / Protection / Tool Kits */}
-          {[
-            { label: "Armaments", items: prof?.armaments ?? [] },
-            { label: "Protection", items: prof?.protection ?? [] },
-            {
-              label: "Tool Kits",
-              items: (prof?.toolKits ?? []).filter((t) => t !== "-"),
-            },
-          ]
-            .filter((g) => g.items.length > 0)
-            .map((group) => (
-              <div key={group.label}>
-                <div
-                  style={{
-                    fontSize: "0.65rem",
-                    fontWeight: 700,
-                    letterSpacing: "0.07em",
-                    textTransform: "uppercase",
-                    color: "var(--text-muted)",
-                    fontFamily: "var(--font-heading)",
-                    marginBottom: "0.375rem",
-                  }}
-                >
-                  {group.label}
                 </div>
+              ))}
+          </div>
+        </Section>
+      )}
+      {/* ──── FAVORITES POPOUT OVERLAY ──── */}
+      {favPopout &&
+        (() => {
+          let title = "";
+          let body: React.ReactNode = null;
+
+          if (favPopout.type === "item") {
+            const item = inventory.find((i) => i.id === favPopout.id);
+            if (item) {
+              title = item.name;
+              body = (
                 <div
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    gap: "0.35rem",
+                    gap: "8px",
                   }}
                 >
-                  {group.items.map((item) => (
+                  <div
+                    style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}
+                  >
+                    {item.category}
+                    {item.armorCategory ? ` · ${item.armorCategory}` : ""}
+                  </div>
+                  {(item.armorBonus ?? 0) > 0 && (
+                    <div style={{ fontSize: "0.8rem" }}>
+                      +{item.armorBonus}{" "}
+                      {item.category === "Shield" ? "Shield" : "Armor"} Def
+                    </div>
+                  )}
+                  {item.damageDiceCount > 0 && (
+                    <div style={{ fontSize: "0.8rem" }}>
+                      {item.damageDiceCount}d{item.damageDiceSize} damage
+                    </div>
+                  )}
+                  {(item.traits ?? []).length > 0 && (
                     <div
-                      key={item}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.625rem",
-                        padding: "0.45rem 0.75rem",
-                        backgroundColor: "var(--bg-nav)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "0.375rem",
+                        fontSize: "0.75rem",
+                        color: "var(--text-muted)",
                       }}
                     >
-                      <span
-                        style={{
-                          fontFamily: "var(--font-heading)",
-                          fontWeight: 700,
-                          fontSize: "0.85rem",
-                          color: "var(--text)",
-                          flex: 1,
-                        }}
-                      >
-                        {item}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.6rem",
-                          fontWeight: 700,
-                          fontFamily: "var(--font-heading)",
-                          padding: "0.1rem 0.35rem",
-                          borderRadius: "9999px",
-                          border: "1px solid var(--primary)",
-                          color: "var(--primary)",
-                        }}
-                      >
-                        Proficient
-                      </span>
+                      {item.traits.join(", ")}
                     </div>
-                  ))}
+                  )}
+                  {item.notes && (
+                    <div
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--text)",
+                        marginTop: "4px",
+                        whiteSpace: "pre-wrap" as const,
+                      }}
+                    >
+                      {item.notes}
+                    </div>
+                  )}
+                  <div
+                    style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}
+                  >
+                    {item.weight} lb · qty {item.quantity}
+                  </div>
                 </div>
-              </div>
-            ))}
-        </div>
-      </Section>
+              );
+            }
+          } else if (favPopout.type === "feat") {
+            const allFeatEntries = [
+              ...allFeats,
+              ...(prof?.baseFeatures ?? []),
+              ...(vocation?.features ?? []),
+            ];
+            const feat = allFeatEntries.find((f) => f.id === favPopout.id);
+            if (feat) {
+              title = feat.name;
+              const featTier =
+                "tier" in feat ? (feat as { tier?: number }).tier : undefined;
+              const featActivation =
+                "activationRaw" in feat
+                  ? (feat as { activationRaw?: string | null }).activationRaw
+                  : null;
+              body = (
+                <div>
+                  {featTier !== undefined && (
+                    <div
+                      style={{
+                        fontSize: "0.72rem",
+                        color: "var(--text-muted)",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Tier {featTier}
+                    </div>
+                  )}
+                  {featActivation && featActivation !== "-" && (
+                    <div
+                      style={{
+                        fontSize: "0.72rem",
+                        color: "var(--accent)",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      {featActivation}
+                    </div>
+                  )}
+                  <MarkdownContent content={feat.descriptionMarkdown} />
+                </div>
+              );
+            }
+          } else if (favPopout.type === "spell") {
+            const spell = spells.find((s) => s.id === favPopout.id);
+            if (spell) {
+              title = spell.name;
+              body = (
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      flexWrap: "wrap" as const,
+                      marginBottom: "10px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      {spell.isCantrip ? "Cantrip" : `Tier ${spell.tier}`}
+                    </span>
+                    {spell.school && (
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        {spell.school}
+                      </span>
+                    )}
+                    {spell.range && (
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        {spell.range}
+                      </span>
+                    )}
+                    {spell.duration && (
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        {spell.duration}
+                      </span>
+                    )}
+                  </div>
+                  <MarkdownContent content={spell.descriptionMarkdown} />
+                </div>
+              );
+            }
+          }
 
-      {/* ──── TABBED SECTION ──── */}
-      <div>
-        <div style={{ marginBottom: "4rem" }}>
-          {activeTab === "feats" && renderFeatsTab()}
-          {activeTab === "inventory" && renderInventoryTab()}
-          {activeTab === "spellcasting" && renderSpellcastingTab()}
-          {activeTab === "notes" && renderNotesTab()}
-        </div>
-        {/* Bottom sticky tab bar */}
-        <div
-          style={{
-            position: "sticky",
-            bottom: 0,
-            backgroundColor: "var(--bg-nav)",
-            borderTop: "1px solid var(--border)",
-            display: "grid",
-            gridTemplateColumns: `repeat(${tabs.filter((t) => !t.hidden).length}, 1fr)`,
-            zIndex: 10,
-          }}
-        >
-          {tabs
-            .filter((t) => !t.hidden)
-            .map((tab) => {
-              const active = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+          if (!body) return null;
+
+          return (
+            <div
+              onClick={() => setFavPopout(null)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                backgroundColor: "rgba(0,0,0,0.55)",
+                zIndex: 200,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "16px",
+              }}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  backgroundColor: "var(--bg-card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  padding: "20px",
+                  maxWidth: "480px",
+                  width: "100%",
+                  maxHeight: "80vh",
+                  overflow: "auto",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                }}
+              >
+                <div
                   style={{
-                    padding: "0.625rem 0.5rem",
-                    border: "none",
-                    cursor: "pointer",
-                    backgroundColor: "transparent",
-                    fontFamily: "var(--font-heading)",
-                    fontStyle: "italic",
-                    fontWeight: 700,
-                    fontSize: "0.75rem",
-                    letterSpacing: "0.05em",
-                    color: active ? "var(--primary)" : "var(--text-muted)",
-                    borderTop: active
-                      ? "2px solid var(--primary)"
-                      : "2px solid transparent",
-                    transition: "color 0.12s",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    marginBottom: "14px",
                   }}
                 >
-                  {tab.label}
-                </button>
-              );
-            })}
-        </div>
-      </div>
+                  <h2
+                    style={{
+                      fontFamily: "var(--font-heading)",
+                      fontStyle: "italic",
+                      fontSize: "1.2rem",
+                      fontWeight: 700,
+                      color: "var(--text)",
+                      margin: 0,
+                    }}
+                  >
+                    {title}
+                  </h2>
+                  <button
+                    onClick={() => setFavPopout(null)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--text-muted)",
+                      fontSize: "1rem",
+                      padding: "0 0 0 12px",
+                      lineHeight: 1,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                {body}
+              </div>
+            </div>
+          );
+        })()}
     </div>
   );
 }

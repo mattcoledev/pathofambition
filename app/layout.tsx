@@ -38,12 +38,9 @@ export default function RootLayout({
         <ThemeProvider>
           <div className="flex min-h-screen">
             <Sidebar />
-            <main
-              className="flex-1 min-w-0 lg:pl-0 pl-0"
-              style={{ paddingTop: "3.5rem" }}
-            >
+            <main className="flex-1 min-w-0 pt-14 lg:pt-0">
               <div
-                style={{ maxWidth: "900px", padding: "1.5rem 2rem 4rem" }}
+                style={{ maxWidth: "1400px", padding: "1.5rem 2rem 4rem" }}
                 className="lg:pt-8"
               >
                 {children}

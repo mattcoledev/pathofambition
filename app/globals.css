@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=JetBrains+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 
 /* ── Dark mode (default) ─────────────────────────────── */
@@ -76,10 +76,16 @@
     --color-foreground: var(--text);
     --font-heading: "Lexend", sans-serif;
     --font-body: "Source Sans 3", sans-serif;
+    --breakpoint-lg: 1300px;
 }
 
 * {
     box-sizing: border-box;
+}
+
+button, a {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 html {
@@ -250,5 +256,114 @@ h6 {
     *::after {
         animation-duration: 0.01ms !important;
         transition-duration: 0.01ms !important;
+    }
+}
+
+/* ── Character Sheet Responsive Layout ─────────────────── */
+
+/* Below 1240px: right rail moves below center */
+@media (max-width: 1240px) {
+    .poa-sheet-grid {
+        grid-template-columns: 280px 1fr !important;
+        grid-template-rows: auto auto;
+    }
+    .poa-col-right {
+        grid-column: 1 / -1;
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 14px;
+    }
+}
+
+/* Below 860px: left rail moves above center, single column */
+@media (max-width: 860px) {
+    .poa-sheet-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .poa-col-left {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+    }
+    .poa-col-right {
+        grid-column: auto;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+}
+
+/* Below 860px: stack header vertically */
+@media (max-width: 860px) {
+    .poa-header {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+    }
+    .poa-header-right {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        width: 100% !important;
+        justify-content: space-between !important;
+    }
+}
+
+/* Below 640px: tighten gaps */
+@media (max-width: 640px) {
+    .poa-sheet-grid {
+        gap: 10px !important;
+        margin-top: 12px !important;
+    }
+    .poa-col-left,
+    .poa-col-center,
+    .poa-col-right {
+        gap: 10px !important;
+    }
+}
+
+/* ── Mobile-only sidebar buttons (Portrait + Favorites) ── */
+/* Visible whenever right rail is not a dedicated 3rd column (≤1240px) */
+.poa-mobile-sidebar-btn {
+    display: none !important;
+}
+@media (max-width: 1240px) {
+    .poa-mobile-sidebar-btn {
+        display: flex !important;
+    }
+}
+
+/* ── Tab bar: always horizontal scroll (no wrap) ─────── */
+.poa-tab-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap !important;
+}
+.poa-tab-bar::-webkit-scrollbar { display: none; }
+.poa-tab-bar button {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* ── Mobile ≤ 480px fixes ────────────────────────────── */
+@media (max-width: 480px) {
+    /* P0: defense 4-col → 2×2 */
+    .poa-defense-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* P1: vitals grid → stack */
+    .poa-vitals-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Rest buttons → vertical column */
+    .poa-rest-buttons {
+        flex-direction: column !important;
+    }
+
+    /* P0: attribute stepper tap targets */
+    .poa-attr-btn {
+        min-width: 36px !important;
+        min-height: 36px !important;
+        width: 36px !important;
+        height: 36px !important;
     }
 }

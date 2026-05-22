@@ -35,11 +35,7 @@
       "page_start": 2,
       "page_end": 2,
       "summary": "Core gameplay loop, scene types, dice systems, success states, and character fundamentals.",
-      "tags": [
-        "core-rules",
-        "gameplay-loop",
-        "attributes"
-      ],
+      "tags": ["core-rules", "gameplay-loop", "attributes"],
       "blocks": [
         {
           "type": "paragraph",
@@ -219,11 +215,7 @@
       "page_start": 3,
       "page_end": 3,
       "summary": "Skill framework, proficiencies, stealth rules, and spellcasting basics.",
-      "tags": [
-        "skills",
-        "proficiency",
-        "spellcasting"
-      ],
+      "tags": ["skills", "proficiency", "spellcasting"],
       "blocks": [
         {
           "type": "paragraph",
@@ -252,88 +244,28 @@
         },
         {
           "type": "table",
-          "columns": [
-            "Tier DC",
-            "Target Successes",
-            "Success on Die \u2265"
-          ],
+          "columns": ["Tier DC", "Target Successes", "Success on Die \u2265"],
           "rows": [
-            [
-              "1",
-              "2",
-              "3+"
-            ],
-            [
-              "2",
-              "3",
-              "3+"
-            ],
-            [
-              "3",
-              "4",
-              "4+"
-            ],
-            [
-              "4",
-              "4",
-              "5+"
-            ],
-            [
-              "5",
-              "5",
-              "5+"
-            ],
-            [
-              "6",
-              "6",
-              "6+"
-            ],
-            [
-              "7",
-              "7",
-              "6+"
-            ]
+            ["1", "2", "3+"],
+            ["2", "3", "3+"],
+            ["3", "4", "4+"],
+            ["4", "4", "5+"],
+            ["5", "5", "5+"],
+            ["6", "6", "6+"],
+            ["7", "7", "6+"]
           ],
           "title": "Skill Check DCs"
         },
         {
           "type": "table",
-          "columns": [
-            "V.I.T.A.L.S.",
-            "Associated Skills",
-            "Attribute"
-          ],
+          "columns": ["V.I.T.A.L.S.", "Associated Skills", "Attribute"],
           "rows": [
-            [
-              "Vigor",
-              "Athletics; Fortitude",
-              "Body"
-            ],
-            [
-              "Intuition",
-              "Research; Arcana; Crafting",
-              "Mind"
-            ],
-            [
-              "Talent",
-              "Thievery; Mobility; Ruses",
-              "Body / Mind"
-            ],
-            [
-              "Awareness",
-              "Perception; Survival; Medicine",
-              "Mind"
-            ],
-            [
-              "Lore",
-              "Nature; Mysticism; Society",
-              "Mind / Will"
-            ],
-            [
-              "Social",
-              "Influence; Performance; Intimidation",
-              "Will / Body"
-            ]
+            ["Vigor", "Athletics; Fortitude", "Body"],
+            ["Intuition", "Research; Arcana; Crafting", "Mind"],
+            ["Talent", "Thievery; Mobility; Ruses", "Body / Mind"],
+            ["Awareness", "Perception; Survival; Medicine", "Mind"],
+            ["Lore", "Nature; Mysticism; Society", "Mind / Will"],
+            ["Social", "Influence; Performance; Intimidation", "Will / Body"]
           ],
           "title": "Associated Skills"
         },
@@ -485,10 +417,7 @@
       "page_start": 4,
       "page_end": 4,
       "summary": "Character creation steps, starting stats, and origins/vocations.",
-      "tags": [
-        "character-creation",
-        "origins"
-      ],
+      "tags": ["character-creation", "origins"],
       "blocks": [
         {
           "type": "list",
@@ -537,22 +466,14 @@
               "entries": [
                 {
                   "name": "Acolyte",
-                  "vocations": [
-                    "Pilgrim (B)",
-                    "Shaman (M)",
-                    "Zealot (W)"
-                  ],
+                  "vocations": ["Pilgrim (B)", "Shaman (M)", "Zealot (W)"],
                   "themes": "Religion or spirits",
                   "starting_items": "Healing kit, religious items and clothing",
                   "special": "Limited Primeval spellcasting (cantrips only)"
                 },
                 {
                   "name": "Apprentice",
-                  "vocations": [
-                    "Builder (B)",
-                    "Artisan (M)",
-                    "Designer (W)"
-                  ],
+                  "vocations": ["Builder (B)", "Artisan (M)", "Designer (W)"],
                   "themes": "Crafting, assessment, creativity, improvisation",
                   "starting_items": "Crafting supplies, personal project, rare sample"
                 },
@@ -568,32 +489,20 @@
                 },
                 {
                   "name": "Chosen",
-                  "vocations": [
-                    "Starborn (B)",
-                    "Anointed (M)",
-                    "Fated (W)"
-                  ],
+                  "vocations": ["Starborn (B)", "Anointed (M)", "Fated (W)"],
                   "themes": "Cosmic, prophecy, magic, luck",
                   "starting_items": "Blessed trinket, journal, birthmark",
                   "special": "Limited Anima spellcasting (cantrips only)"
                 },
                 {
                   "name": "Commonfolk",
-                  "vocations": [
-                    "Mariner (B)",
-                    "Oddjob (M)",
-                    "Tavernhand (W)"
-                  ],
+                  "vocations": ["Mariner (B)", "Oddjob (M)", "Tavernhand (W)"],
                   "themes": "Small town, people-smart, simple, adaptable",
                   "starting_items": "Family heirloom, waterskin, walking staff"
                 },
                 {
                   "name": "Cursed",
-                  "vocations": [
-                    "Exile (B)",
-                    "Host (M)",
-                    "Visitor (W)"
-                  ],
+                  "vocations": ["Exile (B)", "Host (M)", "Visitor (W)"],
                   "themes": "Curses, soul-binding, supernatural affliction",
                   "starting_items": "Exile pack, cursed trinket, ritual supplies",
                   "special": "Limited Spellcasting (cantrips)"
@@ -631,11 +540,7 @@
                 },
                 {
                   "name": "Nobility",
-                  "vocations": [
-                    "Warfare (B)",
-                    "Educated (M)",
-                    "Socialite (W)"
-                  ],
+                  "vocations": ["Warfare (B)", "Educated (M)", "Socialite (W)"],
                   "themes": "Influence, privilege, command",
                   "starting_items": "Fine clothing, signet, letters of introduction"
                 },
@@ -651,21 +556,13 @@
                 },
                 {
                   "name": "Outlaw",
-                  "vocations": [
-                    "Brute (B)",
-                    "Thief (M)",
-                    "Hotshot (W)"
-                  ],
+                  "vocations": ["Brute (B)", "Thief (M)", "Hotshot (W)"],
                   "themes": "Crime, evasion, intimidation",
                   "starting_items": "Disguise tools, lockpicks, illicit contacts"
                 },
                 {
                   "name": "Soldier",
-                  "vocations": [
-                    "Infantry (B)",
-                    "Medic (M)",
-                    "Thane (W)"
-                  ],
+                  "vocations": ["Infantry (B)", "Medic (M)", "Thane (W)"],
                   "themes": "Warfare, discipline, battlefield roles",
                   "starting_items": "Uniform, field supplies, injury kit"
                 }
@@ -686,10 +583,7 @@
       "page_start": 4,
       "page_end": 5,
       "summary": "Core class definitions, resources, proficiencies, and class feats.",
-      "tags": [
-        "classes",
-        "professions"
-      ],
+      "tags": ["classes", "professions"],
       "blocks": [
         {
           "type": "entry_group",
@@ -699,19 +593,17 @@
               "role": "Specialist who scouts, infiltrates, and strikes with tricks and alchemy.",
               "favored_attributes": "Body, Mind",
               "vitality": "Start 10 + Body; +2d8 per Tier",
+              "wounds": "1",
               "key_resource": "None",
               "proficiency": "Skills 2 (Tal/Aware/Int/Soc) | Kit Thievery | Arms Fins./Smpl. | Prot Light",
-              "class_features": [
-                "Undercut",
-                "Agile",
-                "Tread Lightly"
-              ]
+              "class_features": ["Undercut", "Agile", "Tread Lightly"]
             },
             {
               "name": "Berserker",
               "role": "Frontline brute fueled for destruction through rage at a cost.",
               "favored_attributes": "Body",
               "vitality": "Start 14 + Body; +2d12 + 2 per Tier",
+              "wounds": "2",
               "key_resource": "Ambition (Rage)",
               "proficiency": "Skills 1 (Vig/Aware/Soc) | Arms Mrtl./Smpl./Defs. | Prot Light",
               "class_features": [
@@ -725,6 +617,7 @@
               "role": "Adaptive primal half-caster mixing survival, shapeshifting, and spirit magic.",
               "favored_attributes": "Will or Mind, Body",
               "vitality": "Start 9 + Body; +2d10 per Tier",
+              "wounds": "1",
               "key_resource": "Reservoir (Primeval)",
               "proficiency": "Skills 1 (Vig/Aware/Lore) | Kit Med/Alc | Arms Primeval/Smpl./Caty. | Prot Light",
               "class_features": [
@@ -738,6 +631,7 @@
               "role": "Precision skirmisher dominates with techniques and counters.",
               "favored_attributes": "Body, Mind",
               "vitality": "Start 10 + Body; +2d10 per Tier",
+              "wounds": "1",
               "key_resource": "Cadence",
               "proficiency": "Skills 1 (Tal/Aware/Int) | Arms Fins./Smpl./Rngd. | Prot Light+Buck",
               "class_features": [
@@ -753,6 +647,7 @@
               "role": "Full-caster whose inherited magic bends and shapes magic.",
               "favored_attributes": "Will",
               "vitality": "Start 8 + Body; +2d8 per Tier",
+              "wounds": "1",
               "key_resource": "Resonance",
               "proficiency": "Skills 1 (Aware/Lore/Soc) | Kit Craft/Eng/Med | Arms Cat +1 choice | Prot None",
               "class_features": [
@@ -767,6 +662,7 @@
               "role": "Battlefield weapon master using schools, stances, and burst exertion.",
               "favored_attributes": "Body",
               "vitality": "Start 12 + Body; +2d12 per Tier",
+              "wounds": "2",
               "key_resource": "Adrenaline",
               "proficiency": "Skills 1 (Vig/Tal/Aware) | Arms All | Prot All",
               "class_features": [
@@ -780,19 +676,17 @@
               "role": "Soul-powered full-caster trading life force for control, debuffs, and momentum.",
               "favored_attributes": "Will",
               "vitality": "Start 8 + Will; +2d8 per Tier",
+              "wounds": "1",
               "key_resource": "Vitality + Soul Tokens",
               "proficiency": "Skills 1 (Any) | Kit 1 (Outr./Thievery) | Arms Smpl./Caty. | Prot None",
-              "class_features": [
-                "Lifeblood",
-                "Soulglyph",
-                "Spellcasting"
-              ]
+              "class_features": ["Lifeblood", "Soulglyph", "Spellcasting"]
             },
             {
               "name": "Warden",
               "role": "Anti-magic hunter blending martial pressure with arcane skill.",
               "favored_attributes": "Mind, Body",
               "vitality": "Start 9 + Body; +2d10 per Tier",
+              "wounds": "2",
               "key_resource": "Reservoir (Mana)",
               "proficiency": "Skills 2 (Vig/Intu/Tal/Aware) | Kit 1 (Med/Outr.) | Arms Caty./Simple/Fins. | Prot Light/Med",
               "class_features": [
@@ -807,6 +701,7 @@
               "role": "Scholarly full-caster who controls with prepared spells, spheres, and research.",
               "favored_attributes": "Mind",
               "vitality": "Start 8 + Body; +2d8 per Tier",
+              "wounds": "1",
               "key_resource": "Reservoir (Mana)",
               "proficiency": "Skills 1 (Intu/Aware/Lore) | Kit Craft/Alc | Arms Smpl./Caty. | Prot None",
               "class_features": [
@@ -821,6 +716,7 @@
               "role": "Versatile hired blade who borrows techniques and fills gaps with modular training.",
               "favored_attributes": "Body, Will",
               "vitality": "Start 10 + Body; +2d10 per Tier",
+              "wounds": "2",
               "key_resource": "Ambition and Field Kits",
               "proficiency": "Skills 2 (Any) | Kit 1 choice | Arms Simple +1 choice | Prot L/M+Shields",
               "class_features": [
@@ -834,6 +730,7 @@
               "role": "Mental manipulator of perception and reality with tethers and stitched cords.",
               "favored_attributes": "Mind or Will",
               "vitality": "Start 8 + Body; +2d8 per Tier",
+              "wounds": "1",
               "key_resource": "Tethers (Tier) + Ambition (Stitch)",
               "proficiency": "Skills 1 (Intu/Aware/Soc) | Arms Caty./Fins. | Prot Light",
               "class_features": [
@@ -848,6 +745,7 @@
               "role": "Devout half-caster who anchors power in a creed to heal, protect, and punish.",
               "favored_attributes": "Body + (Mind or Will)",
               "vitality": "Start 9 + Body; +2d10 per Tier",
+              "wounds": "1",
               "key_resource": "Creed + Reservoir (Soul)",
               "proficiency": "Skills (Intu/Aware/Lore/Soc) | Kit 1 (Alc/Med) | Arms Simple/Caty./Lt Xbow | Prot Light+Shield",
               "class_features": [
@@ -872,12 +770,7 @@
       "page_start": 6,
       "page_end": 6,
       "summary": "Feat-based progression, renown economy, and path choices by profession.",
-      "tags": [
-        "progression",
-        "feats",
-        "renown",
-        "paths"
-      ],
+      "tags": ["progression", "feats", "renown", "paths"],
       "blocks": [
         {
           "type": "paragraph",
@@ -910,36 +803,11 @@
             "Renown Cost by Tier"
           ],
           "rows": [
-            [
-              "1",
-              "4",
-              "3",
-              "6"
-            ],
-            [
-              "2",
-              "8",
-              "6",
-              "10"
-            ],
-            [
-              "3",
-              "11",
-              "8",
-              "14"
-            ],
-            [
-              "4",
-              "13",
-              "10",
-              "18"
-            ],
-            [
-              "5",
-              "16",
-              "-",
-              "22"
-            ]
+            ["1", "4", "3", "6"],
+            ["2", "8", "6", "10"],
+            ["3", "11", "8", "14"],
+            ["4", "13", "10", "18"],
+            ["5", "16", "-", "22"]
           ]
         },
         {
@@ -1130,12 +998,7 @@
       "page_start": 7,
       "page_end": 8,
       "summary": "Initiative, action points, engagement, damage, conditions, and recovery.",
-      "tags": [
-        "combat",
-        "actions",
-        "conditions",
-        "rest"
-      ],
+      "tags": ["combat", "actions", "conditions", "rest"],
       "blocks": [
         {
           "type": "paragraph",
@@ -1420,13 +1283,7 @@
       "page_start": 8,
       "page_end": 10,
       "summary": "Inventory, kits, weapons, armor, shields, qualities, augments, and item traits.",
-      "tags": [
-        "equipment",
-        "inventory",
-        "weapons",
-        "armor",
-        "kits"
-      ],
+      "tags": ["equipment", "inventory", "weapons", "armor", "kits"],
       "blocks": [
         {
           "type": "paragraph",
@@ -1546,30 +1403,9 @@
                 "Cost"
               ],
               "rows": [
-                [
-                  "Baton",
-                  "Smpl.",
-                  "1d4 B",
-                  "M",
-                  "Light",
-                  "4"
-                ],
-                [
-                  "Cestus",
-                  "Smpl./Fins.",
-                  "1d6 B",
-                  "M",
-                  "Hidden, Light",
-                  "3"
-                ],
-                [
-                  "Cleaver",
-                  "Mrtl.",
-                  "1d10 S",
-                  "M",
-                  "Heavy, Rend",
-                  "\u2014"
-                ],
+                ["Baton", "Smpl.", "1d4 B", "M", "Light", "4"],
+                ["Cestus", "Smpl./Fins.", "1d6 B", "M", "Hidden, Light", "3"],
+                ["Cleaver", "Mrtl.", "1d10 S", "M", "Heavy, Rend", "\u2014"],
                 [
                   "Dagger",
                   "Smpl./Fins.",
@@ -1586,14 +1422,7 @@
                   "Heavy, Rend, Thrown, 2H",
                   "150"
                 ],
-                [
-                  "Greatclub",
-                  "Smpl.",
-                  "1d10 B",
-                  "M",
-                  "Heavy",
-                  "10"
-                ],
+                ["Greatclub", "Smpl.", "1d10 B", "M", "Heavy", "10"],
                 [
                   "Greatsword",
                   "Mrtl.",
@@ -1602,22 +1431,8 @@
                   "Heavy, Adaptive",
                   "200"
                 ],
-                [
-                  "Halberd",
-                  "Mrtl.",
-                  "1d10 P",
-                  "M",
-                  "Heavy, Reach, 2H",
-                  "75"
-                ],
-                [
-                  "Hand axe",
-                  "Smpl.",
-                  "1d6 S",
-                  "M; C",
-                  "Light, Thrown",
-                  "5"
-                ],
+                ["Halberd", "Mrtl.", "1d10 P", "M", "Heavy, Reach, 2H", "75"],
+                ["Hand axe", "Smpl.", "1d6 S", "M; C", "Light, Thrown", "5"],
                 [
                   "Hand crossbow",
                   "Rngd./Fins.",
@@ -1634,22 +1449,8 @@
                   "Brace, Piercer, Reload 1, 2H",
                   "25"
                 ],
-                [
-                  "Javelin",
-                  "Smpl./Rngd.",
-                  "1d6 P",
-                  "N",
-                  "Thrown",
-                  "5"
-                ],
-                [
-                  "Light bow",
-                  "Rngd.",
-                  "1d6 P",
-                  "C",
-                  "Light, 2H",
-                  "15"
-                ],
+                ["Javelin", "Smpl./Rngd.", "1d6 P", "N", "Thrown", "5"],
+                ["Light bow", "Rngd.", "1d6 P", "C", "Light, 2H", "15"],
                 [
                   "Light crossbow",
                   "Rngd./Fins.",
@@ -1658,22 +1459,8 @@
                   "Piercer, Reload 1, 2H",
                   "20"
                 ],
-                [
-                  "Longbow",
-                  "Rngd./Mrtl.",
-                  "1d10 P",
-                  "F",
-                  "Brace, 2H",
-                  "45"
-                ],
-                [
-                  "Longsword",
-                  "Mrtl.",
-                  "1d8(d10) S",
-                  "M",
-                  "Adaptive",
-                  "100"
-                ],
+                ["Longbow", "Rngd./Mrtl.", "1d10 P", "F", "Brace, 2H", "45"],
+                ["Longsword", "Mrtl.", "1d8(d10) S", "M", "Adaptive", "100"],
                 [
                   "Lucerne",
                   "Mrtl.",
@@ -1682,30 +1469,9 @@
                   "Heavy, Piercer 2, 2H",
                   "125"
                 ],
-                [
-                  "Mace",
-                  "Mrtl.",
-                  "1d8 B",
-                  "M",
-                  "Brace",
-                  "50"
-                ],
-                [
-                  "Morningstar",
-                  "Mrtl.",
-                  "1d6 B/P",
-                  "M",
-                  "Piercer",
-                  "40"
-                ],
-                [
-                  "Net",
-                  "Smpl./Rngd.",
-                  "\u2014",
-                  "C",
-                  "Restraint, Pull",
-                  "10"
-                ],
+                ["Mace", "Mrtl.", "1d8 B", "M", "Brace", "50"],
+                ["Morningstar", "Mrtl.", "1d6 B/P", "M", "Piercer", "40"],
+                ["Net", "Smpl./Rngd.", "\u2014", "C", "Restraint, Pull", "10"],
                 [
                   "Pike",
                   "Smpl./Mrtl.",
@@ -1714,38 +1480,10 @@
                   "Heavy, 2H, Reach",
                   "20"
                 ],
-                [
-                  "Quarterstaff",
-                  "Smpl.",
-                  "1d6(8) B",
-                  "M",
-                  "Adaptive",
-                  "2"
-                ],
-                [
-                  "Rapier",
-                  "Fins.",
-                  "1d8 P",
-                  "M",
-                  "Light, Piercer",
-                  "80"
-                ],
-                [
-                  "Scimitar",
-                  "Fins.",
-                  "1d6 S",
-                  "M",
-                  "Light, Rend",
-                  "50"
-                ],
-                [
-                  "Short sword",
-                  "Smpl./Fins.",
-                  "1d6 S/P",
-                  "M",
-                  "Light",
-                  "10"
-                ],
+                ["Quarterstaff", "Smpl.", "1d6(8) B", "M", "Adaptive", "2"],
+                ["Rapier", "Fins.", "1d8 P", "M", "Light, Piercer", "80"],
+                ["Scimitar", "Fins.", "1d6 S", "M", "Light, Rend", "50"],
+                ["Short sword", "Smpl./Fins.", "1d6 S/P", "M", "Light", "10"],
                 [
                   "Sling",
                   "Smpl./Rngd.",
@@ -1754,14 +1492,7 @@
                   "Hidden, Reload 1",
                   "4"
                 ],
-                [
-                  "Spear",
-                  "Smpl.",
-                  "1d6(8) P",
-                  "M",
-                  "Adaptive",
-                  "5"
-                ],
+                ["Spear", "Smpl.", "1d6(8) P", "M", "Adaptive", "5"],
                 [
                   "Throwing axe",
                   "Smpl./Rngd.",
@@ -1778,22 +1509,8 @@
                   "Light, Hidden, Thrown",
                   "1"
                 ],
-                [
-                  "War bow",
-                  "Rngd./Fins.",
-                  "1d8 P",
-                  "N",
-                  "2H",
-                  "25"
-                ],
-                [
-                  "Warhammer",
-                  "Mrtl.",
-                  "1d8(10) B",
-                  "M",
-                  "Adaptive",
-                  "75"
-                ]
+                ["War bow", "Rngd./Fins.", "1d8 P", "N", "2H", "25"],
+                ["Warhammer", "Mrtl.", "1d8(10) B", "M", "Adaptive", "75"]
               ]
             }
           ],
@@ -1812,37 +1529,12 @@
           "blocks": [
             {
               "type": "table",
-              "columns": [
-                "Type",
-                "Bonus",
-                "Trait",
-                "Slots"
-              ],
+              "columns": ["Type", "Bonus", "Trait", "Slots"],
               "rows": [
-                [
-                  "Unarmored",
-                  "0",
-                  "\u2014",
-                  "0"
-                ],
-                [
-                  "Light",
-                  "+1-3",
-                  "\u2014",
-                  "0-1"
-                ],
-                [
-                  "Medium",
-                  "+3-5",
-                  "Loud (Some)",
-                  "1-2"
-                ],
-                [
-                  "Heavy",
-                  "+5-7",
-                  "Loud",
-                  "2-3"
-                ]
+                ["Unarmored", "0", "\u2014", "0"],
+                ["Light", "+1-3", "\u2014", "0-1"],
+                ["Medium", "+3-5", "Loud (Some)", "1-2"],
+                ["Heavy", "+5-7", "Loud", "2-3"]
               ],
               "title": "Armor"
             },
@@ -1856,41 +1548,11 @@
                 "Trait"
               ],
               "rows": [
-                [
-                  "Improvised Shield",
-                  "\u2014",
-                  "\u2014",
-                  "10",
-                  "Fragile 3"
-                ],
-                [
-                  "Buckler",
-                  "Light",
-                  "+1",
-                  "10",
-                  "\u2014"
-                ],
-                [
-                  "Shield",
-                  "Medium",
-                  "+1",
-                  "15",
-                  "\u2014"
-                ],
-                [
-                  "Reinforced Shield",
-                  "Medium",
-                  "+2",
-                  "25",
-                  "Brace"
-                ],
-                [
-                  "Tower Shield",
-                  "Heavy",
-                  "+2(3)",
-                  "40",
-                  "Adaptive (Brace)"
-                ]
+                ["Improvised Shield", "\u2014", "\u2014", "10", "Fragile 3"],
+                ["Buckler", "Light", "+1", "10", "\u2014"],
+                ["Shield", "Medium", "+1", "15", "\u2014"],
+                ["Reinforced Shield", "Medium", "+2", "25", "Brace"],
+                ["Tower Shield", "Heavy", "+2(3)", "40", "Adaptive (Brace)"]
               ],
               "title": "Shields"
             }
@@ -1983,11 +1645,7 @@
       "page_start": 10,
       "page_end": 11,
       "summary": "Known spell progression, spellcasting thresholds, and spell lists by source and sphere.",
-      "tags": [
-        "spells",
-        "sources",
-        "spheres"
-      ],
+      "tags": ["spells", "sources", "spheres"],
       "blocks": [
         {
           "type": "paragraph",
@@ -2003,27 +1661,9 @@
             "Max Tier"
           ],
           "rows": [
-            [
-              "Full",
-              "4",
-              "Per Tier",
-              "3",
-              "6th"
-            ],
-            [
-              "Half",
-              "3",
-              "Per 2 Tiers",
-              "2",
-              "5th"
-            ],
-            [
-              "Limited",
-              "2",
-              "Per 2 Tiers",
-              "1",
-              "4th"
-            ]
+            ["Full", "4", "Per Tier", "3", "6th"],
+            ["Half", "3", "Per 2 Tiers", "2", "5th"],
+            ["Limited", "2", "Per 2 Tiers", "1", "4th"]
           ],
           "title": "Known Spells Progression"
         }
@@ -2126,11 +1766,7 @@
       "page_start": 11,
       "page_end": 12,
       "summary": "GM-facing guidance for running sessions, awarding renown, and preparing skirmishes.",
-      "tags": [
-        "gm",
-        "keeper",
-        "adventure-design"
-      ],
+      "tags": ["gm", "keeper", "adventure-design"],
       "blocks": [
         {
           "type": "paragraph",
@@ -2308,19 +1944,13 @@
         },
         {
           "type": "table",
-          "columns": [
-            "Wildcard",
-            "Effect"
-          ],
+          "columns": ["Wildcard", "Effect"],
           "rows": [
             [
               "Dangerous Object",
               "Hazard HP = 5\u00d7 tier; mishandling triggers a zone-wide effect."
             ],
-            [
-              "Elite Danger",
-              "Replace 1\u20132 foes with stronger versions."
-            ],
+            ["Elite Danger", "Replace 1\u20132 foes with stronger versions."],
             [
               "Horde",
               "Additional identical waves arrive every 2 rounds after the first is bloodied."
@@ -2329,10 +1959,7 @@
               "It's an Ambush",
               "Enemies act in surprise Round 0 unless PCs succeed on Mind checks."
             ],
-            [
-              "Two Factions",
-              "A second group with its own agenda arrives."
-            ],
+            ["Two Factions", "A second group with its own agenda arrives."],
             [
               "The Boss is Here",
               "A major foe enters mid-fight or begins on the field."

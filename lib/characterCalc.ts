@@ -25,6 +25,42 @@ export const VITALS_SET = new Set([
   "Social",
 ]);
 
+export const SPHERE_NAMES = new Set([
+  "Aberration",
+  "Augmentation",
+  "Conjuration",
+  "Decimation",
+  "Divination",
+  "Mortification",
+  "Reclamation",
+]);
+
+/** Derives the set of spell-school spheres a character knows from their choiceSelections. */
+export function computeKnownSpheres(
+  choiceSelections: Record<string, string[]>,
+  choiceFeatures: ChoiceFeature[],
+): Set<string> {
+  const known = new Set<string>();
+  for (const [key, selections] of Object.entries(choiceSelections)) {
+    const cf = choiceFeatures.find(
+      (f) => `${f.entity_name}__${f.feature_name}` === key,
+    );
+    for (const sel of selections) {
+      if (SPHERE_NAMES.has(sel)) {
+        known.add(sel);
+      }
+      if (cf) {
+        const opt = cf.options.find((o) => o.name === sel);
+        if (opt) {
+          const m = opt.effect_text.match(/gain\s+(\w+)\s+sphere/i);
+          if (m && SPHERE_NAMES.has(m[1])) known.add(m[1]);
+        }
+      }
+    }
+  }
+  return known;
+}
+
 export function computeExpertiseBumps(
   selectedFeatIds: string[],
   allFeats: BuilderFeat[],
@@ -178,10 +214,11 @@ export function calcWillDefense(attrs: CharacterAttributes): number {
   return 10 + attrs.will;
 }
 export function calcMaxWounds(
+  prof: Pick<BuilderProfession, "woundBonusPerTier">,
   attrs: CharacterAttributes,
   tier: number,
 ): number {
-  return Math.floor(Math.max(2, attrs.body / 2)) + tier;
+  return 1 + prof.woundBonusPerTier * tier + Math.ceil(attrs.body / 3);
 }
 export function calcCarryWeight(
   attrs: CharacterAttributes,
@@ -408,13 +445,10 @@ export function calcAmbition(
   tier: number = 1,
 ): { dice: string; max: number } {
   const DICE = ["d4", "d6", "d8", "d10", "d12"] as const;
-  // Will-based die index
-  let willIdx = 0;
-  if (will >= 12) willIdx = 4;
-  else if (will >= 10) willIdx = 3;
-  else if (will >= 8) willIdx = 2;
-  else if (will >= 4) willIdx = 1;
-  // Tier-based die index (Tier 1 → d4, Tier 2–3 → d6, Tier 4–5 → d8)
+  const willIdx = Math.min(Math.floor(will / 3), 4);
   const tierIdx = tier >= 4 ? 2 : tier >= 2 ? 1 : 0;
-  return { dice: DICE[Math.max(willIdx, tierIdx)], max: Math.max(5, will) };
+  return {
+    dice: DICE[Math.max(willIdx, tierIdx)],
+    max: 5 + Math.floor(will / 3) + tier,
+  };
 }

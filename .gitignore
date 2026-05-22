@@ -48,3 +48,7 @@ next-env.d.ts
 components/CharacterSheet.tsx.bu_working
 docs/
 app/favicon.ico.old
+parse_markdown_to_json.py
+content/profession_data2.json
+content/profession_feats2.json
+content/spell_data2.json

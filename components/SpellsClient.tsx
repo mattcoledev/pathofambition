@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import TraitBadge from './TraitBadge';
 import type { Spell } from '@/lib/types';
@@ -55,16 +55,8 @@ export default function SpellsClient({ spells }: Props) {
   const [activeSpheres, setActiveSpheres] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
 
-  function toggleSource(s: string) {
-    setActiveSources((prev) => {
-      const next = new Set(prev);
-      next.has(s) ? next.delete(s) : next.add(s);
-      return next;
-    });
-  }
-
-  function toggleSphere(s: string) {
-    setActiveSpheres((prev) => {
+  function toggle(setter: React.Dispatch<React.SetStateAction<Set<string>>>, s: string) {
+    setter((prev) => {
       const next = new Set(prev);
       next.has(s) ? next.delete(s) : next.add(s);
       return next;
@@ -131,7 +123,7 @@ export default function SpellsClient({ spells }: Props) {
           </span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
             {SOURCES.map((s) => (
-              <FilterPill key={s} label={s} active={activeSources.has(s)} onClick={() => toggleSource(s)} />
+              <FilterPill key={s} label={s} active={activeSources.has(s)} onClick={() => toggle(setActiveSources, s)} />
             ))}
           </div>
         </div>
@@ -143,7 +135,7 @@ export default function SpellsClient({ spells }: Props) {
           </span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
             {SPHERES.map((s) => (
-              <FilterPill key={s} label={s} active={activeSpheres.has(s)} onClick={() => toggleSphere(s)} />
+              <FilterPill key={s} label={s} active={activeSpheres.has(s)} onClick={() => toggle(setActiveSpheres, s)} />
             ))}
           </div>
         </div>
